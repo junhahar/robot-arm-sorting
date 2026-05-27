@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+.omc/
+*.pyc
+*.pyo
+*.log
+*.npz
+.vscode/
+.idea/

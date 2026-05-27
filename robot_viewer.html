@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5-Axis Robot Arm Viewer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #16213e;
+    overflow: hidden;
+    font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+}
+#panel {
+    position: absolute; top: 15px; right: 15px;
+    width: 280px;
+    background: rgba(15, 20, 40, 0.92);
+    border: 1px solid rgba(100, 140, 255, 0.25);
+    border-radius: 14px; padding: 16px; color: #dde;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+#panel h3 {
+    margin: 10px 0 6px; color: #7cf;
+    font-size: 12px; letter-spacing: 1px; text-transform: uppercase;
+}
+.status-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 12px; background: rgba(255,50,50,0.15);
+    border-radius: 8px; font-size: 12px; transition: background 0.3s;
+}
+.status-bar.on { background: rgba(50,255,100,0.15); }
+.dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #f44; box-shadow: 0 0 6px #f44; transition: all 0.3s;
+}
+.status-bar.on .dot { background: #4f4; box-shadow: 0 0 6px #4f4; }
+.jr {
+    display: flex; align-items: center; margin: 4px 0; font-size: 13px;
+}
+.jr label { width: 26px; font-weight: bold; color: #8bf; font-size: 12px; }
+.jr input[type=range] { flex: 1; margin: 0 6px; accent-color: #5af; }
+.jr .v { width: 52px; text-align: right; font-family: Consolas, monospace; font-size: 11px; color: #acd; }
+.jr .rng { width: 70px; text-align: center; font-family: Consolas, monospace; font-size: 9px; color: #668; }
+.btn {
+    width: 100%; padding: 8px; margin-top: 6px;
+    border: none; color: white; border-radius: 7px;
+    cursor: pointer; font-size: 12px; font-weight: bold; transition: all 0.2s;
+}
+.btn:hover { filter: brightness(1.15); }
+#grip-btn { background: linear-gradient(135deg, #2a7, #2a5); }
+#grip-btn.closed { background: linear-gradient(135deg, #c44, #a33); }
+#reset-btn { background: linear-gradient(135deg, #456, #345); margin-top: 4px; }
+#title {
+    position: absolute; top: 15px; left: 20px;
+    color: rgba(255,255,255,0.85); font-size: 17px; font-weight: bold;
+}
+#subtitle {
+    position: absolute; top: 38px; left: 20px;
+    color: rgba(255,255,255,0.3); font-size: 11px;
+}
+#info {
+    position: absolute; bottom: 10px; left: 15px;
+    color: rgba(255,255,255,0.25); font-size: 11px;
+}
+</style>
+</head>
+<body>
+<div id="title">5-Axis Robot Arm</div>
+<div id="subtitle">Cults3D 6-Axis MK1 &middot; STS3215 &times;5</div>
+<div id="panel">
+    <div class="status-bar" id="status">
+        <span class="dot"></span>
+        <span id="st-txt">연결 대기중...</span>
+    </div>
+    <h3>Joint Offset (Home = 0&deg;)</h3>
+    <div class="jr"><label>J1</label><input type="range" id="s-j1" min="-150" max="150" value="0" step="0.5"><span class="v" id="v-j1">0.0°</span></div>
+    <div class="jr"><label>J2</label><input type="range" id="s-j2" min="-45" max="30" value="0" step="0.5"><span class="v" id="v-j2">0.0°</span></div>
+    <div class="jr"><label>J3</label><input type="range" id="s-j3" min="-80" max="20" value="0" step="0.5"><span class="v" id="v-j3">0.0°</span></div>
+    <div class="jr"><label>J4</label><input type="range" id="s-j4" min="-50" max="70" value="0" step="0.5"><span class="v" id="v-j4">0.0°</span></div>
+    <div class="jr"><label>J5</label><input type="range" id="s-j5" min="-90" max="90" value="0" step="0.5"><span class="v" id="v-j5">0.0°</span></div>
+    <button class="btn" id="grip-btn">Gripper: OPEN</button>
+    <button class="btn" id="reset-btn">Reset to Home</button>
+</div>
+<div id="info">드래그: 회전 &middot; 스크롤: 줌 &middot; 우클릭: 이동 | ws://localhost:8765</div>
+
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x16213e);
+scene.fog = new THREE.FogExp2(0x16213e, 0.0006);
+
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 1, 3000);
+camera.position.set(300, 350, 500);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+document.body.appendChild(renderer.domElement);
+
+const orbit = new OrbitControls(camera, renderer.domElement);
+orbit.target.set(0, 180, 0);
+orbit.enableDamping = true;
+orbit.dampingFactor = 0.07;
+orbit.minDistance = 150;
+orbit.maxDistance = 1200;
+orbit.update();
+
+// Lighting
+scene.add(new THREE.AmbientLight(0x404060, 0.5));
+const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+sun.position.set(250, 500, 300);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+const sd = 400;
+sun.shadow.camera.left = -sd; sun.shadow.camera.right = sd;
+sun.shadow.camera.top = sd + 200; sun.shadow.camera.bottom = -sd;
+sun.shadow.camera.near = 10; sun.shadow.camera.far = 1200;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0x6688cc, 0.35);
+fill.position.set(-200, 200, -150);
+scene.add(fill);
+scene.add(new THREE.HemisphereLight(0x4466aa, 0x222244, 0.35));
+
+// Ground
+const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(2000, 2000),
+    new THREE.MeshStandardMaterial({ color: 0x1a1f3a, roughness: 0.9 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+scene.add(new THREE.GridHelper(1200, 30, 0x2a3060, 0x222850));
+
+// Materials — CAD-style
+const M = {
+    body: new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.3, metalness: 0.05 }),
+    servo: new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.55, metalness: 0.2 }),
+    hub: new THREE.MeshStandardMaterial({ color: 0x606060, roughness: 0.35, metalness: 0.4 }),
+    accent: new THREE.MeshStandardMaterial({ color: 0xffaa00, roughness: 0.3, metalness: 0.3, emissive: 0x442200, emissiveIntensity: 0.1 }),
+    grip: new THREE.MeshStandardMaterial({ color: 0xcc2222, roughness: 0.4, metalness: 0.1, emissive: 0x330000, emissiveIntensity: 0.1 }),
+    edge: new THREE.MeshStandardMaterial({ color: 0x505050, roughness: 0.45, metalness: 0.2 }),
+};
+
+function bx(w,h,d,m){ const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m); o.castShadow=true; return o; }
+function cy(r,h,m,s=24){ const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,s),m); o.castShadow=true; return o; }
+
+function armPlate(w, len, d) {
+    const g = new THREE.Group();
+    const body = bx(w, len - d, d, M.body);
+    body.position.y = len / 2;
+    g.add(body);
+    const c1 = cy(d / 2, w, M.body, 16);
+    c1.rotation.z = Math.PI / 2; c1.position.y = d / 2;
+    g.add(c1);
+    const c2 = cy(d / 2, w, M.body, 16);
+    c2.rotation.z = Math.PI / 2; c2.position.y = len - d / 2;
+    g.add(c2);
+    return g;
+}
+
+function jointHub(r, thick) {
+    const g = new THREE.Group();
+    const outer = cy(r, thick, M.hub, 24);
+    outer.rotation.z = Math.PI / 2;
+    g.add(outer);
+    const center = cy(r * 0.3, thick + 1, M.accent, 12);
+    center.rotation.z = Math.PI / 2;
+    g.add(center);
+    return g;
+}
+
+// Dimensions (mm) — actual link lengths
+const L1 = 45, L2 = 245, L3 = 212;
+
+const robot = new THREE.Group();
+scene.add(robot);
+
+// ── Base ──
+const bp = cy(65, 10, M.edge, 32); bp.position.y = 5; bp.receiveShadow = true; robot.add(bp);
+const bRing = new THREE.Mesh(new THREE.TorusGeometry(50, 3, 12, 32), M.hub);
+bRing.rotation.x = Math.PI / 2; bRing.position.y = 12; robot.add(bRing);
+const bTop = cy(42, 16, M.body, 32); bTop.position.y = 22; robot.add(bTop);
+
+// ── J1: base rotation ──
+const j1 = new THREE.Group(); j1.position.y = L1; robot.add(j1);
+
+// Shoulder yoke — slim fork
+const yH = 65, yGap = 44, yT = 6, yD = 34;
+const yL = bx(yT, yH, yD, M.body); yL.position.set(-yGap/2, yH/2, 0); j1.add(yL);
+const yR = bx(yT, yH, yD, M.body); yR.position.set( yGap/2, yH/2, 0); j1.add(yR);
+const yB = bx(yGap+yT, 10, yD, M.body); yB.position.set(0, 5, 0); j1.add(yB);
+const s2 = bx(20, 40, 28, M.servo); s2.position.set(0, 38, 0); j1.add(s2);
+const h2L = jointHub(18, yT+2); h2L.position.set(-yGap/2, yH, 0); j1.add(h2L);
+const h2R = jointHub(18, yT+2); h2R.position.set( yGap/2, yH, 0); j1.add(h2R);
+
+// ── J2: shoulder pitch ──
+const j2 = new THREE.Group(); j2.position.y = yH; j1.add(j2);
+
+const a2W = 50, a2D = 15;
+j2.add(armPlate(a2W, L2, a2D));
+const s3 = bx(16, 36, 24, M.servo); s3.position.set(0, L2 - 22, 0); j2.add(s3);
+const h3 = jointHub(16, 10); h3.position.y = L2; j2.add(h3);
+
+// ── J3: elbow pitch ──
+const j3 = new THREE.Group(); j3.position.y = L2; j2.add(j3);
+
+const a3W = 42, a3D = 13;
+j3.add(armPlate(a3W, L3, a3D));
+const s4 = bx(14, 32, 22, M.servo); s4.position.set(0, L3 - 20, 0); j3.add(s4);
+const h4 = jointHub(13, 8); h4.position.y = L3; j3.add(h4);
+
+// ── J4: wrist pitch ──
+const j4 = new THREE.Group(); j4.position.y = L3; j3.add(j4);
+
+const wH = 40;
+const w4L = bx(5, wH, 22, M.body); w4L.position.set(-14, wH/2, 0); j4.add(w4L);
+const w4R = bx(5, wH, 22, M.body); w4R.position.set( 14, wH/2, 0); j4.add(w4R);
+const w4B = bx(33, 7, 22, M.body); w4B.position.set(0, 3.5, 0); j4.add(w4B);
+const s5 = bx(14, 28, 18, M.servo); s5.position.set(0, 20, 0); j4.add(s5);
+
+// ── J5: wrist roll ──
+const j5 = new THREE.Group(); j5.position.y = wH; j4.add(j5);
+j5.add(cy(11, 12, M.hub, 16));
+
+// ── Gripper ──
+const gMount = bx(28, 6, 16, M.edge); gMount.position.y = -10; j5.add(gMount);
+const gServo = bx(14, 24, 14, M.servo); gServo.position.y = -24; j5.add(gServo);
+
+const fL = new THREE.Group();
+const fLp = bx(4, 42, 12, M.grip); fLp.position.y = -21; fL.add(fLp);
+const fLt = bx(6, 8, 14, M.edge); fLt.position.y = -44; fL.add(fLt);
+fL.position.set(-12, -14, 0); j5.add(fL);
+
+const fR = new THREE.Group();
+const fRp = bx(4, 42, 12, M.grip); fRp.position.y = -21; fR.add(fRp);
+const fRt = bx(6, 8, 14, M.edge); fRt.position.y = -44; fR.add(fRt);
+fR.position.set(12, -14, 0); j5.add(fR);
+
+// ── Home pose & limits ──
+// Home = CAD reference pose (servo center = 2048)
+const HOME = { J1: 90, J2: 120, J3: 150, J4: 80, J5: 90 };
+
+// Mechanical limits (offset from home)
+const LIMIT = {
+    J1: [-150, 150],
+    J2: [-45, 30],
+    J3: [-80, 20],
+    J4: [-50, 70],
+    J5: [-90, 90],
+};
+
+// Current offsets from home (0 = home pose)
+const J = { J1: 0, J2: 0, J3: 0, J4: 0, J5: 0 };
+let gripOpen = true;
+
+function updateRobot() {
+    // offset → absolute → rotation
+    const A = {};
+    for (const k in HOME) A[k] = HOME[k] + J[k];
+
+    j1.rotation.y = (A.J1 - 90) * Math.PI / 180;
+    j2.rotation.x = -(A.J2 - 75) * Math.PI / 150;
+    j3.rotation.x = -(A.J3 - 90) * Math.PI / 135;
+    j4.rotation.x = -(A.J4 - 90) * Math.PI / 120;
+    j5.rotation.y = (A.J5 - 90) * Math.PI / 180;
+    const fo = gripOpen ? 12 : 5;
+    fL.position.x = -fo;
+    fR.position.x = fo;
+}
+updateRobot();
+
+// UI
+function sync() {
+    ['j1','j2','j3','j4','j5'].forEach(id => {
+        const k = id.toUpperCase();
+        document.getElementById('s-' + id).value = J[k];
+        const v = J[k];
+        const sign = v > 0 ? '+' : '';
+        document.getElementById('v-' + id).textContent = sign + v.toFixed(1) + '°';
+    });
+    const gb = document.getElementById('grip-btn');
+    gb.textContent = gripOpen ? 'Gripper: OPEN' : 'Gripper: CLOSE';
+    gb.classList.toggle('closed', !gripOpen);
+}
+
+['j1','j2','j3','j4','j5'].forEach(id => {
+    document.getElementById('s-' + id).addEventListener('input', e => {
+        J[id.toUpperCase()] = parseFloat(e.target.value);
+        sync(); updateRobot();
+    });
+});
+
+document.getElementById('grip-btn').addEventListener('click', () => {
+    gripOpen = !gripOpen; sync(); updateRobot();
+});
+document.getElementById('reset-btn').addEventListener('click', () => {
+    J.J1=0; J.J2=0; J.J3=0; J.J4=0; J.J5=0;
+    gripOpen = true; sync(); updateRobot();
+});
+
+// WebSocket — receives absolute angles, converts to offsets
+let ws = null;
+function connectWS() {
+    try { ws = new WebSocket('ws://localhost:8765'); } catch { return; }
+    ws.onopen = () => {
+        document.getElementById('status').classList.add('on');
+        document.getElementById('st-txt').textContent = '연결됨 (MediaPipe)';
+    };
+    ws.onmessage = e => {
+        try {
+            const d = JSON.parse(e.data);
+            if (d.J1 != null) J.J1 = d.J1 - HOME.J1;
+            if (d.J2 != null) J.J2 = d.J2 - HOME.J2;
+            if (d.J3 != null) J.J3 = d.J3 - HOME.J3;
+            if (d.J4 != null) J.J4 = d.J4 - HOME.J4;
+            if (d.J5 != null) J.J5 = d.J5 - HOME.J5;
+            if (d.gripper != null) gripOpen = d.gripper === 'open';
+            sync(); updateRobot();
+        } catch {}
+    };
+    ws.onclose = () => {
+        document.getElementById('status').classList.remove('on');
+        document.getElementById('st-txt').textContent = '연결 대기중...';
+        setTimeout(connectWS, 2000);
+    };
+    ws.onerror = () => { try { ws.close(); } catch {} };
+}
+connectWS();
+
+// Render
+(function animate() {
+    requestAnimationFrame(animate);
+    orbit.update();
+    renderer.render(scene, camera);
+})();
+
+window.addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
