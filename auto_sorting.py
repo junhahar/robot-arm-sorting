@@ -366,7 +366,11 @@ class SortingController:
     def _on_approach(self):
         """IK 대략 이동 + Visual Servoing 수렴"""
         pre_z = self.target_z + LIFT_HEIGHT
-        j2, j3, j4 = ik.solve(self.target_r, pre_z)
+        result = ik.solve(self.target_r, pre_z)
+        if result is None:
+            print("[APPROACH] IK 실패 - 도달 불가")
+            return State.ERROR
+        j2, j3, j4 = result
         target = {
             "J1": self.target_j1,
             "J2": j2, "J3": j3, "J4": j4, "J5": 90.0,
@@ -407,7 +411,10 @@ class SortingController:
                 math.atan2(dx * VS_GAIN * h / CAM_FX, curr_r)
             )
 
-            j2, j3, j4 = ik.solve(new_r, curr_z)
+            result = ik.solve(new_r, curr_z)
+            if result is None:
+                continue
+            j2, j3, j4 = result
             adj = {"J1": new_j1, "J2": j2, "J3": j3, "J4": j4, "J5": 90.0}
             self.pose = s_curve.execute(
                 self.servo, self.pose, adj, MOVE_DURATION_FAST
@@ -426,7 +433,11 @@ class SortingController:
 
         while current_z > min_z:
             current_z -= DESCEND_STEP_MM
-            j2, j3, j4 = ik.solve(self.target_r, current_z)
+            result = ik.solve(self.target_r, current_z)
+            if result is None:
+                print("[DESCEND] IK 실패 - 하강 한계")
+                break
+            j2, j3, j4 = result
             target = dict(self.pose)
             target.update({"J2": j2, "J3": j3, "J4": j4})
             self.pose = s_curve.execute(
@@ -447,7 +458,10 @@ class SortingController:
                         adj_j1 = self.pose["J1"] + math.degrees(
                             math.atan2(dx * VS_GAIN * h / CAM_FX, self.target_r)
                         )
-                        j2, j3, j4 = ik.solve(adj_r, current_z)
+                        result = ik.solve(adj_r, current_z)
+                        if result is None:
+                            continue
+                        j2, j3, j4 = result
                         adj_pose = dict(self.pose)
                         adj_pose.update({
                             "J1": adj_j1, "J2": j2, "J3": j3, "J4": j4,
@@ -480,7 +494,11 @@ class SortingController:
             return State.SCAN
 
         lift_z = self.target_z + LIFT_HEIGHT
-        j2, j3, j4 = ik.solve(self.target_r, lift_z)
+        result = ik.solve(self.target_r, lift_z)
+        if result is None:
+            print("[PICK] 리프트 IK 실패")
+            return State.ERROR
+        j2, j3, j4 = result
         lift = dict(self.pose)
         lift.update({"J2": j2, "J3": j3, "J4": j4})
         self.pose = s_curve.execute(self.servo, self.pose, lift, MOVE_DURATION_FAST)
@@ -588,7 +606,11 @@ class SortingController:
             current_z -= DESCEND_STEP_MM
             descent += DESCEND_STEP_MM
 
-            j2, j3, j4 = ik.solve(curr_r, current_z)
+            result = ik.solve(curr_r, current_z)
+            if result is None:
+                print("[PLACE] IK 실패 - 하강 한계")
+                break
+            j2, j3, j4 = result
             target = dict(self.pose)
             target.update({"J2": j2, "J3": j3, "J4": j4})
             self.pose = s_curve.execute(
@@ -604,7 +626,11 @@ class SortingController:
         time.sleep(0.3)
 
         lift_z = current_z + LIFT_HEIGHT * 2
-        j2, j3, j4 = ik.solve(curr_r, lift_z)
+        result = ik.solve(curr_r, lift_z)
+        if result is None:
+            print("[PLACE] 리프트 IK 실패")
+            return State.ERROR
+        j2, j3, j4 = result
         lift = dict(self.pose)
         lift.update({"J2": j2, "J3": j3, "J4": j4})
         self.pose = s_curve.execute(self.servo, self.pose, lift, MOVE_DURATION_FAST)

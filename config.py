@@ -25,11 +25,11 @@ SERVO_CENTER = 2048
 SERVO_STEPS_PER_DEG = 4096.0 / 360.0  # ~11.378
 
 JOINTS = {
-    "J1": {"servo_id": 1, "min": 0,  "max": 180, "home": 90.0,  "dir": 1},
-    "J2": {"servo_id": 2, "min": 75, "max": 150, "home": 120.0, "dir": 1},
-    "J3": {"servo_id": 3, "min": 0,  "max": 170, "home": 150.0, "dir": 1},
-    "J4": {"servo_id": 4, "min": 30, "max": 150, "home": 80.0,  "dir": 1},
-    "J5": {"servo_id": 5, "min": 0,  "max": 180, "home": 90.0,  "dir": 1},
+    "J1": {"servo_id": 1, "min": 0,   "max": 270, "home": 90.0,  "dir": 1},
+    "J2": {"servo_id": 2, "min": 0,   "max": 270, "home": 120.0, "dir": 1},
+    "J3": {"servo_id": 3, "min": 0,   "max": 270, "home": 150.0, "dir": 1},
+    "J4": {"servo_id": 4, "min": -90, "max": 270, "home": 80.0,  "dir": 1},
+    "J5": {"servo_id": 5, "min": 0,   "max": 270, "home": 90.0,  "dir": 1},
 }
 
 # ─── Gripper (SG90) ─────────────────────────────────────────
@@ -43,6 +43,15 @@ FSR_THRESHOLD = 100  # 아날로그 값, 조립 후 실측
 # ─── IK ─────────────────────────────────────────────────────
 IK_L2 = 245.0  # upper arm (mm)
 IK_L3 = 212.0  # forearm (mm)
+
+# IK joint angle mapping (internal rad <-> servo deg)
+IK_J2_OFFSET = 75.0
+IK_J2_RANGE_DEG = 150.0
+IK_J3_OFFSET = 90.0
+IK_J3_RANGE_DEG = 135.0
+IK_J4_OFFSET = 90.0
+IK_J4_RANGE_DEG = 120.0
+GRIP_OFFSET_RAD = -1.5708  # -pi/2, 수직 파지. 조립 후 실측
 
 # ─── Work Surface ───────────────────────────────────────────
 WORK_SURFACE_Z = -150.0  # mm below base, 조립 후 실측
