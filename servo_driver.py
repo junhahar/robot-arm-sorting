@@ -22,8 +22,8 @@ from config import (
     GRIPPER_OPEN, GRIPPER_CLOSE, HOME,
     CAN_CHANNEL, CAN_BUSTYPE, CAN_BITRATE,
     CAN_ID_SERVO_MOVE, CAN_ID_SERVO_READ,
-    CAN_ID_GRIPPER, CAN_ID_TOF_READ, CAN_ID_ESTOP,
-    CAN_ID_SERVO_POS, CAN_ID_TOF_DIST,
+    CAN_ID_GRIPPER, CAN_ID_TOF_READ, CAN_ID_FSR_READ, CAN_ID_ESTOP,
+    CAN_ID_SERVO_POS, CAN_ID_TOF_DIST, CAN_ID_FSR_VAL,
 )
 
 
@@ -133,6 +133,17 @@ class ServoDriver:
             return 999
         self._send(CAN_ID_TOF_READ)
         data = self._recv(CAN_ID_TOF_DIST)
+        if data and len(data) >= 2:
+            return struct.unpack(">H", data[:2])[0]
+        return None
+
+    # ── FSR (압력 센서) ──
+
+    def read_fsr(self):
+        if self.dry_run:
+            return 0
+        self._send(CAN_ID_FSR_READ)
+        data = self._recv(CAN_ID_FSR_VAL)
         if data and len(data) >= 2:
             return struct.unpack(">H", data[:2])[0]
         return None

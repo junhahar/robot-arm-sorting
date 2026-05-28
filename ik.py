@@ -59,6 +59,14 @@ def forward(j2, j3, j4):
     return r, z
 
 
+def gripper_tilt(j2, j3, j4):
+    """그리퍼 기울기(rad) — 수평=0, 수직 아래=-π/2"""
+    a1 = -(math.pi / 2) + (j2 - 75) * math.pi / 150
+    rel3 = (j3 - 90) * math.pi / 135
+    rel4 = (j4 - 90) * math.pi / 120
+    return a1 + rel3 + rel4
+
+
 def reachable(target_r, target_z):
     """IK 도달 가능 여부"""
     d = math.sqrt(target_r ** 2 + target_z ** 2)
