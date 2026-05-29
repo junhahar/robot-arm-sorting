@@ -13,18 +13,28 @@
 
 | 장치 | 역할 | 전원 |
 |------|------|------|
-| Arduino Uno | ToF·SG90·E-stop·서보 명령 중계 | 노트북 USB |
+| Nucleo-F103RB | STS3215 6축(Bus Servo Adapter UART) + MG90 그리퍼(PWM) 제어 | 5V (XL4015 → WAGO) |
+| Arduino Nano #1 | VL53L0X ToF 센서 처리 | 5V (XL4015 → WAGO) |
+| Arduino Nano #2 | E-stop 처리 | 5V (XL4015 → WAGO) |
 
 ### 통신 백본 (CAN)
 
 ```
-RPi5 ──USB── CANable Pro ══CAN══ MCP2515 ──SPI── Arduino Uno
+                     ┌── CANable Pro ── RPi5
+                     │
+   WAGO (CAN-H) ─────┼── SN65HVD230 ── Nucleo-F103RB
+                     │
+   WAGO (CAN-L) ─────┼── MCP2515 ── Arduino Nano #1 (ToF)
+                     │
+                     └── MCP2515 ── Arduino Nano #2 (E-stop)
 ```
 
+- CAN 버스는 WAGO 2개(CAN-H, CAN-L)로 공통 분기
 - RPi5 ↔ CANable Pro: USB
-- CANable Pro ↔ MCP2515: CAN-H / CAN-L 2선
-- MCP2515 ↔ Arduino: SPI (D10 CS, D11 MOSI, D12 MISO, D13 SCK, D2 INT)
-- 종단저항 120Ω: CANable Pro 및 MCP2515 모듈 내장 점퍼캡으로 활성화
+- Nucleo ↔ SN65HVD230 (Waveshare B형 CAN 트랜시버 보드)
+- 각 Arduino Nano ↔ MCP2515 (SPI)
+- 종단저항 120Ω: 버스 양 끝단 노드에서 활성화
+- 공통 GND도 별도 WAGO로 통합
 
 ### 카메라
 
@@ -34,74 +44,71 @@ RPi5 ──USB── CANable Pro ══CAN══ MCP2515 ──SPI── Arduino
 | 웹캠 1 | 노트북 USB | 영상 촬영 |
 | 웹캠 2 | 노트북 USB | 영상 촬영 |
 
-### 센서 / 액추에이터 (Arduino Uno 연결)
+### 센서 / 액추에이터
 
-| 장치 | 인터페이스 | 핀 |
-|------|-----------|-----|
-| VL53L0X (ToF) | I2C | A4 SDA, A5 SCL |
-| E-stop 버튼 | GPIO 인터럽트 | D3 (INT1) |
-| SG90 그리퍼 서보 | PWM | D9 |
-| Bus Servo Adapter | UART | D0 RX, D1 TX |
+| 장치 | 연결 MCU | 인터페이스 |
+|------|----------|-----------|
+| VL53L0X (ToF) | Arduino Nano #1 | I2C |
+| E-stop 버튼 | Arduino Nano #2 | GPIO 인터럽트 |
+| MG90 그리퍼 서보 | Nucleo-F103RB | PWM |
+| Bus Servo Adapter | Nucleo-F103RB | UART |
 
 ### 서보 제어 라인
 
 ```
-Arduino ──UART── Bus Servo Adapter ──── Servo #1 ──┬── #2 ──┬── #3 ──┬── #4 ──┬── #5
-   D1(TX) → RXD                       (베이스)    │       │       │       │   (그리퍼축)
-   D0(RX) ← TXD                                  (어깨) (팔꿈치) (손목)
-   GND   ↔ GND
+Nucleo-F103RB ──UART── Bus Servo Adapter ── Servo #1 ── #2 ── #3 ── #4 ── #5 ── #6
+                              ▲
+                              │
+                       7.4V (SMPS → 퓨즈)
 ```
 
-- **서보**: Feetech STS3215 × 5축
-- **연결 방식**: Bus Servo Adapter의 서보 포트 #1에 첫 서보 연결 후 데이지체인으로 5축 확장
-- **방향 전환**: Bus Servo Adapter 내부에서 half-duplex 자동 처리 (외부 회로 불필요)
-- **속도**: 하드웨어 UART 사용으로 1Mbps 풀속도 가능
+- 서보: Feetech STS3215 × 6축
+- Bus Servo Adapter의 서보 포트 #1에 첫 서보 연결 후 데이지체인으로 6축 확장
+- Half-duplex는 Bus Servo Adapter 내부에서 자동 처리
+- MG90 그리퍼 서보는 Nucleo PWM 핀에서 직접 제어 (Bus Servo Adapter와 별개 라인)
 
 ### 전원 분배
 
+```
+SMPS Mean Well RSP-200-7.5 (7.4V 출력)
+   │
+   ├─ 퓨즈 ── Bus Servo Adapter ── STS3215 × 6축
+   │
+   └─ 퓨즈 ── XL4015 강하형 DC-DC 컨버터 (FND 전압표시, 가변)
+                  │ 5V 출력
+                  └── WAGO (5V 분배)
+                          ├── Nucleo-F103RB
+                          ├── Arduino Nano #1 (ToF)
+                          └── Arduino Nano #2 (E-stop)
+```
+
 | 전원 | 출력 | 공급 대상 |
 |------|------|-----------|
-| LW-K3010D 벤치 파워서플라이 | 7.4V (또는 9V), CC 8A | Bus Servo Adapter DC 잭 → STS3215 5축 |
+| SMPS Mean Well RSP-200-7.5 | 7.4V | Bus Servo Adapter → STS3215 6축 |
+| XL4015 강하형 DC-DC 5A 가변 컨버터 (FND 표시) | 5V | Nucleo-F103RB, Arduino Nano × 2 |
 | RPi5 27W USB-C 충전기 | 5V/5A | RPi5 + Hailo 8L |
-| 노트북 USB | 5V | Arduino Uno (5V 핀에서 SG90, VL53L0X 분기) |
 
-**공통 GND**: WAGO 분배기로 노트북 GND ↔ 파워서플라이 GND ↔ Arduino GND ↔ Bus Servo Adapter GND를 한 노드로 통합.
-
----
-
-## Arduino 핀 배치 요약
-
-| 핀 | 용도 |
-|----|------|
-| D0 | UART RX (Bus Servo Adapter TXD) |
-| D1 | UART TX (Bus Servo Adapter RXD) |
-| D2 | MCP2515 INT |
-| D3 | E-stop 인터럽트 |
-| D9 | SG90 PWM |
-| D10 | MCP2515 CS |
-| D11 | MCP2515 MOSI |
-| D12 | MCP2515 MISO |
-| D13 | MCP2515 SCK |
-| A4 | I2C SDA (VL53L0X) |
-| A5 | I2C SCL (VL53L0X) |
-| D4~D8, A0~A3 | 예비 (리미트 스위치, 상태 LED 등) |
+**공통 GND**: WAGO 분배기로 SMPS GND ↔ XL4015 GND ↔ Bus Servo Adapter GND ↔ Nucleo GND ↔ Arduino Nano GND ↔ CAN 트랜시버 GND를 하나의 노드로 통합.
 
 ---
 
 ## 시스템 전체 신호 흐름
 
 ```
-[노트북] ──USB── [Arduino Uno] ──SPI── [MCP2515] ═CAN═ [CANable Pro] ──USB── [RPi5 + Hailo 8L]
-              │                                                                    │
-              ├─ I2C ─── [VL53L0X (ToF)]                                           │
-              ├─ GPIO ── [E-stop 버튼]                                             │
-              ├─ PWM ─── [SG90 그리퍼]                                              ──USB── [ArduCam 글로벌 셔터]
-              └─ UART ── [Bus Servo Adapter] ──── [STS3215 #1 → #2 → #3 → #4 → #5]
-                                ▲
-                                │
-                       [LW-K3010D 파워서플라이]
+                       ┌── CANable Pro ── USB ── RPi5 + Hailo 8L ── USB3 ── ArduCam 글로벌 셔터
+                       │
+   CAN 버스 (WAGO) ────┤── SN65HVD230 ── Nucleo-F103RB ──UART── Bus Servo Adapter ── STS3215 × 6
+                       │                       │
+                       │                       └─ PWM ── MG90 그리퍼
+                       │
+                       ├── MCP2515 ── Arduino Nano #1 ── I2C ── VL53L0X (ToF)
+                       │
+                       └── MCP2515 ── Arduino Nano #2 ── GPIO ── E-stop 버튼
 
-[노트북] ──USB── [웹캠 1, 웹캠 2]
+   전원: SMPS RSP-200-7.5 7.4V ─┬─ 퓨즈 ─ Bus Servo Adapter (서보 전원)
+                                 └─ 퓨즈 ─ XL4015 5V 강하 ─ WAGO ─ Nucleo / Nano×2
+
+   [노트북] ── USB ── 웹캠 1, 웹캠 2
 ```
 
 ---
@@ -110,11 +117,14 @@ Arduino ──UART── Bus Servo Adapter ──── Servo #1 ──┬──
 
 | 컴포넌트 | 책임 |
 |----------|------|
-| **RPi5 + Hailo 8L** | 카메라 영상 처리, AI 추론, 위치 추정, 경로 계획, 메인 제어 루프 |
-| **CAN 통신** | RPi5와 Arduino 간 명령/상태 실시간 교환 |
-| **Arduino Uno** | 저수준 I/O 처리 (서보 명령 중계, 센서 읽기, E-stop, 그리퍼) |
-| **Bus Servo Adapter** | UART → STS3215 half-duplex 변환, 전원 분배 |
-| **STS3215 × 5** | 5축 관절 구동 (피드백 포함) |
-| **SG90** | 그리퍼 개폐 |
-| **VL53L0X** | 그리퍼 ↔ 대상물 거리 측정 |
-| **글로벌 셔터 카메라** | 볼트/너트 실시간 판별 |
+| RPi5 + Hailo 8L | 메인 제어, 카메라 영상 처리, AI 추론, 경로 계획 |
+| CAN 버스 (WAGO) | RPi5 ↔ Nucleo ↔ Nano×2 간 명령/상태 실시간 교환 |
+| Nucleo-F103RB | STS3215 6축 + MG90 그리퍼 제어 |
+| Arduino Nano #1 | ToF 거리 측정 |
+| Arduino Nano #2 | E-stop 인터럽트 처리 |
+| Bus Servo Adapter | UART → STS3215 half-duplex 변환, 서보 전원 분배 |
+| STS3215 × 6 | 6축 관절 구동 (피드백 포함) |
+| MG90 | 그리퍼 개폐 |
+| VL53L0X | 그리퍼 ↔ 대상물 거리 측정 |
+| 글로벌 셔터 카메라 | 볼트/너트 실시간 판별 |
+| SMPS RSP-200-7.5 + XL4015 | 7.4V 서보 전원 + 5V 로직 전원 통합 분배 |
