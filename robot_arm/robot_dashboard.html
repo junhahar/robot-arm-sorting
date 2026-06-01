@@ -432,15 +432,24 @@ sampleBolt(-15,175);sampleBolt(20,190);
 sampleNut(5,170);sampleNut(-25,185);
 sampleWasher(15,165);sampleWasher(-10,195);
 
-// ── Update Robot ──
+// ── Update Robot (부드러운 보간) ──
+// disp = 화면에 그려지는 값, 매 프레임 목표(state.angles)로 조금씩 다가감.
+// SMOOTH 작을수록 더 부드럽고 더 지연. 텔레메트리가 관절당 ~0.9s라 0.10~0.15 무난
+// (펌웨어 TELEMETRY_PERIOD_MS를 낮추면 더 좋아진다).
+const disp={...HOME};
+let gripDisp=1;
+const SMOOTH=0.12;
 function updateRobot(){
-  const A=state.angles;
+  const T=state.angles;
+  for(const k in disp) disp[k]+=(T[k]-disp[k])*SMOOTH;
+  gripDisp+=((state.grip?1:0)-gripDisp)*SMOOTH;
+  const A=disp;
   j1g.rotation.y=(A.J1-90)*Math.PI/180;
   j2g.rotation.x=-(A.J2-75)*Math.PI/150;
   j3g.rotation.x=-(A.J3-90)*Math.PI/135;
   j4g.rotation.x=-(A.J4-90)*Math.PI/120;
   j5g.rotation.y=(A.J5-90)*Math.PI/180;
-  const fo=state.grip?12:5;
+  const fo=5+gripDisp*7;
   fL.position.x=-fo;fR.position.x=fo;
 }
 updateRobot();
@@ -489,7 +498,7 @@ let simT=0;
 // ════════════════════════════════════════════
 function connectWS(){
   let ws;
-  try{ws=new WebSocket('ws://localhost:8765')}catch{return}
+  try{ws=new WebSocket('ws://sambo.local:8765')}catch{return}
   ws.onopen=()=>{
     state.wsConnected=true;
     document.getElementById('wsDot').classList.add('on');

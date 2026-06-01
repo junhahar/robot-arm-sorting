@@ -82,7 +82,7 @@ body {
     <button class="btn" id="grip-btn">Gripper: OPEN</button>
     <button class="btn" id="reset-btn">Reset to Home</button>
 </div>
-<div id="info">드래그: 회전 &middot; 스크롤: 줌 &middot; 우클릭: 이동 | ws://localhost:8765</div>
+<div id="info">드래그: 회전 &middot; 스크롤: 줌 &middot; 우클릭: 이동 | ws://sambo.local:8765</div>
 
 <script type="importmap">
 {
@@ -339,21 +339,31 @@ const LIMIT = {
     J5: [-90, 90],
 };
 
-// Current offsets from home (0 = home pose)
+// Current offsets from home (0 = home pose). J = 목표값, Jd = 화면에 그려지는 부드러운 값
 const J = { J1: 0, J2: 0, J3: 0, J4: 0, J5: 0 };
+const Jd = { J1: 0, J2: 0, J3: 0, J4: 0, J5: 0 };
 let gripOpen = true;
+let gripDisp = 1;   // 1=open, 0=closed (그리퍼 손가락도 부드럽게)
+// 보간 계수(0~1): 매 프레임 목표쪽으로 이 비율만큼 다가간다.
+// 작을수록 더 부드럽고 더 지연, 클수록 더 빨리 붙고 덜 부드럽다.
+// 텔레메트리가 관절당 ~0.9s라 0.10~0.15가 무난. 펌웨어 TELEMETRY_PERIOD_MS를 낮추면 더 좋아진다.
+const SMOOTH = 0.12;
 
 function updateRobot() {
+    // 매 프레임 목표(J)로 조금씩 보간 → 끊김 없이 부드럽게
+    for (const k in Jd) Jd[k] += (J[k] - Jd[k]) * SMOOTH;
+    gripDisp += ((gripOpen ? 1 : 0) - gripDisp) * SMOOTH;
+
     // offset → absolute → rotation
     const A = {};
-    for (const k in HOME) A[k] = HOME[k] + J[k];
+    for (const k in HOME) A[k] = HOME[k] + Jd[k];
 
     j1.rotation.y = (A.J1 - 90) * Math.PI / 180;
     j2.rotation.x = -(A.J2 - 75) * Math.PI / 150;
     j3.rotation.x = -(A.J3 - 90) * Math.PI / 135;
     j4.rotation.x = -(A.J4 - 90) * Math.PI / 120;
     j5.rotation.y = (A.J5 - 90) * Math.PI / 180;
-    const fo = gripOpen ? 12 : 5;
+    const fo = 5 + gripDisp * 7;   // 5..12 사이로 부드럽게
     fL.position.x = -fo;
     fR.position.x = fo;
 }
@@ -391,7 +401,7 @@ document.getElementById('reset-btn').addEventListener('click', () => {
 // WebSocket — receives absolute angles, converts to offsets
 let ws = null;
 function connectWS() {
-    try { ws = new WebSocket('ws://localhost:8765'); } catch { return; }
+    try { ws = new WebSocket('ws://sambo.local:8765'); } catch { return; }
     ws.onopen = () => {
         document.getElementById('status').classList.add('on');
         document.getElementById('st-txt').textContent = '연결됨 (MediaPipe)';
@@ -421,6 +431,7 @@ connectWS();
 (function animate() {
     requestAnimationFrame(animate);
     orbit.update();
+    updateRobot();   // 매 프레임 보간 적용 → 부드러운 움직임
     renderer.render(scene, camera);
 })();
 
