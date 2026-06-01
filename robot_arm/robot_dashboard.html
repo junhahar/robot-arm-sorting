@@ -432,45 +432,57 @@ sampleBolt(-15,175);sampleBolt(20,190);
 sampleNut(5,170);sampleNut(-25,185);
 sampleWasher(15,165);sampleWasher(-10,195);
 
-// ── Update Robot (속도 기반 예측 보간 + 그리퍼 보간) ──
-// state.angles = 목표(텔레메트리 원본), disp = 화면에 그려지는 값.
-// 각 관절은 '그 관절 값이 실제로 바뀐 시점' 기준으로 속도를 잰다 → 브리지가 관절당
-// 1개씩 띄엄띄엄 쏴도 속도가 정확하다(6배 튐 없음). 그 속도로 텔레메트리 사이를 외삽해
-// 끊김 없이 채우고, 업데이트가 끊기면 HOLD 후 감쇠하여 마지막 위치에 안전하게 멈춘다.
+// ── Update Robot (버퍼링 보간 = render-behind interpolation) ──
+// 들어온 샘플을 타임스탬프와 함께 모아두고, '지금-DELAY' 시점의 위치를 두 샘플 사이
+// 선형보간으로 '재생'한다. 이미 지나간(=정답인) 경로만 그리므로 추측-보정 끊김이 없다.
+// 대신 DELAY만큼 늦게 보인다. DELAY는 텔레메트리 간격(gapEMA)에 맞춰 자동 — 데이터가
+// 빠를수록 지연이 줄어든다. (펌웨어 TELEMETRY_PERIOD_MS를 낮추면 DELAY도 같이 줄어든다.)
 const disp={...HOME};
 let gripDisp=1;
 const JN=['J1','J2','J3','J4','J5'];
-const vel={J1:0,J2:0,J3:0,J4:0,J5:0};
-const lastVal={...HOME};
-const lastT={J1:0,J2:0,J3:0,J4:0,J5:0};
-const VEL_MAX=150;  // deg/s 속도 추정 상한(폭주 방지)
-const HOLD=0.2;     // s 예측 유지 시간(텔레메트리 간격 정도), 이후 감쇠→정지
-const BLEND=0.4;    // 프레임당 수렴 비율(예측이 추적을 맡으므로 가벼운 평활용)
+const buf={J1:[],J2:[],J3:[],J4:[],J5:[]};   // 관절별 [{t,v}] (값이 바뀐 샘플만)
+const lastSeen={...HOME};
+const BUF_MAX=64;
+let gapEMA=200;                  // ms, 관측된 샘플 간격(자동 추정)
+const DELAY_MIN=80, DELAY_MAX=1000;
 
 function onNewTarget(){
   const now=performance.now();
   for(const j of JN){
-    if(state.angles[j]!==lastVal[j]){
-      const dt=(now-lastT[j])/1000;
-      if(dt>0.005&&dt<1.0){
-        const v=(state.angles[j]-lastVal[j])/dt;
-        vel[j]=Math.max(-VEL_MAX,Math.min(VEL_MAX,v));
+    if(state.angles[j]!==lastSeen[j]){
+      const b=buf[j];
+      if(b.length){
+        const gap=now-b[b.length-1].t;
+        if(gap>10&&gap<2000) gapEMA=gapEMA*0.8+gap*0.2;
       }
-      lastVal[j]=state.angles[j];
-      lastT[j]=now;
+      b.push({t:now,v:state.angles[j]});
+      if(b.length>BUF_MAX)b.shift();
+      lastSeen[j]=state.angles[j];
     }
   }
 }
 
+function sampleAt(j,rt){
+  const b=buf[j];
+  if(!b.length)return state.angles[j];
+  if(rt>=b[b.length-1].t)return b[b.length-1].v;   // 언더런 → 최신값 유지
+  if(rt<=b[0].t)return b[0].v;
+  for(let i=b.length-1;i>0;i--){
+    if(b[i-1].t<=rt&&rt<=b[i].t){
+      const a=b[i-1],c=b[i];
+      return a.v+(c.v-a.v)*((rt-a.t)/((c.t-a.t)||1));
+    }
+  }
+  return b[b.length-1].v;
+}
+
 function updateRobot(){
-  const now=performance.now();
+  const DELAY=Math.max(DELAY_MIN,Math.min(DELAY_MAX,gapEMA*1.4));
+  const rt=performance.now()-DELAY;
   const A={};
   for(const j of JN){
-    const el=(now-lastT[j])/1000;
-    const predicted=state.angles[j]+vel[j]*el;
-    const w=Math.max(0,1-Math.max(0,el-HOLD)*4);
-    const blended=state.angles[j]+(predicted-state.angles[j])*w;
-    disp[j]+=(blended-disp[j])*BLEND;
+    const tgt=sampleAt(j,rt);
+    disp[j]+=(tgt-disp[j])*0.5;   // 버퍼 경계 미세계단 제거용 가벼운 평활
     A[j]=disp[j];
   }
   gripDisp+=((state.grip?1:0)-gripDisp)*0.15;
