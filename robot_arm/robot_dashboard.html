@@ -432,18 +432,48 @@ sampleBolt(-15,175);sampleBolt(20,190);
 sampleNut(5,170);sampleNut(-25,185);
 sampleWasher(15,165);sampleWasher(-10,195);
 
-// ── Update Robot (부드러운 보간) ──
-// disp = 화면에 그려지는 값, 매 프레임 목표(state.angles)로 조금씩 다가감.
-// SMOOTH 작을수록 띄엄띄엄 오는 텔레메트리 사이를 연속으로 미끄러져 끊김이 사라진다(약간 지연).
-// 0.08 = 현재 펌웨어(관절당 ~0.9s)에서도 순간이동 없이 부드럽게. 펌웨어를 빠르게 하면 더 올려도 됨.
+// ── Update Robot (속도 기반 예측 보간 + 그리퍼 보간) ──
+// state.angles = 목표(텔레메트리 원본), disp = 화면에 그려지는 값.
+// 각 관절은 '그 관절 값이 실제로 바뀐 시점' 기준으로 속도를 잰다 → 브리지가 관절당
+// 1개씩 띄엄띄엄 쏴도 속도가 정확하다(6배 튐 없음). 그 속도로 텔레메트리 사이를 외삽해
+// 끊김 없이 채우고, 업데이트가 끊기면 HOLD 후 감쇠하여 마지막 위치에 안전하게 멈춘다.
 const disp={...HOME};
 let gripDisp=1;
-const SMOOTH=0.08;
+const JN=['J1','J2','J3','J4','J5'];
+const vel={J1:0,J2:0,J3:0,J4:0,J5:0};
+const lastVal={...HOME};
+const lastT={J1:0,J2:0,J3:0,J4:0,J5:0};
+const VEL_MAX=150;  // deg/s 속도 추정 상한(폭주 방지)
+const HOLD=0.2;     // s 예측 유지 시간(텔레메트리 간격 정도), 이후 감쇠→정지
+const BLEND=0.4;    // 프레임당 수렴 비율(예측이 추적을 맡으므로 가벼운 평활용)
+
+function onNewTarget(){
+  const now=performance.now();
+  for(const j of JN){
+    if(state.angles[j]!==lastVal[j]){
+      const dt=(now-lastT[j])/1000;
+      if(dt>0.005&&dt<1.0){
+        const v=(state.angles[j]-lastVal[j])/dt;
+        vel[j]=Math.max(-VEL_MAX,Math.min(VEL_MAX,v));
+      }
+      lastVal[j]=state.angles[j];
+      lastT[j]=now;
+    }
+  }
+}
+
 function updateRobot(){
-  const T=state.angles;
-  for(const k in disp) disp[k]+=(T[k]-disp[k])*SMOOTH;
-  gripDisp+=((state.grip?1:0)-gripDisp)*SMOOTH;
-  const A=disp;
+  const now=performance.now();
+  const A={};
+  for(const j of JN){
+    const el=(now-lastT[j])/1000;
+    const predicted=state.angles[j]+vel[j]*el;
+    const w=Math.max(0,1-Math.max(0,el-HOLD)*4);
+    const blended=state.angles[j]+(predicted-state.angles[j])*w;
+    disp[j]+=(blended-disp[j])*BLEND;
+    A[j]=disp[j];
+  }
+  gripDisp+=((state.grip?1:0)-gripDisp)*0.15;
   j1g.rotation.y=(A.J1-90)*Math.PI/180;
   j2g.rotation.x=-(A.J2-75)*Math.PI/150;
   j3g.rotation.x=-(A.J3-90)*Math.PI/135;
@@ -488,6 +518,7 @@ let simT=0;
     state.angles.J3=HOME.J3+Math.sin(simT*0.25)*6;
     state.angles.J4=HOME.J4+Math.sin(simT*0.35)*5;
     state.angles.J5=HOME.J5+Math.sin(simT*0.4)*10;
+    onNewTarget();
   }
   updateRobot();
   renderer.render(scene,camera);
@@ -513,6 +544,7 @@ function connectWS(){
       if(d.J3!=null)state.angles.J3=d.J3;
       if(d.J4!=null)state.angles.J4=d.J4;
       if(d.J5!=null)state.angles.J5=d.J5;
+      onNewTarget();
       if(d.gripper!=null)state.grip=d.gripper==='open';
       if(d.mpu_raw&&d.mpu_raw.length===9){
         for(let i=0;i<9;i++)state.mpu[i]=d.mpu_raw[i];
