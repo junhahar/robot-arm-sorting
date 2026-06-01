@@ -434,11 +434,11 @@ sampleWasher(15,165);sampleWasher(-10,195);
 
 // ── Update Robot (부드러운 보간) ──
 // disp = 화면에 그려지는 값, 매 프레임 목표(state.angles)로 조금씩 다가감.
-// SMOOTH 작을수록 더 부드럽고 더 지연. 텔레메트리가 관절당 ~0.9s라 0.10~0.15 무난
-// (펌웨어 TELEMETRY_PERIOD_MS를 낮추면 더 좋아진다).
+// SMOOTH 작을수록 띄엄띄엄 오는 텔레메트리 사이를 연속으로 미끄러져 끊김이 사라진다(약간 지연).
+// 0.08 = 현재 펌웨어(관절당 ~0.9s)에서도 순간이동 없이 부드럽게. 펌웨어를 빠르게 하면 더 올려도 됨.
 const disp={...HOME};
 let gripDisp=1;
-const SMOOTH=0.12;
+const SMOOTH=0.08;
 function updateRobot(){
   const T=state.angles;
   for(const k in disp) disp[k]+=(T[k]-disp[k])*SMOOTH;
