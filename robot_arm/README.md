@@ -1,120 +1,112 @@
 # Robot Arm Sorting
 
+삼보모터스 실무 프로젝트. 5축 로봇암으로 볼트/너트를 인식해 자동 분류한다.
+
+## 프로젝트 개요
+
+전체 동작은 **마스터 궤적 재생 + Checkpoint AI 보정 하이브리드** 방식이다. 사람이 시연한 큰 동선을 그대로 재생하되, 정밀이 필요한 핵심 구간에서만 카메라·ToF 센서로 실시간 보정한다.
+
+1. **하드웨어 구축** — 5관절축 로봇암 프레임 설계·제작, 부품 통합 및 배선 정리
+2. **MPU 웨이포인트 티칭** — 사람 팔에 부착한 MPU로 동작을 녹화해 마스터 궤적(CSV) 생성
+3. **볼트/너트 딥러닝 분류** — 그리퍼에 부착된 글로벌 셔터 카메라 + YOLO(Hailo 8L)로 실시간 판별
+4. **실시간 위치 보정** — 작업 도중 물체 위치가 바뀌면 Checkpoint(SCAN/PRE_GRASP/GRASP/PLACE)에서 카메라·ToF·ArUco로 경로 보정
+
+```
+[티칭]  Nano#2(USB) + TCA9548A + MPU6050×3 → 노트북 → 웨이포인트 저장 → master_trajectory.csv
+[자동]  RPi5가 CSV 재생 → checkpoint에서 YOLO/ToF/ArUco 보정 → 반복
+```
+
+---
+
 ## 하드웨어 구성
 
-### 메인 컴퓨팅
+### 컴퓨팅 / 제어
 
-| 장치 | 역할 | 전원 |
+| 장치 | 역할 | 비고 |
 |------|------|------|
-| 라즈베리파이5 + Hailo 8L | AI 추론(팔 인식, 볼트/너트 분류), 위치 추정, 메인 제어 | 공식 27W USB-C PD 충전기 |
-| 노트북 | 학습 데이터 수집, 모델 학습, 영상 촬영, 디버깅 | 자체 |
+| 라즈베리파이5 + Hailo 8L | AI 추론(분류), 메인 제어, 궤적 재생 | CAN 마스터 |
+| 노트북 | 티칭 데이터 수집, 모델 학습, 디버깅 | CAN 비참여 |
+| STM32F103RB (Nucleo-F103RB) | 서보 6개 구동, 그리퍼 PWM | CAN 노드 |
+| Arduino Nano #1 | VL53L0X(ToF) 읽어 CAN 송신 | CAN 노드 (MCP2515) |
+| Arduino Nano #2 | MPU6050×3 읽어 노트북으로 시리얼 전송 | USB 티칭 전용, CAN 비참여 |
 
-### MCU
+> E-stop은 프로젝트 방향 변경으로 제거되었다.
 
-| 장치 | 역할 | 전원 |
+### 구동부
+
+| 장치 | 수량 | 비고 |
 |------|------|------|
-| Arduino Uno | ToF·SG90·E-stop·서보 명령 중계 | 노트북 USB |
+| Feetech STS3215 | 6 | 5관절 구동 (어깨에 2개 병렬로 토크 보강) |
+| MG90 메탈 기어 그리퍼 | 1 | 그리퍼 개폐 (SG90에서 교체) |
+| Bus Servo Adapter | 1 | UART → STS3215 half-duplex 변환, 데이지체인 |
 
-### 통신 백본 (CAN)
+### 센서 / 카메라
 
-```
-RPi5 ──USB── CANable Pro ══CAN══ MCP2515 ──SPI── Arduino Uno
-```
+| 장치 | 인터페이스 | 연결 |
+|------|-----------|------|
+| ArduCam USB 글로벌 셔터 | USB3 | RPi5, 그리퍼 eye-in-hand (볼트/너트 인식) |
+| VL53L0X (ToF) | I2C | Nano #1 경유 → CAN |
+| MPU6050 ×3 + TCA9548A | I2C | Nano #2 경유 → USB (티칭 전용) |
+| 웹캠 ×2 | USB | 노트북, 영상 촬영·학습 |
 
-- RPi5 ↔ CANable Pro: USB
-- CANable Pro ↔ MCP2515: CAN-H / CAN-L 2선
-- MCP2515 ↔ Arduino: SPI (D10 CS, D11 MOSI, D12 MISO, D13 SCK, D2 INT)
-- 종단저항 120Ω: CANable Pro 및 MCP2515 모듈 내장 점퍼캡으로 활성화
-
-### 카메라
-
-| 카메라 | 연결 | 용도 |
-|--------|------|------|
-| ArduCam USB 글로벌 셔터 | RPi5 USB3 | 그리퍼 부착, 실시간 볼트/너트 인식 |
-| 웹캠 1 | 노트북 USB | 영상 촬영 |
-| 웹캠 2 | 노트북 USB | 영상 촬영 |
-
-### 센서 / 액추에이터 (Arduino Uno 연결)
-
-| 장치 | 인터페이스 | 핀 |
-|------|-----------|-----|
-| VL53L0X (ToF) | I2C | A4 SDA, A5 SCL |
-| E-stop 버튼 | GPIO 인터럽트 | D3 (INT1) |
-| SG90 그리퍼 서보 | PWM | D9 |
-| Bus Servo Adapter | UART | D0 RX, D1 TX |
-
-### 서보 제어 라인
-
-```
-Arduino ──UART── Bus Servo Adapter ──── Servo #1 ──┬── #2 ──┬── #3 ──┬── #4 ──┬── #5
-   D1(TX) → RXD                       (베이스)    │       │       │       │   (그리퍼축)
-   D0(RX) ← TXD                                  (어깨) (팔꿈치) (손목)
-   GND   ↔ GND
-```
-
-- **서보**: Feetech STS3215 × 5축
-- **연결 방식**: Bus Servo Adapter의 서보 포트 #1에 첫 서보 연결 후 데이지체인으로 5축 확장
-- **방향 전환**: Bus Servo Adapter 내부에서 half-duplex 자동 처리 (외부 회로 불필요)
-- **속도**: 하드웨어 UART 사용으로 1Mbps 풀속도 가능
-
-### 전원 분배
+### 전원
 
 | 전원 | 출력 | 공급 대상 |
 |------|------|-----------|
-| LW-K3010D 벤치 파워서플라이 | 7.4V (또는 9V), CC 8A | Bus Servo Adapter DC 잭 → STS3215 5축 |
-| RPi5 27W USB-C 충전기 | 5V/5A | RPi5 + Hailo 8L |
-| 노트북 USB | 5V | Arduino Uno (5V 핀에서 SG90, VL53L0X 분기) |
+| Mean Well RSP-200-7.5 | 7.5V 정격 → 7.4V로 트림 | Bus Servo Adapter → STS3215 ×6 |
+| XL4015 가변 벅 | 5V | STM32 E5V + Nano ×2 |
+| RPi5 27W USB-C PD | 5V | RPi5 + Hailo 8L |
 
-**공통 GND**: WAGO 분배기로 노트북 GND ↔ 파워서플라이 GND ↔ Arduino GND ↔ Bus Servo Adapter GND를 한 노드로 통합.
-
----
-
-## Arduino 핀 배치 요약
-
-| 핀 | 용도 |
-|----|------|
-| D0 | UART RX (Bus Servo Adapter TXD) |
-| D1 | UART TX (Bus Servo Adapter RXD) |
-| D2 | MCP2515 INT |
-| D3 | E-stop 인터럽트 |
-| D9 | SG90 PWM |
-| D10 | MCP2515 CS |
-| D11 | MCP2515 MOSI |
-| D12 | MCP2515 MISO |
-| D13 | MCP2515 SCK |
-| A4 | I2C SDA (VL53L0X) |
-| A5 | I2C SCL (VL53L0X) |
-| D4~D8, A0~A3 | 예비 (리미트 스위치, 상태 LED 등) |
+> 공통 GND 필수(서보 어댑터·컨버터·MCU 전부). 서보 전원(7.4V)을 MCU 로직 VCC에 직결 금지.
 
 ---
 
-## 시스템 전체 신호 흐름
+## CAN 통신 규약
+
+> 앞으로 모든 CAN 통신은 아래 규약을 지켜서 구현한다. 노드 추가·펌웨어 수정 시 이 표를 기준으로 한다.
+
+### 버스 설정
+
+| 항목 | 값 |
+|------|-----|
+| 비트레이트 | **125 kbps** (전 노드 통일) |
+| 샘플포인트 | **0.625** (RPi 쪽에서 명시적으로 강제) |
+| ID 형식 | 표준 11-bit |
+| 토폴로지 | 데이지체인, 양 끝단에만 120Ω 종단 (정상 측정값 60Ω) |
 
 ```
-[노트북] ──USB── [Arduino Uno] ──SPI── [MCP2515] ═CAN═ [CANable Pro] ──USB── [RPi5 + Hailo 8L]
-              │                                                                    │
-              ├─ I2C ─── [VL53L0X (ToF)]                                           │
-              ├─ GPIO ── [E-stop 버튼]                                             │
-              ├─ PWM ─── [SG90 그리퍼]                                              ──USB── [ArduCam 글로벌 셔터]
-              └─ UART ── [Bus Servo Adapter] ──── [STS3215 #1 → #2 → #3 → #4 → #5]
-                                ▲
-                                │
-                       [LW-K3010D 파워서플라이]
-
-[노트북] ──USB── [웹캠 1, 웹캠 2]
+RPi5 ──USB── CANable Pro ═══CAN(H/L) 데이지체인═══ STM32 ─── Nano#1
+            (종단 120Ω)                                    (종단 120Ω)
 ```
 
----
+전체 CAN 노드는 **RPi5 + STM32 + Nano#1**, 총 3개다. (Nano#2는 USB 티칭 전용으로 버스에 참여하지 않는다.)
 
-## 역할 분담
+### 노드별 비트레이트 설정값
 
-| 컴포넌트 | 책임 |
-|----------|------|
-| **RPi5 + Hailo 8L** | 카메라 영상 처리, AI 추론, 위치 추정, 경로 계획, 메인 제어 루프 |
-| **CAN 통신** | RPi5와 Arduino 간 명령/상태 실시간 교환 |
-| **Arduino Uno** | 저수준 I/O 처리 (서보 명령 중계, 센서 읽기, E-stop, 그리퍼) |
-| **Bus Servo Adapter** | UART → STS3215 half-duplex 변환, 전원 분배 |
-| **STS3215 × 5** | 5축 관절 구동 (피드백 포함) |
-| **SG90** | 그리퍼 개폐 |
-| **VL53L0X** | 그리퍼 ↔ 대상물 거리 측정 |
-| **글로벌 셔터 카메라** | 볼트/너트 실시간 판별 |
+| 노드 | 설정 |
+|------|------|
+| RPi5 (CANable / socketcan) | `bitrate 125000`, `sample-point 0.625` 명시 |
+| STM32F103RB | `Prescaler=16`, `BS1=13TQ`, `BS2=2TQ` (PCLK1 32MHz 기준 → 125k) |
+| Nano #1 (MCP2515 8MHz) | `CAN_125KBPS`, `MCP_8MHZ` |
+
+> STM32의 CAN 핀은 **PB8(RX) / PB9(TX)** 로 AFIO 리맵해서 사용한다. (PA11/PA12는 보드의 USB 회로와 충돌)
+
+### CAN ID 할당표
+
+| ID | 방향 | 용도 | 데이터 |
+|------|------|------|--------|
+| `0x100` | RPi5 → STM32 | 모터 명령 | `[cmd, motor_id, pos_lo, pos_hi, 0, 0, torque, 0]` |
+| `0x200` | STM32 → RPi5 | 모터 ACK | `[cmd, motor_id, status]` (status: `0x00`=OK, `0xFF`=오류) |
+| `0x300` | Nano#1 → RPi5 | ToF 거리 데이터 | `[distance_lo, distance_hi]` |
+| `0x37F` | RPi5 → Nano#1 | PING 요청 | (선택) |
+| `0x3FF` | Nano#1 → RPi5 | PING ACK | |
+
+**cmd 코드**
+
+| cmd | 의미 |
+|-----|------|
+| `0x01` | 위치 지령 (0~4095 step) |
+| `0x02` | 토크 ON/OFF |
+| `0x7F` | ping |
+
+> `0x100` / `0x200` 은 RPi↔STM32 전용이므로 절대 재사용 금지. 신규 CAN 노드를 추가할 경우 `0x400` 대역부터 할당한다.
