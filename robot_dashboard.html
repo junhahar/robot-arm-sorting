@@ -255,14 +255,15 @@ body{background:var(--bg);color:var(--txt);font-family:'JetBrains Mono',monospac
 <script type="module">
 import*as THREE from'three';
 import{OrbitControls}from'three/addons/controls/OrbitControls.js';
+import{STLLoader}from'three/addons/loaders/STLLoader.js';
 
 // ════════════════════════════════════════════
 //  STATE
 // ════════════════════════════════════════════
-const HOME={J1:90,J2:120,J3:150,J4:80,J5:90};
+const HOME={J1:66,J2:59,J3:111,J4:100,J5:166};
 const LIMITS={J1:[0,270],J2:[0,270],J3:[0,270],J4:[-90,270],J5:[0,270]};
 const state={
-  angles:{...HOME},grip:true,mpu:new Float64Array(9),
+  angles:{...HOME},target:{...HOME},grip:true,mpu:new Float64Array(9),
   wsConnected:false,isTeaching:true,wpList:[],trail:[],dataSource:'—',motors:[
     {id:'J1',temp:38,load:45},{id:'J2',temp:41,load:72},{id:'J3',temp:43,load:89},
     {id:'J4',temp:36,load:30},{id:'J5',temp:39,load:55}
@@ -275,8 +276,8 @@ window._state=state; // expose for inline scripts
 // ════════════════════════════════════════════
 const container=document.getElementById('view3d');
 const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x0a0e17);
-scene.fog=new THREE.FogExp2(0x0a0e17,0.0005);
+scene.background=new THREE.Color(0x141a28);
+scene.fog=new THREE.FogExp2(0x141a28,0.0003);
 
 const camera=new THREE.PerspectiveCamera(40,1,1,3000);
 camera.position.set(300,350,500);
@@ -296,8 +297,8 @@ orbit.minDistance=150;orbit.maxDistance=1200;
 orbit.update();
 
 // Lighting
-scene.add(new THREE.AmbientLight(0x303050,0.5));
-const sun=new THREE.DirectionalLight(0xffffff,1.2);
+scene.add(new THREE.AmbientLight(0x506080,0.8));
+const sun=new THREE.DirectionalLight(0xffffff,1.8);
 sun.position.set(250,500,300);sun.castShadow=true;
 sun.shadow.mapSize.set(2048,2048);
 const sd=400;
@@ -305,14 +306,16 @@ sun.shadow.camera.left=-sd;sun.shadow.camera.right=sd;
 sun.shadow.camera.top=sd+200;sun.shadow.camera.bottom=-sd;
 sun.shadow.camera.near=10;sun.shadow.camera.far=1200;
 scene.add(sun);
-const fill=new THREE.DirectionalLight(0x6688cc,0.35);
-fill.position.set(-200,200,-150);scene.add(fill);
-scene.add(new THREE.HemisphereLight(0x334488,0x111122,0.35));
+const fill=new THREE.DirectionalLight(0x88aadd,0.6);
+fill.position.set(-200,300,-150);scene.add(fill);
+const back=new THREE.DirectionalLight(0x4466aa,0.4);
+back.position.set(0,200,-400);scene.add(back);
+scene.add(new THREE.HemisphereLight(0x6688bb,0x222233,0.5));
 
 // Ground
-const ground=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),new THREE.MeshStandardMaterial({color:0x0e1225,roughness:0.9}));
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),new THREE.MeshStandardMaterial({color:0x1a2035,roughness:0.85}));
 ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
-scene.add(new THREE.GridHelper(1200,30,0x1a2540,0x141c30));
+scene.add(new THREE.GridHelper(1200,30,0x2a3555,0x1e2840));
 
 // Materials
 const M={
@@ -339,59 +342,125 @@ function jointHub(r,thick){
   return g;
 }
 
-// ── Robot Model ──
-const L1=45,L2=245,L3=212;
+// ── Robot Model (STL + JSON alignment) ──
+const stlLoader=new STLLoader();
+const STL_MAT=new THREE.MeshStandardMaterial({color:0xf0f0f0,roughness:0.28,metalness:0.15});
+const STL_PATH='models/';
+
+const PART_DEFS={
+  base:{joint:null,files:['base/base.stl','base/basecover1.stl']},
+  shorder:{joint:'J1',files:['shorder/shorder.stl']},
+  arm1:{joint:'J2',files:['arm1/arm1.stl']},
+  arm2:{joint:'J3',files:['arm2/arm2.stl']},
+  wrist:{joint:'J4',files:['wrist/new_write_house.stl','wrist/write_plate.stl']},
+  wrist_roll:{joint:'J5',files:['wrist_roll/Draaiplaat gripper.stl']},
+  gripper:{joint:'J5',files:['gripper/Assembly 2.0 upload v1.stl']},
+  camera_braket:{joint:'J5',files:['camera_braket/last_camerabraket.stl']},
+};
+
+const ALIGN_DEFAULTS={
+  jointCenters:{J1:{x:0,y:77,z:0},J2:{x:0,y:118,z:-5},J3:{x:-23,y:291,z:165},J4:{x:-17,y:138,z:311},J5:{x:-26,y:99,z:394}},
+  jointAxes:{J1:'y',J2:'x',J3:'x',J4:'x',J5:'z'},
+  partOffsets:{base:{px:0,py:0,pz:0,rx:0,ry:0,rz:0},shorder:{px:0,py:0,pz:0,rx:0,ry:0,rz:0},arm1:{px:0,py:0,pz:-3,rx:0,ry:0,rz:0},arm2:{px:0,py:1,pz:0,rx:0,ry:0,rz:0},wrist:{px:-26,py:119,pz:348,rx:29,ry:0,rz:0},wrist_roll:{px:-26,py:118,pz:351,rx:30,ry:0,rz:0},gripper:{px:-25,py:75,pz:424,rx:-169,ry:-90,rz:-19},camera_braket:{px:58,py:90,pz:398,rx:120,ry:0,rz:0}},
+};
+
 const robot=new THREE.Group();scene.add(robot);
-const bp=cy(65,10,M.edge,32);bp.position.y=5;bp.receiveShadow=true;robot.add(bp);
-const bRing=new THREE.Mesh(new THREE.TorusGeometry(50,3,12,32),M.hub);
-bRing.rotation.x=Math.PI/2;bRing.position.y=12;robot.add(bRing);
-const bTop=cy(42,16,M.body,32);bTop.position.y=22;robot.add(bTop);
+const flatGroup=new THREE.Group();robot.add(flatGroup);
+const partContainers={};
+let j1g,j2g,j3g,j4g,j5g;
+let alignData=null;
+let stlLoaded=false;
+let j5LinkDir=null;
 
-// J1: base rotation
-const j1g=new THREE.Group();j1g.position.y=L1;robot.add(j1g);
-const yH=65,yGap=44,yT=6,yD=34;
-const yL=bx(yT,yH,yD,M.body);yL.position.set(-yGap/2,yH/2,0);j1g.add(yL);
-const yR_=bx(yT,yH,yD,M.body);yR_.position.set(yGap/2,yH/2,0);j1g.add(yR_);
-const yB=bx(yGap+yT,10,yD,M.body);yB.position.set(0,5,0);j1g.add(yB);
-const s2=bx(20,40,28,M.servo);s2.position.set(0,38,0);j1g.add(s2);
-const h2L=jointHub(18,yT+2);h2L.position.set(-yGap/2,yH,0);j1g.add(h2L);
-const h2R=jointHub(18,yT+2);h2R.position.set(yGap/2,yH,0);j1g.add(h2R);
+// Load alignment JSON then STLs
+async function initRobotModel(){
+  try{
+    const resp=await fetch(STL_PATH+'stl_align.json');
+    alignData=await resp.json();
+  }catch{
+    alignData=ALIGN_DEFAULTS;
+  }
 
-// J2: shoulder pitch
-const j2g=new THREE.Group();j2g.position.y=yH;j1g.add(j2g);
-j2g.add(armPlate(50,L2,15));
-const s3=bx(16,36,24,M.servo);s3.position.set(0,L2-22,0);j2g.add(s3);
-const h3=jointHub(16,10);h3.position.y=L2;j2g.add(h3);
+  // Load STLs into flat group with part offsets
+  let total=0,loaded=0;
+  for(const files of Object.values(PART_DEFS))total+=files.files.length;
 
-// J3: elbow pitch
-const j3g=new THREE.Group();j3g.position.y=L2;j2g.add(j3g);
-j3g.add(armPlate(42,L3,13));
-const s4=bx(14,32,22,M.servo);s4.position.set(0,L3-20,0);j3g.add(s4);
-const h4=jointHub(13,8);h4.position.y=L3;j3g.add(h4);
+  for(const[name,def] of Object.entries(PART_DEFS)){
+    const container=new THREE.Group();
+    container.name=name;
+    const o=alignData.partOffsets?.[name]||{px:0,py:0,pz:0,rx:0,ry:0,rz:0};
+    container.position.set(o.px,o.py,o.pz);
+    container.rotation.set(o.rx*Math.PI/180,o.ry*Math.PI/180,o.rz*Math.PI/180);
+    flatGroup.add(container);
+    partContainers[name]=container;
 
-// J4: wrist pitch
-const j4g=new THREE.Group();j4g.position.y=L3;j3g.add(j4g);
-const wH=40;
-const w4L=bx(5,wH,22,M.body);w4L.position.set(-14,wH/2,0);j4g.add(w4L);
-const w4R=bx(5,wH,22,M.body);w4R.position.set(14,wH/2,0);j4g.add(w4R);
-const w4B=bx(33,7,22,M.body);w4B.position.set(0,3.5,0);j4g.add(w4B);
-const s5=bx(14,28,18,M.servo);s5.position.set(0,20,0);j4g.add(s5);
+    for(const f of def.files){
+      stlLoader.load(STL_PATH+f,geo=>{
+        geo.computeVertexNormals();
+        const mesh=new THREE.Mesh(geo,STL_MAT.clone());
+        mesh.castShadow=true;mesh.receiveShadow=true;
+        container.add(mesh);
+        loaded++;
+        if(loaded===total){stlLoaded=true;buildRobotHierarchy();}
+      },undefined,()=>{loaded++;if(loaded===total&&!stlLoaded)buildRobotHierarchy();});
+    }
+  }
+}
 
-// J5: wrist roll
-const j5g=new THREE.Group();j5g.position.y=wH;j4g.add(j5g);
-j5g.add(cy(11,12,M.hub,16));
-const gMount=bx(28,6,16,M.edge);gMount.position.y=-10;j5g.add(gMount);
-const gServo=bx(14,24,14,M.servo);gServo.position.y=-24;j5g.add(gServo);
+function buildRobotHierarchy(){
+  const jc=alignData.jointCenters;
+  const JOINTS=['J1','J2','J3','J4','J5'];
+  const hierarchyRoot=new THREE.Group();
+  robot.add(hierarchyRoot);
 
-// Gripper
-const fL=new THREE.Group();
-const fLp=bx(4,42,12,M.grip);fLp.position.y=-21;fL.add(fLp);
-const fLt=bx(6,8,14,M.edge);fLt.position.y=-44;fL.add(fLt);
-fL.position.set(-12,-14,0);j5g.add(fL);
-const fR=new THREE.Group();
-const fRp=bx(4,42,12,M.grip);fRp.position.y=-21;fR.add(fRp);
-const fRt=bx(6,8,14,M.edge);fRt.position.y=-44;fR.add(fRt);
-fR.position.set(12,-14,0);j5g.add(fR);
+  const centers=JOINTS.map(j=>new THREE.Vector3(jc[j].x,jc[j].y,jc[j].z));
+  const linkDirs=[];
+  for(let i=0;i<centers.length-1;i++)linkDirs.push(new THREE.Vector3().subVectors(centers[i+1],centers[i]).normalize());
+  linkDirs.push(linkDirs[linkDirs.length-1].clone());
+
+  const jGroups={};
+  let prevGroup=hierarchyRoot,prevCenter={x:0,y:0,z:0};
+  for(let i=0;i<JOINTS.length;i++){
+    const j=JOINTS[i];
+    const g=new THREE.Group();
+    const c=jc[j];
+    g.position.set(c.x-prevCenter.x,c.y-prevCenter.y,c.z-prevCenter.z);
+    g.userData.linkDir=linkDirs[i];
+    prevGroup.add(g);
+    jGroups[j]=g;
+    prevGroup=g;
+    prevCenter=c;
+  }
+  j1g=jGroups.J1;j2g=jGroups.J2;j3g=jGroups.J3;j4g=jGroups.J4;j5g=jGroups.J5;
+  j5LinkDir=linkDirs[4];
+
+  // Clone meshes into hierarchy
+  flatGroup.updateMatrixWorld(true);
+  hierarchyRoot.updateMatrixWorld(true);
+  for(const[name,def] of Object.entries(PART_DEFS)){
+    const container=partContainers[name];
+    const targetGroup=def.joint?jGroups[def.joint]:hierarchyRoot;
+    container.updateMatrixWorld(true);
+    targetGroup.updateMatrixWorld(true);
+    const invMat=new THREE.Matrix4().copy(targetGroup.matrixWorld).invert();
+    container.children.forEach(child=>{
+      if(child.isMesh){
+        child.updateMatrixWorld(true);
+        const clone=child.clone();
+        clone.matrix.copy(child.matrixWorld);
+        clone.matrix.premultiply(invMat);
+        clone.matrix.decompose(clone.position,clone.quaternion,clone.scale);
+        targetGroup.add(clone);
+      }
+    });
+  }
+  flatGroup.visible=false;
+  console.log('[STL] 로봇 모델 구성 완료');
+}
+
+initRobotModel();
+
+const L1=48.5,L2=245,L3=213,wH=87;
 
 // ── Workspace ──
 function makeLabel(text,color){
@@ -432,81 +501,60 @@ sampleBolt(-15,175);sampleBolt(20,190);
 sampleNut(5,170);sampleNut(-25,185);
 sampleWasher(15,165);sampleWasher(-10,195);
 
-// ── Update Robot (버퍼링 보간 = render-behind interpolation) ──
-// 들어온 샘플을 타임스탬프와 함께 모아두고, '지금-DELAY' 시점의 위치를 두 샘플 사이
-// 선형보간으로 '재생'한다. 이미 지나간(=정답인) 경로만 그리므로 추측-보정 끊김이 없다.
-// 대신 DELAY만큼 늦게 보인다. DELAY는 텔레메트리 간격(gapEMA)에 맞춰 자동 — 데이터가
-// 빠를수록 지연이 줄어든다. (펌웨어 TELEMETRY_PERIOD_MS를 낮추면 DELAY도 같이 줄어든다.)
-const disp={...HOME};
-let gripDisp=1;
-const JN=['J1','J2','J3','J4','J5'];
-const buf={J1:[],J2:[],J3:[],J4:[],J5:[]};   // 관절별 [{t,v}] (값이 바뀐 샘플만)
-const lastSeen={...HOME};
-const BUF_MAX=64;
-let gapEMA=200;                  // ms, 관측된 샘플 간격(자동 추정)
-const DELAY_MIN=80, DELAY_MAX=1000;
-
-function onNewTarget(){
-  const now=performance.now();
-  for(const j of JN){
-    if(state.angles[j]!==lastSeen[j]){
-      const b=buf[j];
-      if(b.length){
-        const gap=now-b[b.length-1].t;
-        if(gap>10&&gap<2000) gapEMA=gapEMA*0.8+gap*0.2;
-      }
-      b.push({t:now,v:state.angles[j]});
-      if(b.length>BUF_MAX)b.shift();
-      lastSeen[j]=state.angles[j];
-    }
-  }
-}
-
-function sampleAt(j,rt){
-  const b=buf[j];
-  if(!b.length)return state.angles[j];
-  if(rt>=b[b.length-1].t)return b[b.length-1].v;   // 언더런 → 최신값 유지
-  if(rt<=b[0].t)return b[0].v;
-  for(let i=b.length-1;i>0;i--){
-    if(b[i-1].t<=rt&&rt<=b[i].t){
-      const a=b[i-1],c=b[i];
-      return a.v+(c.v-a.v)*((rt-a.t)/((c.t-a.t)||1));
-    }
-  }
-  return b[b.length-1].v;
-}
-
+// ── Update Robot ──
+const JOINT_SCALE={J1:[1,90,180],J2:[-1,75,150],J3:[-1,90,135],J4:[-1,90,120],J5:[1,90,180]};
 function updateRobot(){
-  const DELAY=Math.max(DELAY_MIN,Math.min(DELAY_MAX,gapEMA*1.4));
-  const rt=performance.now()-DELAY;
-  const A={};
-  for(const j of JN){
-    const tgt=sampleAt(j,rt);
-    disp[j]+=(tgt-disp[j])*0.5;   // 버퍼 경계 미세계단 제거용 가벼운 평활
-    A[j]=disp[j];
+  if(!j1g)return;
+  const A=state.angles;
+  const axes=alignData?.jointAxes||{J1:'y',J2:'x',J3:'x',J4:'y',J5:'z'};
+  for(const j of['J1','J2','J3','J4']){
+    const g={J1:j1g,J2:j2g,J3:j3g,J4:j4g}[j];
+    if(!g)continue;
+    const[dir,home,div]=JOINT_SCALE[j];
+    const rad=dir*(A[j]-home)*Math.PI/div;
+    g.rotation.set(0,0,0);
+    g.rotation[axes[j]]=rad;
   }
-  gripDisp+=((state.grip?1:0)-gripDisp)*0.15;
-  j1g.rotation.y=(A.J1-90)*Math.PI/180;
-  j2g.rotation.x=-(A.J2-75)*Math.PI/150;
-  j3g.rotation.x=-(A.J3-90)*Math.PI/135;
-  j4g.rotation.x=-(A.J4-90)*Math.PI/120;
-  j5g.rotation.y=(A.J5-90)*Math.PI/180;
-  const fo=5+gripDisp*7;
-  fL.position.x=-fo;fR.position.x=fo;
+  // J5: 링크 방향 축으로 회전
+  if(j5g){
+    const[dir5,home5,div5]=JOINT_SCALE.J5;
+    const rad5=dir5*(A.J5-home5)*Math.PI/div5;
+    if(j5LinkDir){
+      j5g.quaternion.setFromAxisAngle(j5LinkDir,rad5);
+    }else{
+      j5g.rotation.set(0,0,0);
+      j5g.rotation[axes.J5]=rad5;
+    }
+  }
 }
-updateRobot();
 
-// ── FK for top-down ──
-function fkXY(a){
-  const a1=-(Math.PI/2)+(a.J2-75)*Math.PI/150;
-  const a2=a1+(a.J3-90)*Math.PI/135;
-  const a3=a2+(a.J4-90)*Math.PI/120;
-  let r=0;
-  r+=24*Math.cos(a1);r+=148*Math.cos(a2);r+=128*Math.cos(a3);
-  const j1r=(a.J1-90)*Math.PI/180;
-  return{x:r*Math.sin(j1r),y:r*Math.cos(j1r),r};
+// ── FK for top-down (3D 월드 좌표 직접 읽기) ──
+function fkXY(){
+  if(!j5g)return{x:0,y:0,r:0};
+  j5g.updateWorldMatrix(true,false);
+  const wp=new THREE.Vector3();
+  j5g.getWorldPosition(wp);
+  return{x:wp.x,y:wp.z,r:Math.sqrt(wp.x*wp.x+wp.z*wp.z)};
+}
+function getJointWorldPos(jg){
+  if(!jg)return{x:0,y:0};
+  jg.updateWorldMatrix(true,false);
+  const wp=new THREE.Vector3();
+  jg.getWorldPosition(wp);
+  return{x:wp.x,z:wp.z};
 }
 window._fkXY=fkXY;
+window._getJointPos=function(){
+  if(!j1g)return null;
+  return{
+    base:{x:0,z:0},
+    J1:getJointWorldPos(j1g),
+    J2:getJointWorldPos(j2g),
+    J3:getJointWorldPos(j3g),
+    J4:getJointWorldPos(j4g),
+    J5:getJointWorldPos(j5g),
+  };
+};
 
 // ── Resize ──
 function resize3d(){
@@ -517,21 +565,44 @@ function resize3d(){
 new ResizeObserver(resize3d).observe(container);
 setTimeout(resize3d,50);
 
-// ── Render loop ──
-let simT=0;
+// ── Velocity-based predictive interpolation ──
+const vel={J1:0,J2:0,J3:0,J4:0,J5:0};
+const prev={J1:90,J2:120,J3:150,J4:80,J5:90};
+let lastWsTime=0;
+const BLEND=0.35;
+
+function onNewTarget(){
+  const now=performance.now();
+  const dt=(now-lastWsTime)/1000;
+  if(dt>0&&dt<0.5){
+    for(const j of['J1','J2','J3','J4','J5']){
+      vel[j]=(state.target[j]-prev[j])/dt;
+      prev[j]=state.target[j];
+    }
+  }
+  lastWsTime=now;
+}
+
+function predictAngles(frameDt){
+  const elapsed=(performance.now()-lastWsTime)/1000;
+  for(const j of['J1','J2','J3','J4','J5']){
+    const predicted=state.target[j]+vel[j]*elapsed;
+    const blended=state.target[j]+(predicted-state.target[j])*Math.max(0,1-elapsed*4);
+    state.angles[j]+=(blended-state.angles[j])*BLEND;
+  }
+}
+
+let simT=0,lastFrame=performance.now();
 (function animate(){
   requestAnimationFrame(animate);
+  const now=performance.now();
+  const frameDt=(now-lastFrame)/1000;
+  lastFrame=now;
   orbit.update();
-  // Sim mode: gentle idle motion when no WS
   if(!state.wsConnected){
-    simT+=0.008;
-    state.angles.J1=HOME.J1+Math.sin(simT*0.3)*15;
-    state.angles.J2=HOME.J2+Math.sin(simT*0.2)*8;
-    state.angles.J3=HOME.J3+Math.sin(simT*0.25)*6;
-    state.angles.J4=HOME.J4+Math.sin(simT*0.35)*5;
-    state.angles.J5=HOME.J5+Math.sin(simT*0.4)*10;
-    onNewTarget();
+    for(const j of['J1','J2','J3','J4','J5'])state.target[j]=HOME[j];
   }
+  predictAngles(frameDt);
   updateRobot();
   renderer.render(scene,camera);
 })();
@@ -541,7 +612,7 @@ let simT=0;
 // ════════════════════════════════════════════
 function connectWS(){
   let ws;
-  try{ws=new WebSocket('ws://sambo.local:8765')}catch{return}
+  try{ws=new WebSocket('ws://localhost:8765')}catch{return}
   ws.onopen=()=>{
     state.wsConnected=true;
     document.getElementById('wsDot').classList.add('on');
@@ -551,11 +622,11 @@ function connectWS(){
   ws.onmessage=e=>{
     try{
       const d=JSON.parse(e.data);
-      if(d.J1!=null)state.angles.J1=d.J1;
-      if(d.J2!=null)state.angles.J2=d.J2;
-      if(d.J3!=null)state.angles.J3=d.J3;
-      if(d.J4!=null)state.angles.J4=d.J4;
-      if(d.J5!=null)state.angles.J5=d.J5;
+      if(d.J1!=null)state.target.J1=d.J1;
+      if(d.J2!=null)state.target.J2=d.J2;
+      if(d.J3!=null)state.target.J3=d.J3;
+      if(d.J4!=null)state.target.J4=d.J4;
+      if(d.J5!=null)state.target.J5=d.J5;
       onNewTarget();
       if(d.gripper!=null)state.grip=d.gripper==='open';
       if(d.mpu_raw&&d.mpu_raw.length===9){
@@ -589,11 +660,11 @@ window._updateRobot=updateRobot;
 
 <!-- ════ UI LOGIC (non-module) ════ -->
 <script>
-const HOME={J1:90,J2:120,J3:150,J4:80,J5:90};
+const HOME={J1:66,J2:59,J3:111,J4:100,J5:166};
 const LIMITS={J1:[0,270],J2:[0,270],J3:[0,270],J4:[-90,270],J5:[0,270]};
 
 // 3D 모델과 공유하는 상수 (수정 시 3D도 자동 반영)
-const LINK={L2:245,L3:212,WH:40};
+const LINK={L2:245,L3:213,WH:87};
 const BIN_DIST=280;
 const SCAN_DIST=180;
 
@@ -712,10 +783,10 @@ function drawTopDown(){
     return{x:cx+z3d*sc, y:cy_-x3d*sc};
   }
 
-  ctx.fillStyle='#0a0e17';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#141a28';ctx.fillRect(0,0,W,H);
 
   // Grid
-  ctx.strokeStyle='rgba(26,40,68,.4)';ctx.lineWidth=0.5;
+  ctx.strokeStyle='rgba(40,60,100,.5)';ctx.lineWidth=0.5;
   for(let r=50;r<=400;r+=50){
     ctx.beginPath();ctx.arc(cx,cy_,r*sc,0,Math.PI*2);ctx.stroke();
   }
@@ -759,32 +830,27 @@ function drawTopDown(){
   const s=window._state;
   if(s){
     const A=s.angles;
-    const ang=(A.J1-90)*Math.PI/180;
-    const a1=-(Math.PI/2)+(A.J2-75)*Math.PI/150;
-    const a2=a1+(A.J3-90)*Math.PI/135;
-    const a3=a2+(A.J4-90)*Math.PI/120;
-    const links=[LINK.L2,LINK.L3,LINK.WH];const angs_=[a1,a2,a3];
-    let r=0;
-    const pts=[{x:cx,y:cy_}];
-    for(let i=0;i<3;i++){
-      r+=links[i]*Math.cos(angs_[i]);
-      const x3d=-r*Math.sin(ang), z3d=-r*Math.cos(ang);
-      pts.push({x:cx+z3d*sc, y:cy_-x3d*sc});
-    }
+    const jp=window._getJointPos?window._getJointPos():null;
+    if(!jp){return;}
+    const jnames=['base','J1','J2','J3','J4','J5'];
+    const pts=jnames.map(n=>{
+      const p=jp[n]||{x:0,z:0};
+      return{x:cx+p.z*sc, y:cy_-p.x*sc};
+    });
     // Link segments
-    const cols=['rgba(0,200,255,.8)','rgba(0,255,200,.8)','rgba(200,255,0,.8)'];
-    const widths=[5,4,3];
+    const cols=['rgba(100,100,100,.4)','rgba(0,200,255,.8)','rgba(0,255,200,.8)','rgba(200,255,0,.8)','rgba(255,200,0,.8)'];
+    const widths=[3,5,4,3,2];
     ctx.lineCap='round';
-    for(let i=0;i<3;i++){
+    for(let i=0;i<5;i++){
       ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[i+1].x,pts[i+1].y);
       ctx.strokeStyle=cols[i];ctx.lineWidth=widths[i];ctx.stroke();
     }
-    for(let i=1;i<3;i++){
+    for(let i=1;i<5;i++){
       ctx.beginPath();ctx.arc(pts[i].x,pts[i].y,3.5*sc,0,Math.PI*2);
       ctx.fillStyle='rgba(255,255,255,.6)';ctx.fill();
     }
     // End effector
-    const ep=pts[3];
+    const ep=pts[5];
     ctx.beginPath();ctx.arc(ep.x,ep.y,6*sc,0,Math.PI*2);
     ctx.fillStyle='#00d4ff';ctx.shadowBlur=12;ctx.shadowColor='#00d4ff';ctx.fill();ctx.shadowBlur=0;
     if(!s.grip){ctx.beginPath();ctx.arc(ep.x,ep.y,3*sc,0,Math.PI*2);ctx.fillStyle='#ef4444';ctx.fill();}

@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>STL Alignment Tool v2</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;overflow:hidden;font-family:monospace}
+canvas{display:block}
+#panel{position:fixed;right:0;top:0;width:300px;height:100vh;background:rgba(10,10,20,.95);overflow-y:auto;padding:8px;color:#ccc;font-size:11px}
+.section{margin-bottom:8px;border:1px solid #333;border-radius:4px;padding:6px}
+.sec-title{font-weight:bold;margin-bottom:4px;cursor:pointer;user-select:none}
+.sec-body{display:none}
+.section.open .sec-body{display:block}
+.row{display:flex;align-items:center;gap:4px;margin:2px 0}
+.row label{width:28px;color:#888;font-size:9px}
+.row input[type=range]{flex:1;height:12px}
+.row .val{width:55px;text-align:right;color:#4ade80;font-size:10px;background:#111;border:1px solid #333;border-radius:2px;padding:1px 4px;font-family:monospace}
+.btn{padding:5px 10px;border:none;border-radius:3px;cursor:pointer;font-family:monospace;font-weight:bold;font-size:11px;margin:2px}
+.btn-blue{background:#3b82f6;color:#fff}
+.btn-green{background:#4ade80;color:#000}
+.btn-red{background:#ef4444;color:#fff}
+.btn-yellow{background:#f59e0b;color:#000}
+.btn-purple{background:#818cf8;color:#fff}
+.mode-label{font-size:13px;color:#00d4ff;text-align:center;padding:4px;border-bottom:1px solid #333;margin-bottom:6px}
+#info{position:fixed;left:10px;bottom:10px;color:#555;font-size:10px}
+select{background:#111;color:#4ade80;border:1px solid #333;border-radius:2px;font-family:monospace;font-size:10px;padding:1px}
+</style>
+</head>
+<body>
+<div id="panel">
+  <div class="mode-label" id="modeLabel">FLAT MODE — 조립 확인</div>
+  <div style="text-align:center;margin-bottom:6px">
+    <button class="btn btn-green" onclick="toggleMode()">Toggle Mode</button>
+    <button class="btn btn-red" onclick="saveJSON()">Save JSON</button>
+    <button class="btn btn-blue" onclick="document.getElementById('loadFile').click()">Load JSON</button>
+    <input type="file" id="loadFile" accept=".json" style="display:none" onchange="loadJSON(this)">
+  </div>
+  <div id="panelContent"></div>
+</div>
+<div id="info">Flat Mode: 조립 확인. Joint Mode: 관절 테스트. Save JSON으로 저장.</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import*as THREE from'three';
+import{OrbitControls}from'three/addons/controls/OrbitControls.js';
+import{STLLoader}from'three/addons/loaders/STLLoader.js';
+
+// ═══ Scene ═══
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x1a1a2e);
+const camera=new THREE.PerspectiveCamera(40,1,1,5000);
+camera.position.set(400,400,600);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+document.body.appendChild(renderer.domElement);
+const orbit=new OrbitControls(camera,renderer.domElement);
+orbit.target.set(0,200,0);orbit.enableDamping=true;orbit.update();
+
+scene.add(new THREE.AmbientLight(0x404060,0.6));
+const sun=new THREE.DirectionalLight(0xffffff,1.2);
+sun.position.set(300,500,400);scene.add(sun);
+scene.add(new THREE.DirectionalLight(0x6688cc,0.4)).position.set(-200,200,-150);
+scene.add(new THREE.HemisphereLight(0x334488,0x111122,0.3));
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),new THREE.MeshStandardMaterial({color:0x12162a,roughness:0.9}));
+ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+scene.add(new THREE.GridHelper(1200,30,0x1a2540,0x141c30));
+
+// ═══ STL definitions ═══
+const PART_DEFS={
+  base:{joint:null,color:0xe0e0e0,files:['base/base.stl','base/basecover1.stl']},
+  shorder:{joint:'J1',color:0xd0d0d0,files:['shorder/shorder.stl']},
+  arm1:{joint:'J2',color:0xc8c8c8,files:['arm1/arm1.stl']},
+  arm2:{joint:'J3',color:0xc0c0c0,files:['arm2/arm2.stl']},
+  wrist:{joint:'J4',color:0xb8b8b8,files:['wrist/new_write_house.stl','wrist/write_plate.stl']},
+  wrist_roll:{joint:'J5',color:0xb0b0b0,files:['wrist_roll/Draaiplaat gripper.stl']},
+  gripper:{joint:'J5',color:0xa8a8a8,files:['gripper/Assembly 2.0 upload v1.stl']},
+  camera_braket:{joint:'J5',color:0x909090,files:['camera_braket/last_camerabraket.stl']},
+};
+
+// ═══ State ═══
+const flatGroup=new THREE.Group();scene.add(flatGroup);
+const meshes={};
+const stlLoader=new STLLoader();
+let isFlat=true;
+const partOffsets={};
+for(const name of Object.keys(PART_DEFS))partOffsets[name]={px:0,py:0,pz:0,rx:0,ry:0,rz:0};
+
+function applyPartOffset(name){
+  const c=meshes[name];
+  const o=partOffsets[name];
+  c.position.set(o.px,o.py,o.pz);
+  c.rotation.set(o.rx*Math.PI/180,o.ry*Math.PI/180,o.rz*Math.PI/180);
+}
+
+const HOME={J1:90,J2:120,J3:150,J4:80,J5:90};
+const jointAngles={...HOME};
+const jointAxes={J1:'y',J2:'x',J3:'x',J4:'x',J5:'z'};
+const jointScale={J1:[1,90,180],J2:[-1,75,150],J3:[-1,90,135],J4:[-1,90,120],J5:[1,90,180]};
+
+// Joint centers in FLAT (Inventor) coordinate space — user adjusts these
+const jointCenters={
+  J1:{x:0,y:48.5,z:0},
+  J2:{x:0,y:113.5,z:0},
+  J3:{x:0,y:358.5,z:0},
+  J4:{x:0,y:571.5,z:0},
+  J5:{x:0,y:658.5,z:0},
+};
+
+// Joint hierarchy (built dynamically)
+let jGroups={};
+let hierarchyRoot=null;
+
+// ═══ Load STLs into flat group ═══
+for(const[name,def] of Object.entries(PART_DEFS)){
+  const container=new THREE.Group();
+  container.name=name;
+  flatGroup.add(container);
+  meshes[name]=container;
+
+  const mat=new THREE.MeshStandardMaterial({color:def.color,roughness:0.35,metalness:0.1});
+  for(const f of def.files){
+    stlLoader.load('models/'+f,geo=>{
+      geo.computeVertexNormals();
+      const mesh=new THREE.Mesh(geo,mat.clone());
+      mesh.castShadow=true;
+      container.add(mesh);
+    },undefined,()=>console.warn('Failed: '+f));
+  }
+}
+
+// ═══ Joint markers (spheres at joint centers) ═══
+const markers={};
+const markerMat=new THREE.MeshBasicMaterial({color:0xff4444,transparent:true,opacity:0.7});
+for(const j of['J1','J2','J3','J4','J5']){
+  const sphere=new THREE.Mesh(new THREE.SphereGeometry(8,16,16),markerMat.clone());
+  const c=jointCenters[j];
+  sphere.position.set(c.x,c.y,c.z);
+  flatGroup.add(sphere);
+  markers[j]=sphere;
+  // Axis helper at joint center
+  const ax=new THREE.AxesHelper(40);
+  sphere.add(ax);
+}
+
+function updateMarkers(){
+  for(const j of['J1','J2','J3','J4','J5']){
+    const c=jointCenters[j];
+    markers[j].position.set(c.x,c.y,c.z);
+  }
+}
+
+// ═══ Build hierarchy from flat ═══
+function buildHierarchy(){
+  if(hierarchyRoot){scene.remove(hierarchyRoot);}
+  hierarchyRoot=new THREE.Group();
+  scene.add(hierarchyRoot);
+
+  const JOINTS=['J1','J2','J3','J4','J5'];
+  const parentMap={J1:hierarchyRoot};
+  jGroups={};
+
+  // Create chain: root → J1 → J2 → J3 → J4 → J5
+  // Compute link directions for axis alignment
+  const centers=JOINTS.map(j=>new THREE.Vector3(jointCenters[j].x,jointCenters[j].y,jointCenters[j].z));
+  const linkDirs=[];
+  for(let i=0;i<centers.length-1;i++){
+    linkDirs.push(new THREE.Vector3().subVectors(centers[i+1],centers[i]).normalize());
+  }
+  linkDirs.push(linkDirs[linkDirs.length-1].clone()); // J5 same as J4→J5
+
+  let prevGroup=hierarchyRoot;
+  let prevCenter={x:0,y:0,z:0};
+  for(let i=0;i<JOINTS.length;i++){
+    const j=JOINTS[i];
+    const g=new THREE.Group();
+    const c=jointCenters[j];
+    g.position.set(c.x-prevCenter.x, c.y-prevCenter.y, c.z-prevCenter.z);
+
+    // Store link direction for custom axis rotation
+    g.userData.linkDir=linkDirs[i];
+    g.userData.jointName=j;
+
+    prevGroup.add(g);
+    jGroups[j]=g;
+    prevGroup=g;
+    prevCenter=c;
+  }
+
+  // Move parts into their joint groups
+  hierarchyRoot.updateMatrixWorld(true);
+  for(const[name,def] of Object.entries(PART_DEFS)){
+    const container=meshes[name];
+    const joint=def.joint;
+    const targetGroup=joint?jGroups[joint]:hierarchyRoot;
+
+    container.updateMatrixWorld(true);
+    targetGroup.updateMatrixWorld(true);
+    const invMat=new THREE.Matrix4().copy(targetGroup.matrixWorld).invert();
+
+    container.children.forEach(child=>{
+      if(child.isMesh){
+        child.updateMatrixWorld(true);
+        const clone=child.clone();
+        clone.matrix.copy(child.matrixWorld);
+        clone.matrix.premultiply(invMat);
+        clone.matrix.decompose(clone.position,clone.quaternion,clone.scale);
+        targetGroup.add(clone);
+      }
+    });
+  }
+}
+
+// ═══ Update joints ═══
+function updateJoints(){
+  if(!isFlat&&jGroups.J1){
+    for(const j of['J1','J2','J3','J4']){
+      const g=jGroups[j];
+      const[dir,home,div]=jointScale[j];
+      const rad=dir*(jointAngles[j]-home)*Math.PI/div;
+      g.rotation.set(0,0,0);
+      g.rotation[jointAxes[j]]=rad;
+    }
+    // J5: 링크 방향(J4→J5) 축으로 회전
+    const g5=jGroups.J5;
+    const[dir5,home5,div5]=jointScale.J5;
+    const rad5=dir5*(jointAngles.J5-home5)*Math.PI/div5;
+    if(g5.userData.linkDir){
+      const ax=g5.userData.linkDir.clone().normalize();
+      g5.quaternion.setFromAxisAngle(ax,rad5);
+    }else{
+      g5.rotation.set(0,0,0);
+      g5.rotation[jointAxes.J5]=rad5;
+    }
+  }
+}
+
+// ═══ Toggle mode ═══
+window.toggleMode=function(){
+  isFlat=!isFlat;
+  document.getElementById('modeLabel').textContent=isFlat?'FLAT MODE — 조립 확인':'JOINT MODE — 관절 테스트';
+
+  if(isFlat){
+    flatGroup.visible=true;
+    if(hierarchyRoot)hierarchyRoot.visible=false;
+    for(const j in markers)markers[j].visible=true;
+  }else{
+    flatGroup.visible=false;
+    buildHierarchy();
+    hierarchyRoot.visible=true;
+    updateJoints();
+  }
+  buildUI();
+};
+
+// ═══ UI ═══
+function buildUI(){
+  const pc=document.getElementById('panelContent');
+  pc.innerHTML='';
+
+  if(isFlat){
+    // Part position/rotation offsets
+    const psec=mkSection('PARTS (파트 위치/회전)','#00d4ff',true);
+    for(const name of Object.keys(PART_DEFS)){
+      const title=document.createElement('div');
+      title.style.cssText='color:#00d4ff;font-weight:bold;margin-top:4px;font-size:10px';
+      title.textContent='— '+name;
+      psec._body.appendChild(title);
+      if(!partOffsets[name])partOffsets[name]={px:0,py:0,pz:0,rx:0,ry:0,rz:0};
+      for(const[k,range] of [['px',[-1500,1500]],['py',[-1500,1500]],['pz',[-1500,1500]],['rx',[-180,180]],['ry',[-180,180]],['rz',[-180,180]]]){
+        mkSlider(psec._body,k.toUpperCase(),partOffsets[name][k],range[0],range[1],1,v=>{
+          partOffsets[name][k]=v;
+          applyPartOffset(name);
+          save();
+        });
+      }
+    }
+    pc.appendChild(psec);
+
+    // Joint center sliders
+    const sec=mkSection('JOINT CENTERS (빨간 구 위치)','#ef4444',false);
+    for(const j of['J1','J2','J3','J4','J5']){
+      for(const ax of['x','y','z']){
+        mkSlider(sec._body,j+ax.toUpperCase(),jointCenters[j][ax],-800,800,1,v=>{
+          jointCenters[j][ax]=v;
+          updateMarkers();
+          save();
+        });
+      }
+    }
+    pc.appendChild(sec);
+  }else{
+    // Joint angle sliders
+    const sec=mkSection('JOINTS (회전 테스트)','#4ade80',true);
+    for(const j of['J1','J2','J3','J4','J5']){
+      const row=document.createElement('div');row.className='row';
+      const lbl=document.createElement('label');lbl.textContent=j;lbl.style.color='#4ade80';
+      const slider=document.createElement('input');
+      slider.type='range';slider.min=0;slider.max=270;slider.value=jointAngles[j];slider.step=1;
+      const numInput=document.createElement('input');
+      numInput.type='number';numInput.className='val';numInput.value=jointAngles[j];numInput.step=1;
+      const axSel=document.createElement('select');
+      ['x','y','z'].forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a.toUpperCase();if(jointAxes[j]===a)o.selected=true;axSel.appendChild(o);});
+      axSel.onchange=()=>{jointAxes[j]=axSel.value;updateJoints();save();};
+      slider.oninput=()=>{jointAngles[j]=parseFloat(slider.value);numInput.value=slider.value;updateJoints();save();};
+      numInput.oninput=()=>{const v=parseFloat(numInput.value)||0;jointAngles[j]=v;slider.value=v;updateJoints();save();};
+      row.append(lbl,slider,numInput,axSel);
+      sec._body.appendChild(row);
+    }
+    pc.appendChild(sec);
+
+    // Rebuild button
+    const rebuildBtn=document.createElement('button');
+    rebuildBtn.className='btn btn-yellow';
+    rebuildBtn.textContent='Rebuild Hierarchy';
+    rebuildBtn.style.width='100%';
+    rebuildBtn.onclick=()=>{buildHierarchy();updateJoints();};
+    pc.appendChild(rebuildBtn);
+  }
+}
+
+function mkSection(title,color,open){
+  const sec=document.createElement('div');
+  sec.className='section'+(open?' open':'');
+  const t=document.createElement('div');
+  t.className='sec-title';t.style.color=color;t.textContent=title;
+  t.onclick=()=>sec.classList.toggle('open');
+  sec.appendChild(t);
+  const body=document.createElement('div');
+  body.className='sec-body';
+  sec.appendChild(body);
+  sec._body=body;
+  return sec;
+}
+
+function mkSlider(parent,label,val,min,max,step,onChange){
+  const row=document.createElement('div');row.className='row';
+  const lbl=document.createElement('label');lbl.textContent=label;
+  const slider=document.createElement('input');
+  slider.type='range';slider.min=min;slider.max=max;slider.value=val;slider.step=step;
+  const numInput=document.createElement('input');
+  numInput.type='number';numInput.className='val';numInput.value=Math.round(val);numInput.step=step;
+  slider.oninput=()=>{numInput.value=slider.value;onChange(parseFloat(slider.value));};
+  numInput.oninput=()=>{slider.value=numInput.value;onChange(parseFloat(numInput.value)||0);};
+  row.append(lbl,slider,numInput);
+  parent.appendChild(row);
+}
+
+// ═══ Save/Load JSON ═══
+function save(){
+  localStorage.setItem('stl_align_v2',JSON.stringify({jointCenters,jointAngles,jointAxes,partOffsets}));
+}
+
+window.saveJSON=function(){
+  const data={jointCenters,jointAngles,jointAxes,partOffsets};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='stl_align.json';a.click();
+};
+
+window.loadJSON=function(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(data.jointCenters)Object.assign(jointCenters,data.jointCenters);
+      if(data.jointAngles)Object.assign(jointAngles,data.jointAngles);
+      if(data.jointAxes)Object.assign(jointAxes,data.jointAxes);
+      if(data.partOffsets){
+        for(const[name,o] of Object.entries(data.partOffsets)){
+          if(partOffsets[name]){Object.assign(partOffsets[name],o);applyPartOffset(name);}
+        }
+      }
+      updateMarkers();save();buildUI();
+      alert('JSON 로드 완료!');
+    }catch(err){alert('오류: '+err.message);}
+  };
+  reader.readAsText(file);input.value='';
+};
+
+// Load from localStorage
+try{
+  const saved=localStorage.getItem('stl_align_v2');
+  if(saved){
+    const data=JSON.parse(saved);
+    if(data.jointCenters)Object.assign(jointCenters,data.jointCenters);
+    if(data.jointAngles)Object.assign(jointAngles,data.jointAngles);
+    if(data.jointAxes)Object.assign(jointAxes,data.jointAxes);
+    if(data.partOffsets){
+      for(const[name,o] of Object.entries(data.partOffsets)){
+        if(partOffsets[name]){Object.assign(partOffsets[name],o);applyPartOffset(name);}
+      }
+    }
+    updateMarkers();
+  }
+}catch{}
+
+// ═══ Resize & Render ═══
+function resize(){
+  const w=innerWidth-300,h=innerHeight;
+  camera.aspect=w/h;camera.updateProjectionMatrix();
+  renderer.setSize(w,h);
+}
+addEventListener('resize',resize);resize();
+
+(function animate(){
+  requestAnimationFrame(animate);
+  orbit.update();
+  renderer.render(scene,camera);
+})();
+
+buildUI();
+</script>
+</body>
+</html>

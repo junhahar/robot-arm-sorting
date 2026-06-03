@@ -82,7 +82,7 @@ body {
     <button class="btn" id="grip-btn">Gripper: OPEN</button>
     <button class="btn" id="reset-btn">Reset to Home</button>
 </div>
-<div id="info">드래그: 회전 &middot; 스크롤: 줌 &middot; 우클릭: 이동 | ws://sambo.local:8765</div>
+<div id="info">드래그: 회전 &middot; 스크롤: 줌 &middot; 우클릭: 이동 | ws://localhost:8765</div>
 
 <script type="importmap">
 {
@@ -339,68 +339,21 @@ const LIMIT = {
     J5: [-90, 90],
 };
 
-// J = 목표 오프셋(텔레메트리/슬라이더), Jd = 화면에 그려지는 값
+// Current offsets from home (0 = home pose)
 const J = { J1: 0, J2: 0, J3: 0, J4: 0, J5: 0 };
-const Jd = { J1: 0, J2: 0, J3: 0, J4: 0, J5: 0 };
 let gripOpen = true;
-let gripDisp = 1;   // 1=open, 0=closed (그리퍼 손가락도 부드럽게)
-// 버퍼링 보간(render-behind): 들어온 샘플을 모아 '지금-DELAY' 시점을 선형보간으로 재생.
-// 이미 지나간(=정답인) 경로만 그리므로 추측-보정 끊김이 없다. DELAY는 관측 간격에 맞춰 자동
-// (데이터가 빠를수록 지연↓). 슬라이더처럼 자주 들어오면 자동으로 거의 실시간이 된다.
-const JN = ['J1','J2','J3','J4','J5'];
-const buf = { J1:[], J2:[], J3:[], J4:[], J5:[] };  // 관절별 [{t,v}] (오프셋, 바뀐 것만)
-const lastSeen = { J1:0, J2:0, J3:0, J4:0, J5:0 };
-const BUF_MAX = 64;
-let gapEMA = 200;                  // ms, 관측된 샘플 간격(자동 추정)
-const DELAY_MIN = 80, DELAY_MAX = 1000;
-
-function onNewTarget() {
-    const now = performance.now();
-    for (const j of JN) {
-        if (J[j] !== lastSeen[j]) {
-            const b = buf[j];
-            if (b.length) {
-                const gap = now - b[b.length-1].t;
-                if (gap > 10 && gap < 2000) gapEMA = gapEMA*0.8 + gap*0.2;
-            }
-            b.push({ t: now, v: J[j] });
-            if (b.length > BUF_MAX) b.shift();
-            lastSeen[j] = J[j];
-        }
-    }
-}
-
-function sampleAt(j, rt) {
-    const b = buf[j];
-    if (!b.length) return J[j];
-    if (rt >= b[b.length-1].t) return b[b.length-1].v;   // 언더런 → 최신값 유지
-    if (rt <= b[0].t) return b[0].v;
-    for (let i = b.length-1; i > 0; i--) {
-        if (b[i-1].t <= rt && rt <= b[i].t) {
-            const a = b[i-1], c = b[i];
-            return a.v + (c.v - a.v) * ((rt - a.t) / ((c.t - a.t) || 1));
-        }
-    }
-    return b[b.length-1].v;
-}
 
 function updateRobot() {
-    const DELAY = Math.max(DELAY_MIN, Math.min(DELAY_MAX, gapEMA*1.4));
-    const rt = performance.now() - DELAY;
+    // offset → absolute → rotation
     const A = {};
-    for (const j of JN) {
-        const tgt = sampleAt(j, rt);
-        Jd[j] += (tgt - Jd[j]) * 0.5;   // 버퍼 경계 미세계단 제거용 가벼운 평활
-        A[j] = HOME[j] + Jd[j];
-    }
-    gripDisp += ((gripOpen ? 1 : 0) - gripDisp) * 0.15;
+    for (const k in HOME) A[k] = HOME[k] + J[k];
 
     j1.rotation.y = (A.J1 - 90) * Math.PI / 180;
     j2.rotation.x = -(A.J2 - 75) * Math.PI / 150;
     j3.rotation.x = -(A.J3 - 90) * Math.PI / 135;
     j4.rotation.x = -(A.J4 - 90) * Math.PI / 120;
     j5.rotation.y = (A.J5 - 90) * Math.PI / 180;
-    const fo = 5 + gripDisp * 7;   // 5..12 사이로 부드럽게
+    const fo = gripOpen ? 12 : 5;
     fL.position.x = -fo;
     fR.position.x = fo;
 }
@@ -423,7 +376,7 @@ function sync() {
 ['j1','j2','j3','j4','j5'].forEach(id => {
     document.getElementById('s-' + id).addEventListener('input', e => {
         J[id.toUpperCase()] = parseFloat(e.target.value);
-        onNewTarget(); sync(); updateRobot();
+        sync(); updateRobot();
     });
 });
 
@@ -432,14 +385,13 @@ document.getElementById('grip-btn').addEventListener('click', () => {
 });
 document.getElementById('reset-btn').addEventListener('click', () => {
     J.J1=0; J.J2=0; J.J3=0; J.J4=0; J.J5=0;
-    for (const j of JN) { buf[j].length=0; lastSeen[j]=0; Jd[j]=0; }
-    gripOpen = true; onNewTarget(); sync(); updateRobot();
+    gripOpen = true; sync(); updateRobot();
 });
 
 // WebSocket — receives absolute angles, converts to offsets
 let ws = null;
 function connectWS() {
-    try { ws = new WebSocket('ws://sambo.local:8765'); } catch { return; }
+    try { ws = new WebSocket('ws://localhost:8765'); } catch { return; }
     ws.onopen = () => {
         document.getElementById('status').classList.add('on');
         document.getElementById('st-txt').textContent = '연결됨 (MediaPipe)';
@@ -452,7 +404,6 @@ function connectWS() {
             if (d.J3 != null) J.J3 = d.J3 - HOME.J3;
             if (d.J4 != null) J.J4 = d.J4 - HOME.J4;
             if (d.J5 != null) J.J5 = d.J5 - HOME.J5;
-            onNewTarget();
             if (d.gripper != null) gripOpen = d.gripper === 'open';
             sync(); updateRobot();
         } catch {}
@@ -470,7 +421,6 @@ connectWS();
 (function animate() {
     requestAnimationFrame(animate);
     orbit.update();
-    updateRobot();   // 매 프레임 보간 적용 → 부드러운 움직임
     renderer.render(scene, camera);
 })();
 
