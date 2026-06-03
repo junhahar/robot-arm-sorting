@@ -370,7 +370,12 @@ void setReferenceAngle(uint8_t id, int16_t angleX10) {
     stsWriteReg(id, STS_ADDR_LOCK, &unlock, 1);   delay(5);   // EEPROM 언락
     stsWriteReg(id, STS_ADDR_OFFSET, ofsData, 2); delay(10);  // 오프셋 기록
     stsWriteReg(id, STS_ADDR_LOCK, &lock, 1);     delay(5);   // 락
-    setPositionStepTimed(id, targetStep, 0);                  // 새 좌표에서 현재=목표 → 안 움직임
+
+    // ★안전★ 목표를 '지금 실제로 읽히는 현재값'으로 설정 → 오프셋이 clamp돼도 절대 안 튐.
+    // (이전엔 targetStep으로 최대속도 명령 → 오프셋 못 맞추면 그 차이만큼 확 돌아 위험했음)
+    uint16_t presentNew = present;
+    readServoPositionStep(id, &presentNew);
+    setPositionStepTimed(id, presentNew, 0);
 }
 
 

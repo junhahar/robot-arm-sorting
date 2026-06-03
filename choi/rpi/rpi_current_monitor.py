@@ -10,7 +10,8 @@ socketCAN은 브로드캐스트라 여러 프로세스가 같은 can0를 함께 
 
 전제:
     STM 펌웨어가 0x202(전류)를 보내야 한다. 안 보내면 표가 계속 '---'로 뜬다.
-    (펌웨어에 CAN_ID_CURRENT 0x202 / readServoCurrentRaw 추가본이 올라가 있어야 함)
+    서보가 0x45(Present Current) 읽기를 지원해야 한다. 'NA(서보 읽기 실패)'면
+    서보가 0x45에 응답 안 하는 것 → 부하 기준 rpi_load_monitor.py 쓰면 됨.
 
 CAN 셋업 (규약 §5.1):
     sudo ip link set can0 type can bitrate 125000 sample-point 0.625
@@ -57,12 +58,11 @@ def main():
         print("       sudo ip link set can0 type can bitrate 125000 sample-point 0.625")
         return
 
-    # motor_id → dict(ma, direction, ok, last_rx)
     state = {m: {"ma": 0.0, "dir": " ", "ok": 0, "last_rx": 0.0}
              for m in range(1, MOTOR_COUNT + 1)}
     last_draw = 0.0
 
-    print("\033[2J", end="")  # 화면 클리어
+    print("\033[2J", end="")
     try:
         while True:
             msg = bus.recv(timeout=0.1)
@@ -103,7 +103,6 @@ def main():
                     )
                 lines.append("")
                 lines.append(f"  합계: {total:7.0f} mA  ({total/1000:4.2f} A)")
-                # 커서 홈으로 이동 후 덮어쓰기 (깜빡임 최소화)
                 print("\033[H" + "\n".join(lines) + "\033[J", end="", flush=True)
 
     except KeyboardInterrupt:

@@ -75,7 +75,7 @@ PRELOAD_MAX = 20.0
 # gain: 그 축 속도 배율 (M4=5, 무거워서). preload: 거울쌍 분담(M2·3만).
 AXES = [
     {"label": "M1",   "fwd": "q", "back": "a", "calib": "z", "gain": 1.0, "preload": 0.0,            "members": ((1, +1, 180.0),)},
-    {"label": "M2·3", "fwd": "w", "back": "s", "calib": "x", "gain": 1.0, "preload": MIRROR_PRELOAD, "members": ((2, -1, 360.0), (3, +1, 0.0))},
+    {"label": "M2·3", "fwd": "w", "back": "s", "calib": "x", "gain": 1.0, "preload": MIRROR_PRELOAD, "members": ((2, +1, 0.0), (3, -1, 360.0))},
     {"label": "M4",   "fwd": "e", "back": "d", "calib": "c", "gain": 5.0, "preload": 0.0,            "members": ((4, -1, 360.0),)},
     {"label": "M5",   "fwd": "r", "back": "f", "calib": "v", "gain": 1.0, "preload": 0.0,            "members": ((5, +1, 180.0),)},
     {"label": "M6",   "fwd": "t", "back": "g", "calib": "b", "gain": 1.0, "preload": 0.0,            "members": ((6, +1, 180.0),)},
@@ -103,6 +103,11 @@ class MeasuredAngles(can.Listener):
     def get(self, motor_id):
         with self._lock:
             return self._angle.get(motor_id)
+
+    def clear(self, motor_id):
+        # 영점으로 각도 라벨이 바뀌면 옛 측정값을 버린다(새 텔레메트리 올 때까지 None)
+        with self._lock:
+            self._angle.pop(motor_id, None)
 
 
 def send_torque(bus, motor_id, on):
@@ -213,7 +218,8 @@ def main():
                         else:
                             send_set_ref(bus, mid, cal_deg)  # 임의각: 오프셋 직접 기록
                         cal_offset[mid] = 0.0                # 서보가 직접 라벨 → SW 오프셋 불필요
-                        target[mid] = cal_deg
+                        target[mid] = None                   # ★안전★ 영점 후 실제 측정각에서 다시 시드
+                        measured.clear(mid)                  # 옛 라벨 버리고 새 텔레메트리 기다림(점프 방지)
                         msgs.append(f"M{mid}->{cal_deg:.0f}")
                     axis_speed[ai] = 0.0
                     sys.stdout.write("\n[영점/EEPROM] " + "  ".join(msgs) + "\n")
@@ -252,7 +258,9 @@ def main():
                     for mid, sign, _cal in ax["members"]:
                         if target[mid] is None:
                             a = measured.get(mid)
-                            target[mid] = a if a is not None else DEFAULT_ANGLE
+                            if a is None:
+                                continue  # ★안전★ 실제 측정각 받기 전엔 안 움직임(점프 방지)
+                            target[mid] = a
                         target[mid] += sign * delta
                         # 물리[0,360]에 대응하는 logical 범위로 제한 (logical = physical + offset)
                         lo = cal_offset[mid] + ANGLE_MIN
