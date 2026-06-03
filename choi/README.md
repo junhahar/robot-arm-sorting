@@ -17,10 +17,7 @@ choi/
 │   └── platformio.ini
 ├── rpi/          라즈베리파이 파이썬 코드
 │   ├── rpi_keyboard_control_v2.py   주력: 키보드 수동 제어 (축단위·거울쌍·프리로드·EEPROM 영점)
-│   ├── rpi_keyboard_control.py      v1 (개별 모터)
 │   ├── rpi_current_monitor.py       전류 실시간 모니터 (읽기 전용)
-│   ├── rpi_robot_node.py            모터 제어 + Nano 센서 통합 데모
-│   ├── rpi_motor_control.py         초기 모터 제어
 │   └── arm_ik.py                    역기구학 (좌표 → 모터각)
 └── docs/
     ├── 로봇팔_작업정리.md           전체 작업 정리 (프로토콜·영점·IK·과열 등)
