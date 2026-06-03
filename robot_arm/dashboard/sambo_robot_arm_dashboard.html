@@ -692,7 +692,7 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
     <div class="modal-head">CAN 및 데이터 상세 / Diagnostics <button onclick="closeModal('canModal')">×</button></div>
     <div class="modal-body">
       <div class="can-details" style="margin-top:0">
-        <div>서버 주소<b class="mono">ws://localhost:8765</b></div><div>CAN 속도<b class="mono">125 kbps</b></div><div>Sample Point<b class="mono">62.5%</b></div><div>프레임 ID<b class="mono">Standard 11-bit</b></div>
+        <div>서버 주소<b class="mono" id="wsUrlLabel">ws://localhost:8765</b></div><div>CAN 속도<b class="mono">125 kbps</b></div><div>Sample Point<b class="mono">62.5%</b></div><div>프레임 ID<b class="mono">Standard 11-bit</b></div>
       </div>
       <details open><summary>상세 로그 / Debug Log</summary><pre id="debugLog">[DEMO] WebSocket 연결을 기다리는 중입니다.
 [INFO] 실제 데이터 수신 시 DEMO MODE가 자동 해제됩니다.
@@ -1447,12 +1447,17 @@ async function submitAiChat(event){
 function askQuick(question){toggleAiChat(true);$("aiChatInput").value=question;submitAiChat({preventDefault(){}})}
 
 /* ===== WebSocket: structured payload and old flat payload compatibility ===== */
+function getWsUrl(){
+  const host=location.hostname&&location.hostname!=="localhost"&&location.hostname!=="127.0.0.1"?location.hostname:"localhost";
+  return `ws://${host}:8765`;
+}
 function connectWS(){
-  let ws;try{ws=new WebSocket("ws://localhost:8765")}catch{return}
+  const wsUrl=getWsUrl();
+  let ws;try{ws=new WebSocket(wsUrl)}catch{return}
   state.ws=ws;
   ws.onopen=()=>{state.demo=false;state.system.server_connected=true;addLog("서버 연결 — 실제 데이터 수신 대기","ok");debug("WebSocket connected");renderAll()};
   ws.onmessage=e=>{try{const d=JSON.parse(e.data);applyIncoming(d);state.demo=false;state.system.server_connected=true;state.lastFrame=Date.now();renderAll()}catch(err){debug("JSON parse error: "+err.message)}};
-  ws.onclose=()=>{state.demo=true;state.system.server_connected=false;debug("WebSocket disconnected. DEMO MODE enabled.");renderAll();setTimeout(connectWS,2400)};
+  ws.onclose=()=>{state.demo=true;state.system.server_connected=false;debug(`${wsUrl} disconnected. DEMO MODE enabled.`);renderAll();setTimeout(connectWS,2400)};
   ws.onerror=()=>{try{ws.close()}catch{}};
 }
 function applyIncoming(d){
@@ -1499,7 +1504,8 @@ function renderAll(){
 function frame(now){demoTick(now);drawHumanPose();drawGripper();draw3D();drawTopDown();renderRightPanel();requestAnimationFrame(frame)}
 setInterval(()=>{const now=currentTime();setText("clock",now);const sc=$("splashClock");if(sc)sc.textContent=now;const timer=$("recordTimer");if(timer){const s=Math.floor((Date.now()-bootTime)/1000);timer.textContent=`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`}},1000);
 const bootTime=Date.now();
-addLog("시뮬레이션 데이터 표시 — 서버 연결 대기","warn");addLog("WebSocket ws://localhost:8765 연결 대기","info");addLog("6축 STS3215 상태 패널 준비 완료","ok");
+const initialWsUrl=getWsUrl();if($("wsUrlLabel"))$("wsUrlLabel").textContent=initialWsUrl;
+addLog("시뮬레이션 데이터 표시 — 서버 연결 대기","warn");addLog(`WebSocket ${initialWsUrl} 연결 대기`,"info");addLog("6축 STS3215 상태 패널 준비 완료","ok");
 renderAll();bind3DDrag();connectWS();requestAnimationFrame(frame);
 </script>
 </body>
