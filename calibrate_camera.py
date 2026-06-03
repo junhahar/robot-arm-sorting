@@ -15,7 +15,8 @@ import cv2
 import numpy as np
 import argparse
 import os
-from config import CAMERA_ID, HOMOGRAPHY_FILE
+from config import CAMERA_ID
+HOMOGRAPHY_FILE = "camera_calib.npz"
 
 
 class HomographyCalibrator:

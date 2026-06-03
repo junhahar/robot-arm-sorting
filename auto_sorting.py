@@ -9,12 +9,6 @@
   HOME(토크OFF) -> 토크ON -> 스캔(티칭) -> 검출 -> IK접근 -> 파지 -> lift
   -> 분류궤적(티칭) -> ToF하강 -> 배치 -> HOME -> 토크OFF -> 반복
 
-CSV 형식 (웨이포인트):
-  J1,J2,J3,J4,J5,checkpoint
-  90.0,120.0,150.0,80.0,90.0,
-  45.0,130.0,160.0,70.0,90.0,SCAN
-  ...
-
 실행:
   python auto_sorting.py
   python auto_sorting.py --dry-run
@@ -39,11 +33,8 @@ from config import (
     MOVE_DURATION, MOVE_DURATION_FAST,
 )
 from servo_driver import ServoDriver
-import ik
+import arm_ik
 import s_curve
-
-
-CORRECTION_LIMIT = 15.0
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -60,8 +51,10 @@ def load_trajectory(name):
         for row in csv.DictReader(f):
             parsed = {}
             for k, v in row.items():
-                if k == "checkpoint":
+                if k in ("checkpoint", "gripper"):
                     parsed[k] = v.strip()
+                elif k == "seq":
+                    continue
                 else:
                     parsed[k] = float(v)
             rows.append(parsed)
@@ -70,6 +63,22 @@ def load_trajectory(name):
 
 def wp_to_pose(row):
     return {j: row[j] for j in ["J1", "J2", "J3", "J4", "J5"] if j in row}
+
+
+def _pose_to_rad(pose_deg):
+    """s_curve용 degree pose -> arm_ik용 radian dict."""
+    return {j: math.radians(pose_deg.get(j, 0)) for j in ["J1", "J2", "J3", "J4", "J5"]}
+
+
+def _ik_to_pose(q_rad):
+    """arm_ik IK 결과(rad) -> s_curve용 degree pose."""
+    return arm_ik.rad_to_deg(q_rad)
+
+
+def _current_xyz(pose_deg):
+    """현재 pose(deg) -> TCP (x, y, z) mm."""
+    q = _pose_to_rad(pose_deg)
+    return arm_ik.fk(q["J1"], q["J2"], q["J3"], q["J4"])
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -143,20 +152,6 @@ class Camera:
         y_mm = (py - CAM_CY) * height_mm / CAM_FY
         return x_mm, y_mm
 
-    def detect_aruco(self, frame):
-        if self.aruco_detector is None:
-            return {}
-        import cv2
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        corners, ids, _ = self.aruco_detector.detectMarkers(gray)
-        if ids is None:
-            return {}
-        result = {}
-        for i, marker_id in enumerate(ids.flatten()):
-            center = corners[i][0].mean(axis=0)
-            result[int(marker_id)] = (float(center[0]), float(center[1]))
-        return result
-
     def close(self):
         if self.cap:
             self.cap.release()
@@ -175,21 +170,6 @@ class AutoSorter:
 
         self.pose = dict(HOME)
         self.cycle_count = 0
-        self.running = True
-
-    # ── Torque ───────────────────────────────────────────────
-
-    def _torque_on(self):
-        if not self.servo.dry_run:
-            import can
-            for sid in range(1, 7):
-                self.servo._send(0x10, bytes([sid, 0x08, 0x00]))
-        print("[TORQUE] ON")
-
-    def _torque_off(self):
-        if not self.servo.dry_run:
-            self.servo.estop()
-        print("[TORQUE] OFF")
 
     # ── Main Loop ────────────────────────────────────────────
 
@@ -200,8 +180,8 @@ class AutoSorter:
         self.pose = dict(HOME)
 
         try:
-            while self.running:
-                self._torque_on()
+            while True:
+                self.servo.torque_on()
                 time.sleep(0.2)
 
                 result = self._scan()
@@ -209,9 +189,9 @@ class AutoSorter:
                     self._go_home()
                     continue
 
-                detected_class, target_j1, target_r, target_z = result
+                detected_class, tx, ty, tz = result
 
-                if not self._approach_and_pick(target_j1, target_r, target_z):
+                if not self._approach_and_pick(tx, ty, tz):
                     self._error_recovery()
                     continue
 
@@ -245,7 +225,7 @@ class AutoSorter:
             self.pose = s_curve.execute(
                 self.servo, self.pose, target, MOVE_DURATION
             )
-            time.sleep(0.1)
+            time.sleep(0.3)
 
             detection = self._try_detect()
             if detection:
@@ -258,7 +238,7 @@ class AutoSorter:
         stable_count = 0
         last_class = None
 
-        for _ in range(STABLE_FRAMES + 2):
+        for _ in range(STABLE_FRAMES * 3):
             frame = self.camera.read()
             if frame is None:
                 return None
@@ -285,70 +265,48 @@ class AutoSorter:
                 if tof is None or tof > 2000:
                     return None
 
-                actual = self.servo.read_all()
-                if not actual:
-                    return None
-
-                curr_r, curr_z = ik.forward(
-                    actual["J2"], actual["J3"], actual["J4"]
-                )
-
+                cx, cy, cz = _current_xyz(self.pose)
                 px, py = best["cx"], best["cy"]
-                x_cam, y_cam = self.camera.pixel_to_mm(px, py, tof)
-                x_grip = x_cam + CAM_OFFSET_X
-                y_grip = y_cam + CAM_OFFSET_Y
+                dx_mm, dy_mm = self.camera.pixel_to_mm(px, py, tof)
 
-                target_j1 = actual["J1"] + math.degrees(
-                    math.atan2(x_grip, curr_r)
-                )
-                target_r = curr_r + y_grip
+                target_x = cx + dx_mm + CAM_OFFSET_X
+                target_y = cy + dy_mm + CAM_OFFSET_Y
+                target_z = cz
 
                 print(f"[SCAN] Found: {best['class']} "
-                      f"(conf={best['conf']:.2f})")
-                return best["class"], target_j1, target_r, curr_z
+                      f"(conf={best['conf']:.2f}) "
+                      f"at ({target_x:.0f},{target_y:.0f},{target_z:.0f})")
+                return best["class"], target_x, target_y, target_z
 
         return None
 
     # ── APPROACH + PICK: IK 정밀 작업 ────────────────────────
 
-    def _approach_and_pick(self, target_j1, target_r, target_z):
-        # IK 접근
-        pre_z = target_z + LIFT_HEIGHT
-        result = ik.solve(target_r, pre_z)
-        if result is None:
+    def _approach_and_pick(self, tx, ty, tz):
+        pre_z = tz + LIFT_HEIGHT
+        q = arm_ik.ik(tx, ty, pre_z)
+        if q is None:
             print("[APPROACH] IK failed")
             return False
-        j2, j3, j4 = result
-        target = {"J1": target_j1, "J2": j2, "J3": j3, "J4": j4,
-                  "J5": self.pose.get("J5", 90.0)}
+        target = _ik_to_pose(q)
         self.pose = s_curve.execute(
             self.servo, self.pose, target, MOVE_DURATION
         )
 
-        # Visual Servoing
-        self._visual_servo()
+        self._visual_servo(tx, ty)
 
-        # ToF 하강
-        actual = self.servo.read_all()
-        if actual:
-            curr_r, curr_z = ik.forward(
-                actual["J2"], actual["J3"], actual["J4"]
-            )
-        else:
-            curr_r, curr_z = target_r, pre_z
+        cx, cy, cz = _current_xyz(self.pose)
+        current_z = cz
 
-        current_z = curr_z
         for _ in range(int(MAX_DESCEND_DEPTH / DESCEND_STEP_MM)):
             current_z -= DESCEND_STEP_MM
-            result = ik.solve(curr_r, current_z)
-            if result is None:
+            q = arm_ik.ik(cx, cy, current_z)
+            if q is None:
                 print("[DESCEND] IK limit")
                 break
-            j2, j3, j4 = result
-            t = dict(self.pose)
-            t.update({"J2": j2, "J3": j3, "J4": j4})
+            target = _ik_to_pose(q)
             self.pose = s_curve.execute(
-                self.servo, self.pose, t, MOVE_DURATION_FAST
+                self.servo, self.pose, target, MOVE_DURATION_FAST
             )
 
             tof = self.servo.read_tof()
@@ -356,27 +314,23 @@ class AutoSorter:
                 print(f"[DESCEND] ToF={tof}mm - grasp distance")
                 break
 
-        # 파지
         self.servo.gripper(False)
         time.sleep(GRIP_CLOSE_WAIT)
 
-        # lift
         lift_z = current_z + LIFT_HEIGHT
-        result = ik.solve(curr_r, lift_z)
-        if result is None:
+        q = arm_ik.ik(cx, cy, lift_z)
+        if q is None:
             print("[PICK] Lift IK failed")
             return False
-        j2, j3, j4 = result
-        lift = dict(self.pose)
-        lift.update({"J2": j2, "J3": j3, "J4": j4})
+        target = _ik_to_pose(q)
         self.pose = s_curve.execute(
-            self.servo, self.pose, lift, MOVE_DURATION_FAST
+            self.servo, self.pose, target, MOVE_DURATION_FAST
         )
 
         print("[PICK] Object picked")
         return True
 
-    def _visual_servo(self):
+    def _visual_servo(self, tx, ty):
         for i in range(VS_MAX_ITER):
             frame = self.camera.read()
             if frame is None:
@@ -397,26 +351,16 @@ class AutoSorter:
             tof = self.servo.read_tof()
             h = tof if tof and tof < 2000 else 200
 
-            actual = self.servo.read_all()
-            if not actual:
-                break
-            curr_r, curr_z = ik.forward(
-                actual["J2"], actual["J3"], actual["J4"]
-            )
+            cx, cy, cz = _current_xyz(self.pose)
+            new_x = cx + dx * VS_GAIN * h / CAM_FX
+            new_y = cy + dy * VS_GAIN * h / CAM_FY
 
-            new_r = curr_r + dy * VS_GAIN * h / CAM_FY
-            new_j1 = self.pose["J1"] + math.degrees(
-                math.atan2(dx * VS_GAIN * h / CAM_FX, curr_r)
-            )
-
-            result = ik.solve(new_r, curr_z)
-            if result is None:
+            q = arm_ik.ik(new_x, new_y, cz)
+            if q is None:
                 continue
-            j2, j3, j4 = result
-            adj = {"J1": new_j1, "J2": j2, "J3": j3, "J4": j4,
-                   "J5": self.pose.get("J5", 90.0)}
+            target = _ik_to_pose(q)
             self.pose = s_curve.execute(
-                self.servo, self.pose, adj, MOVE_DURATION_FAST
+                self.servo, self.pose, target, MOVE_DURATION_FAST
             )
 
     # ── PLACE: 티칭 궤적 + ToF 하강 ─────────────────────────
@@ -427,7 +371,6 @@ class AutoSorter:
             print(f"[PLACE] Unknown class: {detected_class}")
             return False
 
-        # 분류 궤적 재생 (lift 자세 -> 분류통 위)
         traj = load_trajectory(bin_cfg["traj"])
         if not traj:
             print(f"[PLACE] No trajectory for {detected_class}")
@@ -442,26 +385,17 @@ class AutoSorter:
             )
         self.pose = current
 
-        # ToF 하강 (분류통 안으로)
-        actual = self.servo.read_all()
-        if actual:
-            curr_r, curr_z = ik.forward(
-                actual["J2"], actual["J3"], actual["J4"]
-            )
-        else:
-            curr_r, curr_z = 200.0, 0.0
+        cx, cy, cz = _current_xyz(self.pose)
+        current_z = cz
 
-        current_z = curr_z
         for _ in range(int(MAX_PLACE_DEPTH / DESCEND_STEP_MM)):
             current_z -= DESCEND_STEP_MM
-            result = ik.solve(curr_r, current_z)
-            if result is None:
+            q = arm_ik.ik(cx, cy, current_z)
+            if q is None:
                 break
-            j2, j3, j4 = result
-            t = dict(self.pose)
-            t.update({"J2": j2, "J3": j3, "J4": j4})
+            target = _ik_to_pose(q)
             self.pose = s_curve.execute(
-                self.servo, self.pose, t, MOVE_DURATION_FAST
+                self.servo, self.pose, target, MOVE_DURATION_FAST
             )
 
             tof = self.servo.read_tof()
@@ -469,19 +403,15 @@ class AutoSorter:
                 print(f"[PLACE] ToF={tof}mm - place distance")
                 break
 
-        # 놓기
         self.servo.gripper(True)
         time.sleep(0.3)
 
-        # lift out
         lift_z = current_z + LIFT_HEIGHT * 2
-        result = ik.solve(curr_r, lift_z)
-        if result:
-            j2, j3, j4 = result
-            lift = dict(self.pose)
-            lift.update({"J2": j2, "J3": j3, "J4": j4})
+        q = arm_ik.ik(cx, cy, lift_z)
+        if q:
+            target = _ik_to_pose(q)
             self.pose = s_curve.execute(
-                self.servo, self.pose, lift, MOVE_DURATION_FAST
+                self.servo, self.pose, target, MOVE_DURATION_FAST
             )
 
         print(f"[PLACE] {detected_class} placed")
@@ -494,7 +424,7 @@ class AutoSorter:
             self.servo, self.pose, HOME, MOVE_DURATION
         )
         time.sleep(0.5)
-        self._torque_off()
+        self.servo.torque_off()
 
     # ── Error Recovery ───────────────────────────────────────
 

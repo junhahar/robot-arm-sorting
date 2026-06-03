@@ -29,8 +29,11 @@ import math
 import argparse
 import time
 
-from config import HOME, JOINTS
-import ik
+from config import HOME
+import arm_ik
+
+JOINTS = {j: {"min": math.degrees(lo), "max": math.degrees(hi)}
+          for j, (lo, hi) in arm_ik.J_LIMITS.items()}
 
 TRAJECTORY_DIR = "trajectories"
 os.makedirs(TRAJECTORY_DIR, exist_ok=True)
@@ -66,16 +69,13 @@ JUMP_WARN_THRESHOLD = 30.0
 # ═══════════════════════════════════════════════════════════════
 
 def gripper_xyz(robot):
-    r, z = ik.forward(robot["J2"], robot["J3"], robot["J4"])
-    j1_rad = math.radians(robot["J1"])
-    x = r * math.sin(j1_rad)
-    y = r * math.cos(j1_rad)
-    return x, y, z
+    q = {j: math.radians(robot[j]) for j in ["J1", "J2", "J3", "J4"]}
+    return arm_ik.fk(q["J1"], q["J2"], q["J3"], q["J4"])
 
 
 def check_reachable(robot):
-    r, z = ik.forward(robot["J2"], robot["J3"], robot["J4"])
-    return ik.reachable(r, z)
+    x, y, z = gripper_xyz(robot)
+    return arm_ik.reachable(x, y, z)
 
 
 def check_jump(robot, last_wp):
@@ -170,7 +170,7 @@ def _draw_topdown(canvas, robot, waypoints):
     cv2.putText(canvas, "TOP VIEW (mm)", (cx - 80, 30),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
 
-    max_reach = (ik.IK_L2 + ik.IK_L3) * s
+    max_reach = (arm_ik.L1 + arm_ik.L2) * s
     cv2.circle(canvas, (cx, cy), int(max_reach), (40, 40, 40), 1)
     cv2.circle(canvas, (cx, cy), int(max_reach * 0.3), (30, 30, 30), 1)
 
@@ -245,8 +245,9 @@ def draw_teaching_view(robot, waypoints, gripper_open, next_checkpoint,
     cv2.putText(canvas, f"Gripper: x={gx:.0f} y={gy:.0f} z={gz:.0f} mm",
                 (10, 145), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (200, 200, 0), 1)
 
-    r_val, z_val = ik.forward(robot["J2"], robot["J3"], robot["J4"])
-    cv2.putText(canvas, f"Reach: r={r_val:.0f} z={z_val:.0f} mm",
+    gx, gy, gz = gripper_xyz(robot)
+    r_val = math.hypot(gx, gy)
+    cv2.putText(canvas, f"Reach: r={r_val:.0f} z={gz:.0f} mm",
                 (10, 165), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (200, 200, 0), 1)
 
     # 도달 가능 여부
