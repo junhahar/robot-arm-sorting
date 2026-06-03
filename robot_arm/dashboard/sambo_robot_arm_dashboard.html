@@ -1326,7 +1326,7 @@ function clearWaypoints(){if(state.wpList.length&&!confirm("저장 위치 목록
 function exportCSV(){if(!state.wpList.length){addLog("저장할 위치가 없습니다.","warn");return}const keys=["seq","type","time","J1","J2","J3","J4","J5","J6","gripper"],csv=[keys.join(","),...state.wpList.map(r=>keys.map(k=>r[k]).join(","))].join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download="sambo_robot_path.csv";a.click();URL.revokeObjectURL(a.href);addLog("경로 CSV 저장 완료","ok")}
 const MANUAL_COUPLED_JOINTS={1:2,2:1};
 const MANUAL_MIRROR_SUM=360;
-function manualJointMax(joint){return joint.id==="J2"||joint.id==="J3"?360:180}
+function manualJointMax(joint){return 360}
 function setManualJointTarget(i,value){
   const joint=state.robot.joints[i],next=clamp(Number(value),0,manualJointMax(joint));
   joint.target=next;joint.current=next;
