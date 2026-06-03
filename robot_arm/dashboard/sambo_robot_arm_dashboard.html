@@ -987,8 +987,8 @@ function restoreVideos(){
 }
 function renderManualRows(){
   if(!$("manualRows"))return;
-  $("manualRows").innerHTML=state.robot.joints.map((j,i)=>`<div class="manual-row ${j.id==="J2"||j.id==="J3"?"coupled":""}"><b>${j.id} <span class="joint-name">${j.name}</span>${j.id==="J2"||j.id==="J3"?"<small>J2 · J3 연동</small>":""}</b>
-    <input class="action-control" data-manual-joint="${i}" type="range" min="0" max="180" step=".1" value="${j.target}" oninput="manualJoint(${i},this.value)">
+  $("manualRows").innerHTML=state.robot.joints.map((j,i)=>`<div class="manual-row ${j.id==="J2"||j.id==="J3"?"coupled":""}"><b>${j.id} <span class="joint-name">${j.name}</span>${j.id==="J2"||j.id==="J3"?"<small>J2 ↔ J3 거울 연동</small>":""}</b>
+    <input class="action-control" data-manual-joint="${i}" type="range" min="0" max="${manualJointMax(j)}" step=".1" value="${j.target}" oninput="manualJoint(${i},this.value)">
     <output class="mono" data-manual-output="${i}">${deg(j.target)}</output><button class="small-btn action-control" onclick="manualStep(${i},-1)">-1°</button><button class="small-btn action-control" onclick="manualStep(${i},1)">+1°</button></div>`).join("");
 }
 function renderPrimary(){
@@ -1199,9 +1199,11 @@ async function loadActualStlRobot(T,r){
   ]);
   placeGlobal(base,root);placeGlobal(basecover,G[0]);placeGlobal(shoulder,G[0]);placeGlobal(arm1,G[1]);placeGlobal(arm2,G[2]);
   placeLocal(wristHouse,G[3],[-26,119,348],[29,0,0]);placeLocal(wristPlate,G[3],[-26,119,348],[29,0,0]);
+  const j4Hub=new T.Mesh(new T.CylinderGeometry(.13,.13,.07,36),M.link),j4Mark=new T.Mesh(new T.BoxGeometry(.055,.055,.2),M.accent);
+  j4Hub.rotation.z=Math.PI/2;j4Mark.position.set(0,.145,0);j4Hub.castShadow=j4Mark.castShadow=true;G[3].add(j4Hub);G[3].add(j4Mark);
   placeLocal(wristRoll,G[4],[-26,118,351],[30,0,0]);placeLocal(cameraBracket,G[4],[58,90,398],[120,0,0]);
   placeLocal(gripper,G[5],[-25,75,424],[-169,-90,-19]);
-  r.groups=G;r.gripperMesh=gripper;r.ready=true;
+  r.groups=G;r.j4Hub=j4Hub;r.j4Mark=j4Mark;r.gripperMesh=gripper;r.ready=true;
 }
 function initThreeRobot(canvas){
   const T=window.THREE,scene=new T.Scene(),camera=new T.PerspectiveCamera(42,1,.1,100);
@@ -1318,13 +1320,15 @@ function saveWaypoint(type){const row={seq:state.wpList.length+1,type,time:curre
 function clearWaypoints(){if(state.wpList.length&&!confirm("저장 위치 목록을 처음부터 다시 만들까요?"))return;state.wpList=[];addLog("저장 위치 목록 초기화","warn");renderPath()}
 function exportCSV(){if(!state.wpList.length){addLog("저장할 위치가 없습니다.","warn");return}const keys=["seq","type","time","J1","J2","J3","J4","J5","J6","gripper"],csv=[keys.join(","),...state.wpList.map(r=>keys.map(k=>r[k]).join(","))].join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download="sambo_robot_path.csv";a.click();URL.revokeObjectURL(a.href);addLog("경로 CSV 저장 완료","ok")}
 const MANUAL_COUPLED_JOINTS={1:2,2:1};
+const MANUAL_MIRROR_SUM=360;
+function manualJointMax(joint){return joint.id==="J2"||joint.id==="J3"?360:180}
 function setManualJointTarget(i,value){
-  const joint=state.robot.joints[i],next=clamp(Number(value),0,180),delta=next-joint.target;
+  const joint=state.robot.joints[i],next=clamp(Number(value),0,manualJointMax(joint));
   joint.target=next;joint.current=next;
   const pairIndex=MANUAL_COUPLED_JOINTS[i];
   if(pairIndex!=null){
     const pair=state.robot.joints[pairIndex];
-    pair.target=clamp(pair.target+delta,0,180);pair.current=pair.target;
+    pair.target=clamp(MANUAL_MIRROR_SUM-next,0,manualJointMax(pair));pair.current=pair.target;
   }
 }
 function syncManualRows(){
