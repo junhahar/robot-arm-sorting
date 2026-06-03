@@ -1186,6 +1186,7 @@ function placeLocal(mesh,parent,position,rotation=[0,0,0]){
   mesh.rotation.set(rotation[0]*rad,rotation[1]*rad,rotation[2]*rad);parent.add(mesh);
 }
 function rotateStlJoint(group,axis,angle){group.rotation.set(0,0,0);group.rotation[axis]=angle*Math.PI/180}
+function shoulderMirrorAngle(A){return ((A.J2-180)+(180-A.J3))/2}
 async function loadActualStlRobot(T,r){
   const root=r.modelRoot,M=r.materials,C={J1:[0,77,0],J2:[0,118,-5],J3:[-23,291,165],J4:[-17,138,311],J5:[-26,99,394],J6:[-25,75,424]};
   root.userData.center=[0,0,0];
@@ -1198,9 +1199,9 @@ async function loadActualStlRobot(T,r){
     loadStlPart(T,STL_PARTS.cameraBracket,M.camera)
   ]);
   placeGlobal(base,root);placeGlobal(basecover,G[0]);placeGlobal(shoulder,G[0]);placeGlobal(arm1,G[1]);placeGlobal(arm2,G[2]);
-  placeLocal(wristHouse,G[3],[-26,119,348],[29,0,0]);placeLocal(wristPlate,G[3],[-26,119,348],[29,0,0]);
   const j4Hub=new T.Mesh(new T.CylinderGeometry(.13,.13,.07,36),M.link),j4Mark=new T.Mesh(new T.BoxGeometry(.055,.055,.2),M.accent);
-  j4Hub.rotation.z=Math.PI/2;j4Mark.position.set(0,.145,0);j4Hub.castShadow=j4Mark.castShadow=true;G[3].add(j4Hub);G[3].add(j4Mark);
+  j4Hub.rotation.z=Math.PI/2;j4Mark.position.set(0,.145,0);j4Hub.castShadow=j4Mark.castShadow=true;G[2].add(j4Hub);G[2].add(j4Mark);
+  placeLocal(wristHouse,G[3],[-26,119,348],[29,0,0]);placeLocal(wristPlate,G[3],[-26,119,348],[29,0,0]);
   placeLocal(wristRoll,G[4],[-26,118,351],[30,0,0]);placeLocal(cameraBracket,G[4],[58,90,398],[120,0,0]);
   placeLocal(gripper,G[5],[-25,75,424],[-169,-90,-19]);
   r.groups=G;r.j4Hub=j4Hub;r.j4Mark=j4Mark;r.gripperMesh=gripper;r.ready=true;
@@ -1230,8 +1231,12 @@ function drawThreeRobot(){
   if(w!==r.lastW||h!==r.lastH){r.lastW=w;r.lastH=h;r.camera.aspect=w/h;r.camera.updateProjectionMatrix();r.renderer.setSize(w,h,false)}
   if(r.ready){
     const A=Object.fromEntries(state.robot.joints.map(j=>[j.id,j.current])),G=r.groups;
-    rotateStlJoint(G[0],"y",A.J1-STL_HOME.J1);rotateStlJoint(G[1],"x",A.J2-STL_HOME.J2);rotateStlJoint(G[2],"x",A.J3-STL_HOME.J3);
-    rotateStlJoint(G[3],"x",A.J4-STL_HOME.J4);rotateStlJoint(G[4],"z",A.J5-STL_HOME.J5);rotateStlJoint(G[5],"z",A.J6-STL_HOME.J6);
+    rotateStlJoint(G[0],"y",A.J1-STL_HOME.J1);
+    rotateStlJoint(G[1],"x",shoulderMirrorAngle(A)*.55);
+    rotateStlJoint(G[2],"x",(A.J4-90)*.9);
+    rotateStlJoint(G[3],"x",(A.J5-90)*.75);
+    rotateStlJoint(G[4],"z",(A.J6-60)*.9);
+    rotateStlJoint(G[5],"z",(A.J6-60)*.45);
     r.gripperMesh.material.emissive.setHex(state.gripper.state==="OPEN"?0x062d36:0x32190a);
   }
   const dist=6.15/view.zoom,phi=view.pitch,theta=view.yaw;
@@ -1249,7 +1254,7 @@ function rotY(v,a){return V(v.x*Math.cos(a)+v.z*Math.sin(a),v.y,-v.x*Math.sin(a)
 function armDir(yaw,pitch){return V(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch))}
 function fk(){
   const A=Object.fromEntries(state.robot.joints.map(j=>[j.id,j.current])),yaw=(A.J1-90)*Math.PI/180;
-  const p1=(A.J2-88)*Math.PI/240,p2=p1+(A.J3-138)*Math.PI/260,p3=p2+(A.J4-80)*Math.PI/300;
+  const p1=shoulderMirrorAngle(A)*Math.PI/360,p2=p1+(A.J4-90)*Math.PI/260,p3=p2+(A.J5-90)*Math.PI/320;
   const base=V(0,0,0),shoulder=V(0,76,0),elbow=add(shoulder,mul(armDir(yaw,p1),165)),wrist=add(elbow,mul(armDir(yaw,p2),142)),end=add(wrist,mul(armDir(yaw,p3),72));
   return{base,shoulder,elbow,wrist,end,yaw,A};
 }
