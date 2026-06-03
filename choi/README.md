@@ -21,7 +21,6 @@ choi/
 │   ├── rpi_keyboard_control_v1_3.py  v1_2 + 상태줄 '목표/실측' 둘 다 표시
 │   ├── rpi_keyboard_control_v1_4.py  v1_3 + '9' 카메라 자세 축별 순차 이동
 │   ├── rpi_keyboard_control_v1_5.py  v1_4 + 홈복귀 S-curve (★최신 권장)
-│   ├── rpi_keyboard_control_v2.py    360/0 임의각 영점 버전 (set_ref, 주의)
 │   ├── rpi_current_monitor.py        전류 실시간 모니터 (0x202)
 │   ├── rpi_load_monitor.py           부하(load) 실시간 모니터 (0x201, 항상 읽힘)
 │   └── arm_ik.py                     역기구학 (좌표 → 모터각)
@@ -41,9 +40,8 @@ choi/
 | **v1_3** | 〃 | 〃 | 상태줄 목표/실측 표시 |
 | **v1_4** | 〃 | 〃 | `9`=카메라 자세 순차 이동 |
 | **v1_5** ★ | 〃 | **S-curve** | `9`=카메라 자세, STREAM 80 |
-| v2 | M2→360·M3→0·M4→360 (set_ref) | 즉시 | 360/0 풀가동 (clamp 튐 주의) |
 
-> **v1_5 권장.** v2의 360/0 EEPROM 영점(set_ref)은 오프셋 ±180° 한계로 끝이 아닌 자세에서 튈 수 있어 주의.
+> **v1_5 권장** (최신).
 
 ### 공통 키 매핑
 - 이동: M1 `q/a`  M2·M3 `w/s`(거울쌍)  M4 `e/d`  M5 `r/f`  M6 `t/g`
