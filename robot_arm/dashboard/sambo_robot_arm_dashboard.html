@@ -854,8 +854,8 @@ const state={
   system:{server_connected:false,can_status:"OK",camera_status:"WAIT",ai_status:"RUNNING",estop:false},
   robot:{joints:[
     {id:"J1",name:"Base",current:92.3,target:95.0,temp:41.2,load:35,status:"OK"},
-    {id:"J2",name:"Shoulder",current:118.4,target:120.0,temp:45.0,load:52,status:"OK"},
-    {id:"J3",name:"Elbow",current:144.0,target:155.0,temp:49.5,load:81,status:"WARN"},
+    {id:"J2",name:"Shoulder",current:360.0,target:360.0,temp:45.0,load:52,status:"OK"},
+    {id:"J3",name:"Elbow",current:0.0,target:0.0,temp:49.5,load:81,status:"WARN"},
     {id:"J4",name:"Wrist Pitch",current:80.0,target:82.0,temp:39.1,load:30,status:"OK"},
     {id:"J5",name:"Wrist Roll",current:90.0,target:90.0,temp:38.5,load:28,status:"OK"},
     {id:"J6",name:"End Assist",current:60.0,target:60.0,temp:37.8,load:25,status:"OK"}
@@ -1186,7 +1186,7 @@ function placeLocal(mesh,parent,position,rotation=[0,0,0]){
   mesh.rotation.set(rotation[0]*rad,rotation[1]*rad,rotation[2]*rad);parent.add(mesh);
 }
 function rotateStlJoint(group,axis,angle){group.rotation.set(0,0,0);group.rotation[axis]=angle*Math.PI/180}
-function shoulderMirrorAngle(A){return ((A.J2-180)+(180-A.J3))/2}
+function shoulderMirrorAngle(A){return ((360-A.J2)+A.J3)/2}
 async function loadActualStlRobot(T,r){
   const root=r.modelRoot,M=r.materials,C={J1:[0,77,0],J2:[0,118,-5],J3:[-23,291,165],J4:[-17,138,311],J5:[-26,99,394],J6:[-25,75,424]};
   root.userData.center=[0,0,0];
@@ -1349,7 +1349,7 @@ function manualStep(i,v){setManualJointTarget(i,state.robot.joints[i].target+v);
 function manualAction(name){if(!confirm(`${name} 명령을 실행할까요? 실제 장비 주변 안전을 먼저 확인하세요.`))return;addLog(`수동 시험 명령: ${name}`,"warn")}
 function toggleGripper(){state.gripper.state=state.gripper.state==="OPEN"?"CLOSED":"OPEN";state.gripper.sg90_angle=state.gripper.state==="OPEN"?90:30;addLog(`그리퍼 ${state.gripper.state==="OPEN"?"열림":"닫힘"}`,"info");renderAll()}
 function clearLogs(){$("eventLogs").innerHTML=""}
-const HOME_ANGLES=[90,120,150,80,90,60];
+const HOME_ANGLES=[90,360,0,80,90,60];
 function sendDashboardCommand(command,payload={}){
   if(state.ws?.readyState===WebSocket.OPEN){state.ws.send(JSON.stringify({type:"COMMAND",command,payload}));debug(`COMMAND sent: ${command}`);return true}
   debug(`[DEMO] ${command} command logged only`);return false;
@@ -1432,7 +1432,7 @@ function applyIncoming(d){
 /* ===== Demo data: visibly labeled, never presented as hardware data ===== */
 function demoTick(now){
   if(!state.demo||state.system.estop||state.mode==="MANUAL")return;simT+=.018;
-  const base=[95,120,151,82,90,60],amp=[16,6,8,5,13,8];state.robot.joints.forEach((j,i)=>{j.current=base[i]+Math.sin(simT*(.65+i*.07))*amp[i];j.target=j.current+(i===2?8:Math.sin(simT+i)*2);j.temp=clamp(j.temp+(Math.random()-.5)*.18,35,57);j.load=clamp(j.load+(Math.random()-.5)*1.8,18,i===2?86:70)});
+  const base=[95,360,0,82,90,60],amp=[16,0,0,5,13,8],mirrorSwing=Math.abs(Math.sin(simT*.72))*32;state.robot.joints.forEach((j,i)=>{j.current=base[i]+Math.sin(simT*(.65+i*.07))*amp[i];if(i===1)j.current=360-mirrorSwing;if(i===2)j.current=mirrorSwing;j.target=i===1?360-mirrorSwing:i===2?mirrorSwing:j.current+Math.sin(simT+i)*2;j.temp=clamp(j.temp+(Math.random()-.5)*.18,35,57);j.load=clamp(j.load+(Math.random()-.5)*1.8,18,i===2?86:70)});
   const h=state.human_pose;h.shoulder_motion=42+Math.sin(simT*.8)*7;h.elbow_bend=78+Math.sin(simT*.92)*11;h.wrist_direction=15+Math.cos(simT)*8;h.hand_delta_x=12+Math.sin(simT)*5;h.hand_delta_y=-8+Math.cos(simT*.7)*4;h.mpu.forEach((m,i)=>{m.yaw+=Math.sin(simT+i)*.04;m.pitch+=Math.cos(simT*.7+i)*.05});
   state.gripper.tof_mm=48.2+Math.sin(simT*.8)*2.2;state.vision.confidence=.91+Math.sin(simT)*.03;state.vision.correction.dx_mm=2.1+Math.sin(simT*.6)*.8;state.vision.correction.dy_mm=-1.8+Math.cos(simT*.5)*.6;
   state.can_health.received+=Math.floor(Math.random()*3);state.can_health.last_rx_ms=Math.round(16+Math.abs(Math.sin(simT))*12);state.can_health.delay_ms=Math.round(12+Math.abs(Math.cos(simT*.7))*10);
