@@ -565,6 +565,7 @@
       ctx.beginPath();
       ctx.arc((box.x+box.w/2)*sx,(box.y+box.h/2)*sy,16,0,Math.PI*2);
       ctx.stroke();
+      drawCameraGripAction(ctx,W,H,box,sx,sy,step);
     }
     const grad=ctx.createRadialGradient(W/2,H/2,H*.1,W/2,H/2,H*.8);
     grad.addColorStop(0,"rgba(0,0,0,0)");
@@ -580,6 +581,48 @@
     ctx.fillText(`${PHASE_LABELS[step.phase]} · X ${signed(state.vision.correction.dx_mm)} / Y ${signed(state.vision.correction.dy_mm)} mm`,W*.28,H-13);
     ctx.fillStyle="#f7c948";
     ctx.fillText("PRESENTATION DEMO",W-150,H-13);
+  }
+
+  function drawCameraGripAction(ctx,W,H,box,sx,sy,step){
+    if(!["APPROACH","GRASP","LIFT","CARRY","PLACE"].includes(step.phase))return;
+    const cx=(box.x+box.w/2)*sx;
+    const cy=(box.y+box.h/2)*sy;
+    const closed=["GRASP","LIFT","CARRY"].includes(step.phase);
+    const placing=step.phase==="PLACE";
+    const gap=closed?18:placing?42:48;
+    const fingerH=Math.max(54,box.h*sy*.85);
+    const fingerW=12;
+    ctx.save();
+    ctx.lineWidth=4;
+    ctx.strokeStyle=closed?"#ff8b52":"#20d5e8";
+    ctx.fillStyle=closed?"rgba(255,139,82,.22)":"rgba(32,213,232,.16)";
+    ctx.shadowColor=closed?"rgba(255,139,82,.55)":"rgba(32,213,232,.45)";
+    ctx.shadowBlur=12;
+    [-1,1].forEach(side=>{
+      const x=cx+side*gap;
+      ctx.beginPath();
+      ctx.roundRect(x-fingerW/2,cy-fingerH/2,fingerW,fingerH,5);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x,cy-fingerH/2);
+      ctx.lineTo(cx+side*20,cy-fingerH/2-28);
+      ctx.stroke();
+    });
+    ctx.shadowBlur=0;
+    ctx.fillStyle="rgba(5,12,20,.88)";
+    ctx.strokeStyle=closed?"#ff8b52":"#20d5e8";
+    ctx.lineWidth=2;
+    const label=placing?"그리퍼 열림 / 통 투입":closed?"그리퍼 닫힘 / 집기 완료":"그리퍼 접근 / 열림";
+    const labelW=ctx.measureText(label).width+18;
+    ctx.beginPath();
+    ctx.roundRect(Math.max(10,cx-labelW/2),Math.max(14,cy-fingerH/2-54),labelW,26,6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle=closed?"#ffb28a":"#8befff";
+    ctx.font="bold 12px Malgun Gothic, Segoe UI";
+    ctx.fillText(label,Math.max(19,cx-labelW/2+9),Math.max(31,cy-fingerH/2-37));
+    ctx.restore();
   }
 
   function makeThreeLabel(T,text,color){
@@ -623,12 +666,29 @@
     carrier.add(bolt,nut);
     const glow=new T.Mesh(new T.SphereGeometry(.19,32,16),new T.MeshBasicMaterial({color:0xf7c948,transparent:true,opacity:.18}));
     carrier.add(glow);
+    const gripMat=new T.MeshStandardMaterial({color:0xff8b52,metalness:.12,roughness:.42,emissive:0x2b1104});
+    const palmMat=new T.MeshStandardMaterial({color:0x20d5e8,metalness:.2,roughness:.36,emissive:0x031b22});
+    const gripperFx=new T.Group();
+    const palm=new T.Mesh(new T.BoxGeometry(.54,.055,.11),palmMat);
+    palm.position.set(0,.24,-.02);
+    const leftFinger=new T.Mesh(new T.BoxGeometry(.065,.21,.32),gripMat);
+    const rightFinger=new T.Mesh(new T.BoxGeometry(.065,.21,.32),gripMat);
+    leftFinger.position.set(-.28,.08,0);
+    rightFinger.position.set(.28,.08,0);
+    const leftTip=new T.Mesh(new T.BoxGeometry(.095,.05,.18),gripMat);
+    const rightTip=new T.Mesh(new T.BoxGeometry(.095,.05,.18),gripMat);
+    leftTip.position.set(-.28,-.055,.08);
+    rightTip.position.set(.28,-.055,.08);
+    const stem=new T.Mesh(new T.CylinderGeometry(.022,.022,.34,16),palmMat);
+    stem.position.set(0,.42,-.02);
+    gripperFx.add(palm,leftFinger,rightFinger,leftTip,rightTip,stem);
+    carrier.add(gripperFx);
     const label=makeThreeLabel(T,"작업물 이동","#f7c948");
     label.position.set(0,.34,0);
     carrier.add(label);
     group.add(carrier);
     threeRobot.scene.add(group);
-    threeRobot.emergencySortDemo={group,carrier,bolt,nut,label};
+    threeRobot.emergencySortDemo={group,carrier,bolt,nut,label,gripperFx,leftFinger,rightFinger,leftTip,rightTip,palm,stem};
     return threeRobot.emergencySortDemo;
   }
 
@@ -652,6 +712,31 @@
     marker.bolt.visible=step.item==="BOLT";
     marker.nut.visible=step.item==="NUT";
     marker.label.visible=step.item!=="NONE";
+    syncThreeGripAction(marker,step);
+  }
+
+  function syncThreeGripAction(marker,step){
+    if(!marker.gripperFx)return;
+    const visible=step.item!=="NONE"&&["APPROACH","GRASP","LIFT","CARRY","PLACE"].includes(step.phase);
+    marker.gripperFx.visible=visible;
+    if(!visible)return;
+    const closed=["GRASP","LIFT","CARRY"].includes(step.phase);
+    const placing=step.phase==="PLACE";
+    const gap=closed?.13:placing?.31:.31;
+    marker.leftFinger.position.x=-gap;
+    marker.rightFinger.position.x=gap;
+    marker.leftTip.position.x=-gap;
+    marker.rightTip.position.x=gap;
+    marker.leftFinger.rotation.z=closed?-.08:placing?.18:.14;
+    marker.rightFinger.rotation.z=closed?.08:placing?-.18:-.14;
+    marker.leftTip.rotation.z=marker.leftFinger.rotation.z;
+    marker.rightTip.rotation.z=marker.rightFinger.rotation.z;
+    marker.gripperFx.position.y=closed?.03:placing?.08:.13;
+    marker.palm.material.emissive.setHex(closed?0x092a12:0x031b22);
+    marker.leftFinger.material.emissive.setHex(closed?0x361505:0x1a0902);
+    marker.rightFinger.material.emissive.setHex(closed?0x361505:0x1a0902);
+    marker.leftTip.material.emissive.setHex(closed?0x361505:0x1a0902);
+    marker.rightTip.material.emissive.setHex(closed?0x361505:0x1a0902);
   }
 
   function hideThreeSortMarker(){
