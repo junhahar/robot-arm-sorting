@@ -21,7 +21,10 @@
     GRASP:"그리퍼 집기",
     LIFT:"들어 올림",
     CARRY:"분류 위치 이동",
-    PLACE:"통 투입",
+    BIN_APPROACH:"통 위 접근",
+    LOWER:"통 안쪽 하강",
+    PLACE:"그리퍼 열림 / 투입",
+    RETREAT:"투입 후 후퇴",
     HOME:"HOME 복귀"
   };
   const DEMO_STEP_MS=1450;
@@ -36,10 +39,16 @@
     PRE_GRASP:{x:-.12,y:.48,z:.68},
     GRASP:{x:-.18,y:.66,z:.42},
     LIFT:{x:-.18,y:1.02,z:.36},
-    CARRY_BOLT:{x:-.92,y:.92,z:.62},
-    CARRY_NUT:{x:.92,y:.92,z:.62},
-    PLACE_BOLT:{x:-1.68,y:.62,z:.82},
-    PLACE_NUT:{x:1.68,y:.62,z:.82},
+    CARRY_BOLT:{x:-.52,y:.78,z:.36},
+    CARRY_NUT:{x:.50,y:.78,z:.56},
+    BIN_APPROACH_BOLT:{x:-.64,y:.58,z:.22},
+    BIN_APPROACH_NUT:{x:.58,y:.58,z:.42},
+    LOWER_BOLT:{x:-.72,y:.48,z:.12},
+    LOWER_NUT:{x:.68,y:.48,z:.34},
+    PLACE_BOLT:{x:-.74,y:.42,z:.16},
+    PLACE_NUT:{x:.72,y:.42,z:.36},
+    RETREAT_BOLT:{x:-.52,y:.70,z:.36},
+    RETREAT_NUT:{x:.50,y:.70,z:.56},
     HOME:{x:0,y:.12,z:1.08}
   };
 
@@ -102,12 +111,27 @@
       joints:[132,344,16,344,188,190],correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
     },
     {
-      mode:"AUTO_RUN",step:"PLACE",progress:74,target:"BOLT",item:"BOLT",bin:"BOLT",phase:"PLACE",motion:"PLACE_BOLT",tof:58,gripper:"OPEN",
-      message:"볼트 통 투입 완료: 볼트 1개",level:"ok",
-      joints:[120,354,6,354,188,180],correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:1,NUT:0}
+      mode:"AUTO_RUN",step:"CARRY",progress:71,target:"BOLT",item:"BOLT",bin:"BOLT",phase:"BIN_APPROACH",motion:"BIN_APPROACH_BOLT",tof:38,gripper:"CLOSED",
+      message:"볼트 통 위로 접근: 투입 위치와 그리퍼 중심 정렬",level:"info",
+      joints:[118,348,12,348,188,188],correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
     },
     {
-      mode:"AUTO_RUN",step:"SCAN",progress:79,target:"NONE",item:"NONE",bin:"NONE",phase:"SEARCH",motion:"SEARCH_CENTER",tof:78,gripper:"OPEN",
+      mode:"AUTO_RUN",step:"PLACE",progress:73,target:"BOLT",item:"BOLT",bin:"BOLT",phase:"LOWER",motion:"LOWER_BOLT",tof:24,gripper:"CLOSED",
+      message:"볼트 통 안쪽으로 하강: 떨어뜨릴 높이까지 접근",level:"info",
+      joints:[110,346,14,346,188,184],correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
+    },
+    {
+      mode:"AUTO_RUN",step:"PLACE",progress:75,target:"BOLT",item:"BOLT",bin:"BOLT",phase:"PLACE",motion:"PLACE_BOLT",tof:18,gripper:"OPEN",
+      message:"그리퍼 열림: 볼트 통에 볼트 투입 완료",level:"ok",
+      joints:[105,342,18,342,188,180],correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:1,NUT:0}
+    },
+    {
+      mode:"AUTO_RUN",step:"PLACE",progress:77,target:"NONE",item:"NONE",bin:"BOLT",phase:"RETREAT",motion:"RETREAT_BOLT",tof:42,gripper:"OPEN",
+      message:"볼트 투입 후 그리퍼 후퇴: 다음 탐색 자세로 복귀 준비",level:"info",
+      joints:[130,344,16,344,188,180],correction:[0,0],confidence:.88,stable:3,counts:{BOLT:1,NUT:0}
+    },
+    {
+      mode:"AUTO_RUN",step:"SCAN",progress:80,target:"NONE",item:"NONE",bin:"NONE",phase:"SEARCH",motion:"SEARCH_CENTER",tof:78,gripper:"OPEN",
       message:"다음 작업물 탐색: 다시 스캔 자세로 복귀",level:"info",
       joints:[180,348,12,348,180,180],correction:[0,0],confidence:.38,stable:0,counts:{BOLT:1,NUT:0}
     },
@@ -137,9 +161,24 @@
       joints:[226,344,16,344,188,172],correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:0}
     },
     {
-      mode:"AUTO_RUN",step:"PLACE",progress:99,target:"NUT",item:"NUT",bin:"NUT",phase:"PLACE",motion:"PLACE_NUT",tof:60,gripper:"OPEN",
-      message:"너트 통 투입 완료: 볼트 1개, 너트 1개",level:"ok",
-      joints:[238,354,6,354,188,180],correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:1}
+      mode:"AUTO_RUN",step:"CARRY",progress:98,target:"NUT",item:"NUT",bin:"NUT",phase:"BIN_APPROACH",motion:"BIN_APPROACH_NUT",tof:37,gripper:"CLOSED",
+      message:"너트 통 위로 접근: 통 중심으로 손목 정렬",level:"info",
+      joints:[238,344,16,344,188,176],correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:0}
+    },
+    {
+      mode:"AUTO_RUN",step:"PLACE",progress:98.5,target:"NUT",item:"NUT",bin:"NUT",phase:"LOWER",motion:"LOWER_NUT",tof:23,gripper:"CLOSED",
+      message:"너트 통 안쪽으로 하강: 투입 직전 높이 확인",level:"info",
+      joints:[250,346,14,346,188,178],correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:0}
+    },
+    {
+      mode:"AUTO_RUN",step:"PLACE",progress:99,target:"NUT",item:"NUT",bin:"NUT",phase:"PLACE",motion:"PLACE_NUT",tof:18,gripper:"OPEN",
+      message:"그리퍼 열림: 너트 통에 너트 투입 완료",level:"ok",
+      joints:[255,342,18,342,188,180],correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:1}
+    },
+    {
+      mode:"AUTO_RUN",step:"PLACE",progress:99.5,target:"NONE",item:"NONE",bin:"NUT",phase:"RETREAT",motion:"RETREAT_NUT",tof:42,gripper:"OPEN",
+      message:"너트 투입 후 그리퍼 후퇴: 통과 간섭 없이 빠져나옴",level:"info",
+      joints:[230,344,16,344,188,180],correction:[0,0],confidence:.88,stable:3,counts:{BOLT:1,NUT:1}
     },
     {
       mode:"AUTO_RUN",step:"HOME",progress:100,target:"NONE",item:"NONE",bin:"NONE",phase:"HOME",motion:"HOME",tof:72,gripper:"OPEN",
@@ -528,7 +567,7 @@
       ctx.fillText("탐색 중: 후보 없음",W*.22+8,H*.20+20);
     }else if(step.phase==="CAMERA_FOUND"){
       drawCandidate(`${ITEM_LABELS[step.item]} 후보 ${(step.confidence*100).toFixed(0)}%`,"#f7c948",1.04);
-    }else if(["CLASSIFY","APPROACH","GRASP","LIFT","CARRY","PLACE"].includes(step.phase)){
+    }else if(["CLASSIFY","APPROACH","GRASP","LIFT","CARRY","BIN_APPROACH","LOWER","PLACE"].includes(step.phase)){
       drawCandidate(`${ITEM_LABELS[step.item]} ${(step.confidence*100).toFixed(0)}%`,"#4ade80");
       ctx.strokeStyle=step.item==="BOLT"?"#4ade80":"#60a5fa";
       ctx.beginPath();
@@ -670,7 +709,7 @@
   }
 
   function shouldAttachToRobotGripper(step){
-    return step.item!=="NONE"&&["APPROACH","GRASP","LIFT","CARRY","PLACE"].includes(step.phase);
+    return step.item!=="NONE"&&["APPROACH","GRASP","LIFT","CARRY","BIN_APPROACH","LOWER","PLACE"].includes(step.phase);
   }
 
   function getRobotGripperPose(){
@@ -711,7 +750,7 @@
 
   function syncThreeGripAction(marker,step){
     if(!marker.gripperFx)return;
-    const visible=step.item!=="NONE"&&["APPROACH","GRASP","LIFT","CARRY","PLACE"].includes(step.phase);
+    const visible=step.item!=="NONE"&&["APPROACH","GRASP","LIFT","CARRY","BIN_APPROACH","LOWER","PLACE"].includes(step.phase);
     marker.gripperFx.visible=visible;
     if(!visible)return;
     const closed=["GRASP","LIFT","CARRY"].includes(step.phase);
