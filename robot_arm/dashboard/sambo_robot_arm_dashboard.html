@@ -1242,8 +1242,8 @@ function stlRotationsFromTwin(p){
   return{base:p.base,shoulder:-58+p.shoulder*.72,elbow:82-p.elbow*.62,wristPitch:p.wristPitch*.55,wristRoll:p.wristRoll*.8,endAssist:p.endAssist*.35};
 }
 const SORT_CELLS=[
-  {key:"BOLT",label:"볼트 통",en:"BOLT BIN",x:-.74,z:.16,color:0x26b97a,accent:0x4ade80},
-  {key:"NUT",label:"너트 통",en:"NUT BIN",x:.72,z:.36,color:0x3478d4,accent:0x60a5fa}
+  {key:"BOLT",label:"볼트 통",en:"BOLT BIN",x:-2.05,z:-1.20,color:0x26b97a,accent:0x4ade80},
+  {key:"NUT",label:"너트 통",en:"NUT BIN",x:2.05,z:-1.20,color:0x3478d4,accent:0x60a5fa}
 ];
 function makeSceneLabel(T,text,accent,subtext=""){
   const canvas=document.createElement("canvas"),ctx=canvas.getContext("2d");
@@ -1341,7 +1341,7 @@ function drawThreeRobot(){
     rotateStlJoint(G[5],"z",rot.endAssist);
     r.gripperMesh.material.emissive.setHex(state.gripper.state==="OPEN"?0x062d36:0x32190a);
   }
-  const dist=6.15/view.zoom,phi=view.pitch,theta=view.yaw;
+  const dist=8.60/view.zoom,phi=view.pitch,theta=view.yaw;
   r.camera.position.set(dist*Math.sin(phi)*Math.cos(theta),1.28+dist*Math.cos(phi),dist*Math.sin(phi)*Math.sin(theta));r.camera.lookAt(0,1.45,.35);
   r.renderer.render(r.scene,r.camera);
   const pose=fk();state.robot.end_effector={x:pose.end.x,y:pose.end.z,z:pose.end.y};

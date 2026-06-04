@@ -39,16 +39,16 @@
     PRE_GRASP:{x:-.12,y:.48,z:.68},
     GRASP:{x:-.18,y:.66,z:.42},
     LIFT:{x:-.18,y:1.02,z:.36},
-    CARRY_BOLT:{x:-.52,y:.78,z:.36},
-    CARRY_NUT:{x:.50,y:.78,z:.56},
-    BIN_APPROACH_BOLT:{x:-.64,y:.58,z:.22},
-    BIN_APPROACH_NUT:{x:.58,y:.58,z:.42},
-    LOWER_BOLT:{x:-.72,y:.48,z:.12},
-    LOWER_NUT:{x:.68,y:.48,z:.34},
-    PLACE_BOLT:{x:-.74,y:.42,z:.16},
-    PLACE_NUT:{x:.72,y:.42,z:.36},
-    RETREAT_BOLT:{x:-.52,y:.70,z:.36},
-    RETREAT_NUT:{x:.50,y:.70,z:.56},
+    CARRY_BOLT:{x:-1.46,y:.84,z:-.72},
+    CARRY_NUT:{x:1.46,y:.84,z:-.72},
+    BIN_APPROACH_BOLT:{x:-1.86,y:.74,z:-1.02},
+    BIN_APPROACH_NUT:{x:1.86,y:.74,z:-1.02},
+    LOWER_BOLT:{x:-2.05,y:.62,z:-1.20},
+    LOWER_NUT:{x:2.05,y:.62,z:-1.20},
+    PLACE_BOLT:{x:-2.05,y:.44,z:-1.20},
+    PLACE_NUT:{x:2.05,y:.44,z:-1.20},
+    RETREAT_BOLT:{x:-1.46,y:.84,z:-.72},
+    RETREAT_NUT:{x:1.46,y:.84,z:-.72},
     HOME:{x:0,y:.12,z:1.08}
   };
 
@@ -59,8 +59,8 @@
     const radial=Math.hypot(x,z);
     const base=Math.atan2(x,z)*180/Math.PI;
     const reach=limit((radial-.28)/.82,0,1);
-    const shoulder=limit(4+reach*18+lift*8,0,46);
-    const elbow=limit(4+reach*12+(1-lift)*6+elbowBias*.25,0,42);
+    const shoulder=limit(8+reach*20+(1-lift)*8+elbowBias*.12,0,52);
+    const elbow=limit(10+reach*38+(1-lift)*12+elbowBias*.35,0,68);
     return[
       limit(180+base,0,360),
       limit(360-shoulder,0,360),
@@ -131,27 +131,27 @@
     {
       mode:"AUTO_RUN",step:"CARRY",progress:68,target:"BOLT",item:"BOLT",bin:"BOLT",phase:"CARRY",motion:"CARRY_BOLT",tof:46,gripper:"CLOSED",
       message:"볼트 통으로 이동: CAN 0x100 목표각, STM32 0x201 피드백 표시",level:"info",
-      joints:demoIK({x:-.52,z:.36,lift:.75,elbowBias:2,wrist:8,roll:10}),correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
+      joints:demoIK({x:-1.46,z:-.72,lift:.84,elbowBias:7,wrist:10,roll:10}),correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"CARRY",progress:71,target:"BOLT",item:"BOLT",bin:"BOLT",phase:"BIN_APPROACH",motion:"BIN_APPROACH_BOLT",tof:38,gripper:"CLOSED",
       message:"볼트 통 위로 접근: 투입 위치와 그리퍼 중심 정렬",level:"info",
-      joints:demoIK({x:-.64,z:.22,lift:.55,elbowBias:10,wrist:8,roll:8}),correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
+      joints:demoIK({x:-1.86,z:-1.02,lift:.72,elbowBias:12,wrist:10,roll:8}),correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"PLACE",progress:73,target:"BOLT",item:"BOLT",bin:"BOLT",phase:"LOWER",motion:"LOWER_BOLT",tof:24,gripper:"CLOSED",
       message:"볼트 통 안쪽으로 하강: 떨어뜨릴 높이까지 접근",level:"info",
-      joints:demoIK({x:-.72,z:.12,lift:.34,elbowBias:18,wrist:8,roll:4}),correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
+      joints:demoIK({x:-2.05,z:-1.20,lift:.60,elbowBias:16,wrist:10,roll:4}),correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"PLACE",progress:75,target:"BOLT",item:"BOLT",bin:"BOLT",phase:"PLACE",motion:"PLACE_BOLT",tof:18,gripper:"OPEN",
       message:"그리퍼 열림: 볼트 통에 볼트 투입 완료",level:"ok",
-      joints:demoIK({x:-.74,z:.16,lift:.3,elbowBias:20,wrist:8,roll:0}),correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:1,NUT:0}
+      joints:demoIK({x:-2.05,z:-1.20,lift:.56,elbowBias:16,wrist:10,roll:0}),correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:1,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"PLACE",progress:77,target:"NONE",item:"NONE",bin:"BOLT",phase:"RETREAT",motion:"RETREAT_BOLT",tof:42,gripper:"OPEN",
       message:"볼트 투입 후 그리퍼 후퇴: 다음 탐색 자세로 복귀 준비",level:"info",
-      joints:demoIK({x:-.52,z:.36,lift:.7,elbowBias:4,wrist:8}),correction:[0,0],confidence:.88,stable:3,counts:{BOLT:1,NUT:0}
+      joints:demoIK({x:-1.46,z:-.72,lift:.84,elbowBias:7,wrist:10}),correction:[0,0],confidence:.88,stable:3,counts:{BOLT:1,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"SCAN",progress:80,target:"NONE",item:"NONE",bin:"NONE",phase:"SEARCH",motion:"SEARCH_CENTER",tof:78,gripper:"OPEN",
@@ -181,27 +181,27 @@
     {
       mode:"AUTO_RUN",step:"CARRY",progress:97,target:"NUT",item:"NUT",bin:"NUT",phase:"CARRY",motion:"CARRY_NUT",tof:43,gripper:"CLOSED",
       message:"너트 통으로 이동: 분류 위치까지 운반",level:"info",
-      joints:demoIK({x:.50,z:.56,lift:.75,elbowBias:2,wrist:8,roll:-8}),correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:0}
+      joints:demoIK({x:1.46,z:-.72,lift:.84,elbowBias:7,wrist:10,roll:-8}),correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"CARRY",progress:98,target:"NUT",item:"NUT",bin:"NUT",phase:"BIN_APPROACH",motion:"BIN_APPROACH_NUT",tof:37,gripper:"CLOSED",
       message:"너트 통 위로 접근: 통 중심으로 손목 정렬",level:"info",
-      joints:demoIK({x:.58,z:.42,lift:.55,elbowBias:10,wrist:8,roll:-4}),correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:0}
+      joints:demoIK({x:1.86,z:-1.02,lift:.72,elbowBias:12,wrist:10,roll:-4}),correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"PLACE",progress:98.5,target:"NUT",item:"NUT",bin:"NUT",phase:"LOWER",motion:"LOWER_NUT",tof:23,gripper:"CLOSED",
       message:"너트 통 안쪽으로 하강: 투입 직전 높이 확인",level:"info",
-      joints:demoIK({x:.68,z:.34,lift:.34,elbowBias:18,wrist:8,roll:-2}),correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:0}
+      joints:demoIK({x:2.05,z:-1.20,lift:.60,elbowBias:16,wrist:10,roll:-2}),correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"PLACE",progress:99,target:"NUT",item:"NUT",bin:"NUT",phase:"PLACE",motion:"PLACE_NUT",tof:18,gripper:"OPEN",
       message:"그리퍼 열림: 너트 통에 너트 투입 완료",level:"ok",
-      joints:demoIK({x:.72,z:.36,lift:.3,elbowBias:20,wrist:8,roll:0}),correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:1}
+      joints:demoIK({x:2.05,z:-1.20,lift:.56,elbowBias:16,wrist:10,roll:0}),correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:1}
     },
     {
       mode:"AUTO_RUN",step:"PLACE",progress:99.5,target:"NONE",item:"NONE",bin:"NUT",phase:"RETREAT",motion:"RETREAT_NUT",tof:42,gripper:"OPEN",
       message:"너트 투입 후 그리퍼 후퇴: 통과 간섭 없이 빠져나옴",level:"info",
-      joints:demoIK({x:.50,z:.56,lift:.7,elbowBias:4,wrist:8}),correction:[0,0],confidence:.88,stable:3,counts:{BOLT:1,NUT:1}
+      joints:demoIK({x:1.46,z:-.72,lift:.84,elbowBias:7,wrist:10}),correction:[0,0],confidence:.88,stable:3,counts:{BOLT:1,NUT:1}
     },
     {
       mode:"AUTO_RUN",step:"HOME",progress:100,target:"NONE",item:"NONE",bin:"NONE",phase:"HOME",motion:"HOME",tof:72,gripper:"OPEN",
@@ -615,10 +615,10 @@
   }
 
   function drawCameraGripAction(ctx,W,H,box,sx,sy,step){
-    if(!["APPROACH","GRASP","LIFT","CARRY","PLACE"].includes(step.phase))return;
+    if(!["APPROACH","GRASP","LIFT","CARRY","BIN_APPROACH","LOWER","PLACE"].includes(step.phase))return;
     const cx=(box.x+box.w/2)*sx;
     const cy=(box.y+box.h/2)*sy;
-    const closed=["GRASP","LIFT","CARRY"].includes(step.phase);
+    const closed=["GRASP","LIFT","CARRY","BIN_APPROACH","LOWER"].includes(step.phase);
     const placing=step.phase==="PLACE";
     const gap=closed?18:placing?42:48;
     const fingerH=Math.max(54,box.h*sy*.85);
@@ -713,26 +713,32 @@
     const stem=new T.Mesh(new T.CylinderGeometry(.022,.022,.34,16),palmMat);
     stem.position.set(0,.42,-.02);
     gripperFx.add(palm,leftFinger,rightFinger,leftTip,rightTip,stem);
-    carrier.add(gripperFx);
     const label=makeThreeLabel(T,"작업물 이동","#f7c948");
     label.position.set(0,.34,0);
     carrier.add(label);
     group.add(carrier);
+    group.add(gripperFx);
     threeRobot.scene.add(group);
     threeRobot.emergencySortDemo={group,carrier,bolt,nut,label,gripperFx,leftFinger,rightFinger,leftTip,rightTip,palm,stem};
     return threeRobot.emergencySortDemo;
   }
 
   function markerPosition(step){
+    if(step.motion==="BIN_APPROACH_BOLT")return SORT_POSITIONS.BIN_APPROACH_BOLT;
+    if(step.motion==="BIN_APPROACH_NUT")return SORT_POSITIONS.BIN_APPROACH_NUT;
+    if(step.motion==="LOWER_BOLT")return SORT_POSITIONS.LOWER_BOLT;
+    if(step.motion==="LOWER_NUT")return SORT_POSITIONS.LOWER_NUT;
     if(step.motion==="CARRY_BOLT")return SORT_POSITIONS.CARRY_BOLT;
     if(step.motion==="CARRY_NUT")return SORT_POSITIONS.CARRY_NUT;
     if(step.motion==="PLACE_BOLT")return SORT_POSITIONS.PLACE_BOLT;
     if(step.motion==="PLACE_NUT")return SORT_POSITIONS.PLACE_NUT;
+    if(step.motion==="RETREAT_BOLT")return SORT_POSITIONS.PLACE_BOLT;
+    if(step.motion==="RETREAT_NUT")return SORT_POSITIONS.PLACE_NUT;
     return SORT_POSITIONS[step.motion]||SORT_POSITIONS.NONE;
   }
 
   function shouldAttachToRobotGripper(step){
-    return step.item!=="NONE"&&["APPROACH","GRASP","LIFT","CARRY","BIN_APPROACH","LOWER","PLACE"].includes(step.phase);
+    return step.item!=="NONE"&&["GRASP","LIFT","CARRY","BIN_APPROACH","LOWER"].includes(step.phase);
   }
 
   function getRobotGripperPose(){
@@ -768,15 +774,21 @@
     marker.bolt.visible=step.item==="BOLT";
     marker.nut.visible=step.item==="NUT";
     marker.label.visible=step.item!=="NONE";
-    syncThreeGripAction(marker,step);
+    syncThreeGripAction(marker,step,gripperPose);
   }
 
-  function syncThreeGripAction(marker,step){
+  function syncThreeGripAction(marker,step,gripperPose){
     if(!marker.gripperFx)return;
     const visible=step.item!=="NONE"&&["APPROACH","GRASP","LIFT","CARRY","BIN_APPROACH","LOWER","PLACE"].includes(step.phase);
     marker.gripperFx.visible=visible;
     if(!visible)return;
-    const closed=["GRASP","LIFT","CARRY"].includes(step.phase);
+    const pose=gripperPose||getRobotGripperPose();
+    if(pose){
+      marker.gripperFx.position.copy(pose.position);
+      marker.gripperFx.quaternion.copy(pose.quaternion);
+      marker.gripperFx.rotateX(Math.PI/2);
+    }
+    const closed=["GRASP","LIFT","CARRY","BIN_APPROACH","LOWER"].includes(step.phase);
     const placing=step.phase==="PLACE";
     const gap=closed?.13:placing?.31:.31;
     marker.leftFinger.position.x=-gap;
@@ -787,7 +799,12 @@
     marker.rightFinger.rotation.z=closed?.08:placing?-.18:-.14;
     marker.leftTip.rotation.z=marker.leftFinger.rotation.z;
     marker.rightTip.rotation.z=marker.rightFinger.rotation.z;
-    marker.gripperFx.position.y=closed?.03:placing?.08:.13;
+    if(placing){
+      const side=step.bin==="BOLT"?-1:1;
+      marker.gripperFx.position.x+=side*.18;
+      marker.gripperFx.position.z-=.08;
+    }
+    marker.gripperFx.position.y+=(closed?.03:placing?.14:.13);
     marker.palm.material.emissive.setHex(closed?0x092a12:0x031b22);
     marker.leftFinger.material.emissive.setHex(closed?0x361505:0x1a0902);
     marker.rightFinger.material.emissive.setHex(closed?0x361505:0x1a0902);
