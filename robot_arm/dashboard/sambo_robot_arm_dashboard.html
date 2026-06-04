@@ -1299,7 +1299,7 @@ async function loadActualStlRobot(T,r){
     loadStlPart(T,STL_PARTS.wristPlate,M.link),loadStlPart(T,STL_PARTS.wristRoll,M.accent),loadStlPart(T,STL_PARTS.gripper,M.gripper),
     loadStlPart(T,STL_PARTS.cameraBracket,M.camera)
   ]);
-  placeGlobal(base,root);placeGlobal(basecover,G[0]);placeGlobal(shoulder,G[0]);placeGlobal(arm1,G[1]);placeGlobal(arm2,G[2]);
+  placeGlobal(base,root);placeGlobal(basecover,root);placeGlobal(shoulder,G[0]);placeGlobal(arm1,G[1]);placeGlobal(arm2,G[2]);
   const j4Hub=new T.Mesh(new T.CylinderGeometry(.13,.13,.07,36),M.link),j4Mark=new T.Mesh(new T.BoxGeometry(.055,.055,.2),M.accent);
   j4Hub.rotation.z=Math.PI/2;j4Mark.position.set(0,.145,0);j4Hub.castShadow=j4Mark.castShadow=true;G[2].add(j4Hub);G[2].add(j4Mark);
   placeLocal(wristHouse,G[3],[-26,119,348],[29,0,0]);placeLocal(wristPlate,G[3],[-26,119,348],[29,0,0]);

@@ -52,138 +52,161 @@
     HOME:{x:0,y:.12,z:1.08}
   };
 
+  const HOME_JOINTS=[180,360,0,360,180,180];
+
+  // Temporary visual IK for the emergency demo. Replace this with measured FK/IK after hardware tests.
+  function demoIK({x=0,z=1,lift=.45,elbowBias=0,wrist=0,roll=0}={}){
+    const radial=Math.hypot(x,z);
+    const base=Math.atan2(x,z)*180/Math.PI;
+    const reach=limit((radial-.28)/.82,0,1);
+    const shoulder=limit(4+reach*18+lift*8,0,46);
+    const elbow=limit(4+reach*12+(1-lift)*6+elbowBias*.25,0,42);
+    return[
+      limit(180+base,0,360),
+      limit(360-shoulder,0,360),
+      shoulder,
+      limit(360-elbow,0,360),
+      limit(180+wrist,0,360),
+      limit(180+roll,0,360)
+    ];
+  }
+
+  function limit(value,min,max){
+    return Math.min(max,Math.max(min,value));
+  }
+
   const DEMO_STEPS=[
     {
       mode:"TEACHING",step:"TEACHING",progress:4,target:"NONE",item:"NONE",bin:"NONE",phase:"TEACHING",motion:"NONE",tof:90,gripper:"OPEN",
       message:"티칭 모드 시작: MPU 3개 센서 자세를 로봇 목표각으로 변환",level:"warn",
-      joints:[180,360,0,360,180,180],correction:[0,0],confidence:.86,stable:1,counts:{BOLT:0,NUT:0},
+      joints:HOME_JOINTS,correction:[0,0],confidence:.86,stable:1,counts:{BOLT:0,NUT:0},
       human:{shoulder_motion:35,elbow_bend:64,wrist_direction:8,hand_delta_x:4,hand_delta_y:-3}
     },
     {
       mode:"TEACHING",step:"TEACHING",progress:10,target:"NONE",item:"NONE",bin:"NONE",phase:"TEACHING",motion:"NONE",tof:88,gripper:"OPEN",
       message:"티칭 경로 저장 완료: SCAN-PICK-PLACE 순서 준비",level:"ok",
-      joints:[186,350,10,350,184,178],correction:[0,0],confidence:.92,stable:2,counts:{BOLT:0,NUT:0},
+      joints:demoIK({x:.08,z:.95,lift:.45,wrist:4,roll:-2}),correction:[0,0],confidence:.92,stable:2,counts:{BOLT:0,NUT:0},
       human:{shoulder_motion:44,elbow_bend:78,wrist_direction:15,hand_delta_x:12,hand_delta_y:-8}
     },
     {
       mode:"AUTO_RUN",step:"SCAN",progress:16,target:"NONE",item:"NONE",bin:"NONE",phase:"SEARCH",motion:"SEARCH_LEFT",tof:82,gripper:"OPEN",
       message:"탐색 구간 모션: 작업대 왼쪽을 스캔",level:"info",
-      joints:[154,350,10,350,182,180],correction:[0,0],confidence:.30,stable:0,counts:{BOLT:0,NUT:0}
+      joints:demoIK({x:-.34,z:1.0,lift:.6,wrist:2}),correction:[0,0],confidence:.30,stable:0,counts:{BOLT:0,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"SCAN",progress:22,target:"NONE",item:"NONE",bin:"NONE",phase:"SEARCH",motion:"SEARCH_CENTER",tof:78,gripper:"OPEN",
       message:"탐색 구간 모션: 중앙 영역 스캔",level:"info",
-      joints:[180,348,12,348,180,180],correction:[0,0],confidence:.34,stable:0,counts:{BOLT:0,NUT:0}
+      joints:demoIK({x:0,z:1.04,lift:.58}),correction:[0,0],confidence:.34,stable:0,counts:{BOLT:0,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"SCAN",progress:28,target:"NONE",item:"NONE",bin:"NONE",phase:"SEARCH",motion:"SEARCH_RIGHT",tof:74,gripper:"OPEN",
       message:"탐색 구간 모션: 오른쪽 영역 스캔",level:"info",
-      joints:[206,350,10,350,178,182],correction:[0,0],confidence:.36,stable:0,counts:{BOLT:0,NUT:0}
+      joints:demoIK({x:.34,z:1.0,lift:.6,wrist:-2,roll:2}),correction:[0,0],confidence:.36,stable:0,counts:{BOLT:0,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"DETECT",progress:34,target:"BOLT",item:"BOLT",bin:"NONE",phase:"CAMERA_FOUND",motion:"BOLT_FOUND",tof:62,gripper:"OPEN",
       message:"그리퍼 카메라에 후보 표시: 볼트 형태 검출",level:"info",
-      joints:[170,340,20,340,176,184],correction:[3.2,-2.1],confidence:.76,stable:1,bbox:{x:304,y:198,w:112,h:78},counts:{BOLT:0,NUT:0}
+      joints:demoIK({x:-.18,z:1.0,lift:.52,wrist:-4,roll:4}),correction:[3.2,-2.1],confidence:.76,stable:1,bbox:{x:304,y:198,w:112,h:78},counts:{BOLT:0,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"DETECT",progress:40,target:"BOLT",item:"BOLT",bin:"BOLT",phase:"CLASSIFY",motion:"BOLT_FOUND",tof:55,gripper:"OPEN",
       message:"YOLO/Hailo 판정: 볼트 95%, 볼트 통 경로 선택",level:"ok",
-      joints:[170,336,24,336,176,184],correction:[1.8,-1.2],confidence:.95,stable:3,bbox:{x:312,y:202,w:106,h:74},counts:{BOLT:0,NUT:0}
+      joints:demoIK({x:-.18,z:.92,lift:.48,wrist:-4,roll:4}),correction:[1.8,-1.2],confidence:.95,stable:3,bbox:{x:312,y:202,w:106,h:74},counts:{BOLT:0,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"PRE_GRASP",progress:48,target:"BOLT",item:"BOLT",bin:"BOLT",phase:"APPROACH",motion:"PRE_GRASP",tof:36,gripper:"OPEN",
       message:"가까이 접근: ToF 거리와 위치 보정값으로 집기 지점 보정",level:"info",
-      joints:[166,326,34,326,174,186],correction:[.9,-.5],confidence:.96,stable:3,bbox:{x:318,y:206,w:98,h:70},counts:{BOLT:0,NUT:0}
+      joints:demoIK({x:-.18,z:.62,lift:.38,elbowBias:12,wrist:-6,roll:6}),correction:[.9,-.5],confidence:.96,stable:3,bbox:{x:318,y:206,w:98,h:70},counts:{BOLT:0,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"GRASP",progress:56,target:"BOLT",item:"BOLT",bin:"BOLT",phase:"GRASP",motion:"GRASP",tof:23,gripper:"CLOSED",
       message:"그리퍼 닫힘: 볼트 집기 완료",level:"ok",
-      joints:[166,322,38,322,174,186],correction:[.4,-.2],confidence:.96,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
+      joints:demoIK({x:-.18,z:.48,lift:.28,elbowBias:18,wrist:-6,roll:6}),correction:[.4,-.2],confidence:.96,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"LIFT",progress:62,target:"BOLT",item:"BOLT",bin:"BOLT",phase:"LIFT",motion:"LIFT",tof:34,gripper:"CLOSED",
       message:"작업물 들어 올림: 그리퍼에 볼트 유지",level:"info",
-      joints:[160,332,28,332,182,188],correction:[.2,-.1],confidence:.95,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
+      joints:demoIK({x:-.26,z:.52,lift:.7,elbowBias:8,wrist:2,roll:8}),correction:[.2,-.1],confidence:.95,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"CARRY",progress:68,target:"BOLT",item:"BOLT",bin:"BOLT",phase:"CARRY",motion:"CARRY_BOLT",tof:46,gripper:"CLOSED",
       message:"볼트 통으로 이동: CAN 0x100 목표각, STM32 0x201 피드백 표시",level:"info",
-      joints:[132,344,16,344,188,190],correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
+      joints:demoIK({x:-.52,z:.36,lift:.75,elbowBias:2,wrist:8,roll:10}),correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"CARRY",progress:71,target:"BOLT",item:"BOLT",bin:"BOLT",phase:"BIN_APPROACH",motion:"BIN_APPROACH_BOLT",tof:38,gripper:"CLOSED",
       message:"볼트 통 위로 접근: 투입 위치와 그리퍼 중심 정렬",level:"info",
-      joints:[118,348,12,348,188,188],correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
+      joints:demoIK({x:-.64,z:.22,lift:.55,elbowBias:10,wrist:8,roll:8}),correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"PLACE",progress:73,target:"BOLT",item:"BOLT",bin:"BOLT",phase:"LOWER",motion:"LOWER_BOLT",tof:24,gripper:"CLOSED",
       message:"볼트 통 안쪽으로 하강: 떨어뜨릴 높이까지 접근",level:"info",
-      joints:[110,346,14,346,188,184],correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
+      joints:demoIK({x:-.72,z:.12,lift:.34,elbowBias:18,wrist:8,roll:4}),correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:0,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"PLACE",progress:75,target:"BOLT",item:"BOLT",bin:"BOLT",phase:"PLACE",motion:"PLACE_BOLT",tof:18,gripper:"OPEN",
       message:"그리퍼 열림: 볼트 통에 볼트 투입 완료",level:"ok",
-      joints:[105,342,18,342,188,180],correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:1,NUT:0}
+      joints:demoIK({x:-.74,z:.16,lift:.3,elbowBias:20,wrist:8,roll:0}),correction:[0,0],confidence:.94,stable:3,bbox:{x:322,y:208,w:92,h:66},counts:{BOLT:1,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"PLACE",progress:77,target:"NONE",item:"NONE",bin:"BOLT",phase:"RETREAT",motion:"RETREAT_BOLT",tof:42,gripper:"OPEN",
       message:"볼트 투입 후 그리퍼 후퇴: 다음 탐색 자세로 복귀 준비",level:"info",
-      joints:[130,344,16,344,188,180],correction:[0,0],confidence:.88,stable:3,counts:{BOLT:1,NUT:0}
+      joints:demoIK({x:-.52,z:.36,lift:.7,elbowBias:4,wrist:8}),correction:[0,0],confidence:.88,stable:3,counts:{BOLT:1,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"SCAN",progress:80,target:"NONE",item:"NONE",bin:"NONE",phase:"SEARCH",motion:"SEARCH_CENTER",tof:78,gripper:"OPEN",
       message:"다음 작업물 탐색: 다시 스캔 자세로 복귀",level:"info",
-      joints:[180,348,12,348,180,180],correction:[0,0],confidence:.38,stable:0,counts:{BOLT:1,NUT:0}
+      joints:demoIK({x:0,z:1.04,lift:.58}),correction:[0,0],confidence:.38,stable:0,counts:{BOLT:1,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"DETECT",progress:84,target:"NUT",item:"NUT",bin:"NONE",phase:"CAMERA_FOUND",motion:"NUT_FOUND",tof:60,gripper:"OPEN",
       message:"그리퍼 카메라에 후보 표시: 너트 형태 검출",level:"info",
-      joints:[194,338,22,338,178,176],correction:[-2.4,1.7],confidence:.78,stable:1,bbox:{x:246,y:198,w:88,h:86},counts:{BOLT:1,NUT:0}
+      joints:demoIK({x:.18,z:1.0,lift:.52,wrist:-2,roll:-4}),correction:[-2.4,1.7],confidence:.78,stable:1,bbox:{x:246,y:198,w:88,h:86},counts:{BOLT:1,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"DETECT",progress:88,target:"NUT",item:"NUT",bin:"NUT",phase:"CLASSIFY",motion:"NUT_FOUND",tof:52,gripper:"OPEN",
       message:"YOLO/Hailo 판정: 너트 94%, 너트 통 경로 선택",level:"ok",
-      joints:[194,334,26,334,178,176],correction:[-1.2,.8],confidence:.94,stable:3,bbox:{x:252,y:202,w:82,h:80},counts:{BOLT:1,NUT:0}
+      joints:demoIK({x:.18,z:.92,lift:.48,wrist:-2,roll:-4}),correction:[-1.2,.8],confidence:.94,stable:3,bbox:{x:252,y:202,w:82,h:80},counts:{BOLT:1,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"PRE_GRASP",progress:91,target:"NUT",item:"NUT",bin:"NUT",phase:"APPROACH",motion:"PRE_GRASP",tof:35,gripper:"OPEN",
       message:"가까이 접근: 너트 중심점으로 집기 보정",level:"info",
-      joints:[190,326,34,326,176,174],correction:[-.6,.4],confidence:.94,stable:3,bbox:{x:258,y:206,w:78,h:76},counts:{BOLT:1,NUT:0}
+      joints:demoIK({x:.18,z:.62,lift:.38,elbowBias:12,wrist:-4,roll:-6}),correction:[-.6,.4],confidence:.94,stable:3,bbox:{x:258,y:206,w:78,h:76},counts:{BOLT:1,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"GRASP",progress:94,target:"NUT",item:"NUT",bin:"NUT",phase:"GRASP",motion:"GRASP",tof:22,gripper:"CLOSED",
       message:"그리퍼 닫힘: 너트 집기 완료",level:"ok",
-      joints:[190,322,38,322,176,174],correction:[-.3,.2],confidence:.94,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:0}
+      joints:demoIK({x:.18,z:.48,lift:.28,elbowBias:18,wrist:-4,roll:-6}),correction:[-.3,.2],confidence:.94,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"CARRY",progress:97,target:"NUT",item:"NUT",bin:"NUT",phase:"CARRY",motion:"CARRY_NUT",tof:43,gripper:"CLOSED",
       message:"너트 통으로 이동: 분류 위치까지 운반",level:"info",
-      joints:[226,344,16,344,188,172],correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:0}
+      joints:demoIK({x:.50,z:.56,lift:.75,elbowBias:2,wrist:8,roll:-8}),correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"CARRY",progress:98,target:"NUT",item:"NUT",bin:"NUT",phase:"BIN_APPROACH",motion:"BIN_APPROACH_NUT",tof:37,gripper:"CLOSED",
       message:"너트 통 위로 접근: 통 중심으로 손목 정렬",level:"info",
-      joints:[238,344,16,344,188,176],correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:0}
+      joints:demoIK({x:.58,z:.42,lift:.55,elbowBias:10,wrist:8,roll:-4}),correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"PLACE",progress:98.5,target:"NUT",item:"NUT",bin:"NUT",phase:"LOWER",motion:"LOWER_NUT",tof:23,gripper:"CLOSED",
       message:"너트 통 안쪽으로 하강: 투입 직전 높이 확인",level:"info",
-      joints:[250,346,14,346,188,178],correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:0}
+      joints:demoIK({x:.68,z:.34,lift:.34,elbowBias:18,wrist:8,roll:-2}),correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:0}
     },
     {
       mode:"AUTO_RUN",step:"PLACE",progress:99,target:"NUT",item:"NUT",bin:"NUT",phase:"PLACE",motion:"PLACE_NUT",tof:18,gripper:"OPEN",
       message:"그리퍼 열림: 너트 통에 너트 투입 완료",level:"ok",
-      joints:[255,342,18,342,188,180],correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:1}
+      joints:demoIK({x:.72,z:.36,lift:.3,elbowBias:20,wrist:8,roll:0}),correction:[0,0],confidence:.93,stable:3,bbox:{x:260,y:208,w:74,h:72},counts:{BOLT:1,NUT:1}
     },
     {
       mode:"AUTO_RUN",step:"PLACE",progress:99.5,target:"NONE",item:"NONE",bin:"NUT",phase:"RETREAT",motion:"RETREAT_NUT",tof:42,gripper:"OPEN",
       message:"너트 투입 후 그리퍼 후퇴: 통과 간섭 없이 빠져나옴",level:"info",
-      joints:[230,344,16,344,188,180],correction:[0,0],confidence:.88,stable:3,counts:{BOLT:1,NUT:1}
+      joints:demoIK({x:.50,z:.56,lift:.7,elbowBias:4,wrist:8}),correction:[0,0],confidence:.88,stable:3,counts:{BOLT:1,NUT:1}
     },
     {
       mode:"AUTO_RUN",step:"HOME",progress:100,target:"NONE",item:"NONE",bin:"NONE",phase:"HOME",motion:"HOME",tof:72,gripper:"OPEN",
       message:"HOME 복귀: 티칭-탐색-판정-집기-분류 시연 완료",level:"ok",
-      joints:[180,360,0,360,180,180],correction:[0,0],confidence:.90,stable:3,counts:{BOLT:1,NUT:1}
+      joints:HOME_JOINTS,correction:[0,0],confidence:.90,stable:3,counts:{BOLT:1,NUT:1}
     }
   ];
 
