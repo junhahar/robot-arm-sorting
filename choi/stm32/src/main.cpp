@@ -22,6 +22,7 @@
 //   cmd=0x03: 각도 명령        [0x03, id, ax10_lo, ax10_hi, move_ms_lo, move_ms_hi, 0, 0]
 //   cmd=0x04: 영점 보정        [0x04, id, ...] 현재 위치를 180°(중위)로 (모터 안 움직임)  ← 추가
 //   cmd=0x02: 토크 ON/OFF      [0x02, id, 0,0,0,0, torque, 0]
+//   cmd=0x06: MG90 그리퍼 PWM  [0x06, angle(0~180), 0,0,0,0,0,0]   ← 추가 (STM32 직접 PWM)
 //   cmd=0x7F: ping
 //
 // 0x201 텔레메트리 (DLC 7): [id, ax10_lo, ax10_hi, tempC, load_lo, load_hi, flags]
@@ -33,12 +34,17 @@
 
 #include <Arduino.h>
 #include "stm32f1xx_hal.h"
+#include <Servo.h>   // MG90 그리퍼 PWM (STM32duino Servo)
 
 // STS3215 버스 서보 어댑터 UART입니다.
 // HardwareSerial 생성자 순서는 (RX, TX)이므로 PA10=RX, PA9=TX입니다.
 HardwareSerial ServoSerial(PA10, PA9);
 
 #define SERVO_COUNT 6
+
+// MG90 그리퍼 (PWM 서보) — STS3215와 별개, STM32가 직접 PWM 구동
+#define GRIPPER_PWM_PIN  PA6    // TIM3_CH1 (사용 중인 핀과 충돌 없음)
+#define GRIPPER_INIT_DEG 90
 
 #define CAN_ID_CMD       0x100
 #define CAN_ID_ACK       0x200
@@ -51,11 +57,14 @@ HardwareSerial ServoSerial(PA10, PA9);
 #define CMD_SET_MIDDLE   0x04   // 현재 위치를 180°(중위)로 영점 보정 (EEPROM)
 #define CMD_SET_REF      0x05   // 현재 위치를 임의 각도(angle×10)로 영점 보정 (EEPROM 오프셋 직접 기록)
 #define CMD_PING         0x7F
+#define CMD_GRIPPER      0x06   // MG90 그리퍼 PWM 각도 [0x06, angle(0~180)]
 
 #define STATUS_OK        0x00
 #define STATUS_ERROR     0xFF
 
 static CAN_HandleTypeDef hcan;
+
+Servo gripper;   // MG90 그리퍼
 
 // STS3215 프로토콜 명령과 레지스터 주소입니다.
 static const uint8_t STS_INST_READ = 0x02;
@@ -457,6 +466,15 @@ void handleCanFrame(uint16_t canId, uint8_t* buf, uint8_t len) {
         return;
     }
 
+    if (cmd == CMD_GRIPPER) {
+        // MG90 그리퍼 PWM. buf[1]=각도(0~180). 서보 1~6이 아니므로 motorId 검증 전에 처리.
+        uint8_t angle = buf[1];
+        if (angle > 180) angle = 180;
+        gripper.write(angle);
+        sendAck(cmd, 0, STATUS_OK);
+        return;
+    }
+
     if (motorId < 1 || motorId > SERVO_COUNT) {
         sendAck(cmd, motorId, STATUS_ERROR);
         return;
@@ -540,7 +558,10 @@ void setup() {
 
     Serial.println("STM32 IK angle receiver + STS3215 controller");
     Serial.println("CAN: 125kbps / sample-point 62.5%");
-    Serial.println("RX 0x100: step/angle/torque/middle, TX 0x200 ACK, 0x201 telemetry, 0x202 current");
+    Serial.println("RX 0x100: step/angle/torque/middle/gripper, TX 0x200 ACK, 0x201 telemetry, 0x202 current");
+
+    gripper.attach(GRIPPER_PWM_PIN);     // MG90 그리퍼 PWM 시작
+    gripper.write(GRIPPER_INIT_DEG);
 
     for (uint8_t id = 1; id <= SERVO_COUNT; id++) {
         setTorque(id, true);
