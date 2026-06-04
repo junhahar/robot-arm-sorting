@@ -459,20 +459,11 @@
   }
 
   function injectOverlay(){
-    if(document.getElementById("emergencyDemoOverlay"))return;
-    const overlay=document.createElement("div");
-    overlay.id="emergencyDemoOverlay";
-    overlay.className="emergency-demo-overlay";
-    overlay.innerHTML="<b>긴급 발표 시연</b><span>티칭부터 자동 분류까지 보여주는 프론트 전용 데모입니다. 실제 CAN/모터 명령은 전송하지 않습니다.</span>";
-    document.body.appendChild(overlay);
+    document.getElementById("emergencyDemoOverlay")?.remove();
   }
 
   function injectSortPanel(){
-    if(document.getElementById("emergencySortPanel"))return;
-    const panel=document.createElement("div");
-    panel.id="emergencySortPanel";
-    panel.className="emergency-sort-panel";
-    document.body.appendChild(panel);
+    document.getElementById("emergencySortPanel")?.remove();
   }
 
   function updateButton(){
@@ -483,33 +474,11 @@
   }
 
   function updateOverlay(status){
-    const overlay=document.getElementById("emergencyDemoOverlay");
-    if(!overlay)return;
-    const step=runtime.currentStep||DEMO_STEPS[0];
-    overlay.classList.toggle("show",runtime.active||runtime.done);
-    overlay.innerHTML=`<b>긴급 발표 시연 ${status||""}</b><span>${PHASE_LABELS[step.phase]} · ${step.message}<br>프론트 전용 데모라 실제 CAN/모터 명령은 전송하지 않습니다.</span>`;
+    document.getElementById("emergencyDemoOverlay")?.remove();
   }
 
   function updateSortPanel(){
-    const panel=document.getElementById("emergencySortPanel");
-    if(!panel)return;
-    const step=runtime.currentStep||DEMO_STEPS[0];
-    const counts=step.counts||{BOLT:0,NUT:0};
-    const item=runtime.done?"분류 완료":(step.phase==="SEARCH"||step.phase==="TEACHING"?"탐색 전":ITEM_LABELS[step.item]||ITEM_LABELS.NONE);
-    const bin=runtime.done?"볼트 통 + 너트 통":(step.bin==="NONE"?"판정 대기":BIN_LABELS[step.bin]||BIN_LABELS.NONE);
-    panel.classList.toggle("show",runtime.active||runtime.done);
-    panel.innerHTML=`
-      <div class="emergency-sort-title">티칭 → 탐색 → AI 판정 → 집기 → 분류 <span>${PHASE_LABELS[step.phase]}</span></div>
-      <div class="emergency-sort-route">
-        <div class="emergency-sort-node"><small>그리퍼 카메라 / AI</small><b>${item}</b></div>
-        <div class="emergency-sort-arrow">→</div>
-        <div class="emergency-sort-node"><small>선택된 투입 위치</small><b>${bin}</b></div>
-      </div>
-      <div class="emergency-sort-bins">
-        <div class="emergency-sort-bin bolt ${step.bin==="BOLT"?"active":""}"><small>볼트 통</small><b>${counts.BOLT}</b> 개</div>
-        <div class="emergency-sort-bin nut ${step.bin==="NUT"?"active":""}"><small>너트 통</small><b>${counts.NUT}</b> 개</div>
-      </div>
-    `;
+    document.getElementById("emergencySortPanel")?.remove();
   }
 
   function drawEmergencyGripper(){
