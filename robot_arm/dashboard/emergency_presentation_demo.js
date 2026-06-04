@@ -700,15 +700,40 @@
     return SORT_POSITIONS[step.motion]||SORT_POSITIONS.NONE;
   }
 
+  function shouldAttachToRobotGripper(step){
+    return step.item!=="NONE"&&["APPROACH","GRASP","LIFT","CARRY","PLACE"].includes(step.phase);
+  }
+
+  function getRobotGripperPose(){
+    if(typeof threeRobot==="undefined"||!threeRobot||!window.THREE)return null;
+    const anchor=threeRobot.gripperMesh||(threeRobot.groups&&threeRobot.groups[5]);
+    if(!anchor||typeof anchor.getWorldPosition!=="function")return null;
+    const T=window.THREE;
+    const position=new T.Vector3();
+    const quaternion=new T.Quaternion();
+    anchor.getWorldPosition(position);
+    anchor.getWorldQuaternion(quaternion);
+    position.y+=.05;
+    return{position,quaternion};
+  }
+
   function syncThreeSortMarker(){
     const marker=ensureThreeSortMarker();
     if(!marker)return;
     const step=runtime.currentStep||DEMO_STEPS[0];
     marker.group.visible=runtime.active||runtime.done;
     if(!marker.group.visible)return;
-    const pos=markerPosition(step);
-    marker.carrier.position.set(pos.x,pos.y,pos.z);
-    marker.carrier.rotation.y+=(step.item==="NUT"?.08:.05);
+    const gripperPose=shouldAttachToRobotGripper(step)?getRobotGripperPose():null;
+    if(gripperPose){
+      marker.carrier.position.copy(gripperPose.position);
+      marker.carrier.quaternion.copy(gripperPose.quaternion);
+      marker.carrier.rotateX(Math.PI/2);
+      marker.carrier.rotateZ(step.item==="NUT"?Math.PI/2:0);
+    }else{
+      const pos=markerPosition(step);
+      marker.carrier.position.set(pos.x,pos.y,pos.z);
+      marker.carrier.rotation.set(0,marker.carrier.rotation.y+(step.item==="NUT"?.08:.05),0);
+    }
     marker.bolt.visible=step.item==="BOLT";
     marker.nut.visible=step.item==="NUT";
     marker.label.visible=step.item!=="NONE";
