@@ -20,7 +20,13 @@ choi/
 │   ├── rpi_keyboard_control_v1_2.py  v1 + 부드러운 홈복귀(비례감속)
 │   ├── rpi_keyboard_control_v1_3.py  v1_2 + 상태줄 '목표/실측' 둘 다 표시
 │   ├── rpi_keyboard_control_v1_4.py  v1_3 + '9' 카메라 자세 축별 순차 이동
-│   ├── rpi_keyboard_control_v1_5.py  v1_4 + 홈복귀 S-curve (★최신 권장)
+│   ├── rpi_keyboard_control_v1_5.py  v1_4 + 홈복귀 S-curve
+│   ├── rpi_keyboard_control_v1_6.py  v1_5 + '8' 카메라 자세2, 자세이동 S-curve
+│   ├── rpi_keyboard_control_v1_7.py  v1_6 + MG90 그리퍼(Nano, 0x310)
+│   ├── rpi_keyboard_control_v1_8.py  v1_7 + MG90을 STM32 PWM(0x06)으로 이전
+│   ├── rpi_keyboard_control_v1_9.py  v1_8 + IK↔실물 캘리브 수집(k/j/p/l)+선형보정 회귀
+│   ├── rpi_keyboard_control_v1_10.py v1_9 + '7' 각도 입력 자세이동 + 관절 한계
+│   ├── rpi_keyboard_control_v1_11.py v1_10 + '1~5' 축별 입력이동, M2·3 거울 자동 (★최신 권장)
 │   ├── rpi_current_monitor.py        전류 실시간 모니터 (0x202)
 │   ├── rpi_load_monitor.py           부하(load) 실시간 모니터 (0x201, 항상 읽힘)
 │   └── arm_ik.py                     역기구학 (좌표 → 모터각)
@@ -33,22 +39,34 @@ choi/
 
 ## 키보드 제어 버전 비교
 
-| 파일 | 영점 | 홈복귀 | 추가 기능 |
-|---|---|---|---|
-| **v1** | 전부 180° 중위보정(안전) | 즉시 명령 | 거울쌍·gain·프리로드 |
-| **v1_2** | 〃 | 부드러운(비례감속) | |
-| **v1_3** | 〃 | 〃 | 상태줄 목표/실측 표시 |
-| **v1_4** | 〃 | 〃 | `9`=카메라 자세 순차 이동 |
-| **v1_5** ★ | 〃 | **S-curve** | `9`=카메라 자세, STREAM 80 |
+| 파일 | 홈복귀 | 추가 기능 |
+|---|---|---|
+| **v1** | 즉시 명령 | 거울쌍·gain·프리로드 (전부 180° 중위보정) |
+| **v1_2** | 부드러운(비례감속) | |
+| **v1_3** | 〃 | 상태줄 목표/실측 표시 |
+| **v1_4** | 〃 | `9`=카메라 자세 순차 이동 |
+| **v1_5** | **S-curve** | `9`=카메라 자세, STREAM 80 |
+| **v1_6** | S-curve | `8`=카메라 자세2, 자세이동도 S-curve |
+| **v1_7** | S-curve | MG90 그리퍼(Nano, 0x310) `y/h` |
+| **v1_8** | S-curve | MG90을 STM32 PWM(0x06)으로 이전 |
+| **v1_9** | S-curve | IK↔실물 캘리브 수집 `k/j/p/l` + 회귀(real=a·ik+b) |
+| **v1_10** | S-curve | `7`=각도 6개 입력 자세이동 + 관절 한계(수동 clamp/입력 거부) |
+| **v1_11** ★ | S-curve | `1~5`=축별 목표각 입력이동, M2·3 거울 자동, 개별 홈복귀 제거(`0`만) |
 
-> **v1_5 권장** (최신).
+> **v1_11 권장** (최신). 캘리브는 calib/ik.py 한 곳에서만 — k/j/p는 중복이니 보정 끝났으면 사용 안 함(이중보정 주의).
 
-### 공통 키 매핑
-- 이동: M1 `q/a`  M2·M3 `w/s`(거울쌍)  M4 `e/d`  M5 `r/f`  M6 `t/g`
-- 영점: `z` `x` `c` `v` `b` (현재 위치를 기준각으로, 모터 안 움직임)
-- 홈복귀: `1`~`6` 그 모터 / `0` 전체 → 180°
-- 카메라 자세(v1_4/v1_5): `9` (M1→M4→M2·3→M5→M6 순차)
+### 키 매핑 (v1_11 기준)
+- 이동(수동, 누르면 가속): M1 `q/a`  M2·M3 `w/s`(거울쌍)  M4 `e/d`  M5 `r/f`  M6 `t/g`
+- 영점(현재 위치를 180°로, 모터 안 움직임): `z`=M1 `x`=M2·3 `c`=M4 `v`=M5 `b`=M6
+- **축이동(S-curve, 목표각 입력)**: `1`=M1 `2`=M2·3 `3`=M4 `4`=M5 `5`=M6
+- **자세입력(S-curve, 각 5개)**: `7` (M1 M2·3 M4 M5 M6 입력, M3은 360−M2 거울 자동)
+- 카메라 자세(S-curve): `9` / `8` (M1→M4→M2·3→M5→M6 순차)
+- 전체 홈복귀: `0` (전부 180°)
+- 그리퍼(MG90/STM32 PWM): `y`=+ `h`=−
 - 프리로드(M2·3 부하 분담): `]` `[`,  종료: `ESC`
+- 캘리브(보정 끝났으면 사용 안 함): `k`=IK각입력 `j`=실측 저장 `p`=회귀 `l`=샘플수
+
+> M2·M3 거울쌍은 명령각 **360 대칭**(M2+M3=360, 중점 180). 두 모터 모두 180으로 영점을 잡는 전제. 카메라 자세값도 M2+M3=360으로 맞춤.
 
 ---
 
@@ -62,7 +80,7 @@ choi/
 | `0x202` | STM→RPi | 전류 |
 | `0x300` | Nano→RPi | 가상 센서 |
 
-**0x100 명령:** `0x01`=위치(step), `0x03`=각도(angle×10), `0x04`=영점180°(중위보정), `0x05`=영점 임의각(오프셋 기록), `0x02`=토크, `0x7F`=ping.
+**0x100 명령:** `0x01`=위치(step), `0x03`=각도(angle×10), `0x04`=영점180°(중위보정), `0x05`=영점 임의각(오프셋 기록), `0x02`=토크, `0x06`=MG90 그리퍼 PWM(PA6, 각도 0~180), `0x7F`=ping.
 
 물리: 125 kbps / sample-point 62.5% / PB8=RX, PB9=TX. 자세한 건 `docs/CAN_통신_규약.md`.
 
@@ -82,7 +100,7 @@ sudo ip link set can0 down
 sudo ip link set can0 type can bitrate 125000 sample-point 0.625
 sudo ip link set can0 up
 
-python3 rpi/rpi_keyboard_control_v1_5.py   # 키보드 제어 (권장)
+python3 rpi/rpi_keyboard_control_v1_11.py  # 키보드 제어 (권장, 최신)
 python3 rpi/rpi_load_monitor.py            # (다른 터미널) 부하 모니터
 python3 rpi/arm_ik.py                      # 역기구학 self-test (FK 라운드트립)
 ```
