@@ -45,6 +45,11 @@ HardwareSerial ServoSerial(PA10, PA9);
 // MG90 그리퍼 (PWM 서보) — STS3215와 별개, STM32가 직접 PWM 구동
 #define GRIPPER_PWM_PIN  PA6    // TIM3_CH1 (사용 중인 핀과 충돌 없음)
 #define GRIPPER_INIT_DEG 90
+// MG90S 펄스폭 범위[us]. STM32duino Servo 기본(544~2400)은 MG90S 끝단과 안 맞아
+// 0°/180°에서 위치를 못 찾고 계속 도는 일이 있다 → 실측 일반값 600~2400으로 명시.
+// (서보가 끝에서 여전히 떨거나 돌면 이 두 값을 좁혀가며 맞춘다: 예 700~2300)
+#define GRIPPER_PULSE_MIN_US 600
+#define GRIPPER_PULSE_MAX_US 2400
 
 #define CAN_ID_CMD       0x100
 #define CAN_ID_ACK       0x200
@@ -82,9 +87,22 @@ static const uint8_t STS_ADDR_LOCK   = 0x37;           // EEPROM 락 (0=언락, 
 // 이유: 모터 전부를 한 loop에서 읽으면 CAN 명령 처리가 늦어집니다.
 // ※ 전류를 더 빠르게 보고 싶으면 이 값을 낮추세요(예: 40~50ms). 6모터 순환이라
 //   150ms면 모터당 전류 갱신이 ~0.9s로 느립니다. 50ms면 ~0.3s.
-static const uint32_t TELEMETRY_PERIOD_MS = 150;
+// 한 tick에 모터 1개의 '항목 1개'만 UART로 읽는다(블로킹 분산). 한 항목당 한 tick.
+// 그래서 텔레메트리가 loop를 잡는 시간이 1/4로 줄어 → 그리퍼/명령 반응 지연 완화.
+// 4항목(위치/온도/부하/전류)을 다 읽으면 그때 CAN 프레임(0x201/0x202)을 보낸다.
+// 주기도 150→25ms로 줄임: 한 항목만 읽으니 부담 적고, 25ms×4=100ms로 모터당 1.5바퀴/0.6s 갱신.
+static const uint32_t TELEMETRY_PERIOD_MS = 25;
 static uint32_t lastTelemetryMs = 0;
 static uint8_t telemetryMotorId = 1;
+static uint8_t telemetryStage = 0;   // 0=위치,1=온도,2=부하,3=전류→전송
+
+// 한 모터의 항목을 모으는 누적 버퍼 (4항목 다 읽으면 한 번에 전송)
+static int16_t  telAngleX10 = 0;
+static uint8_t  telTempC = 0;
+static uint16_t telRawLoad = 0;
+static uint16_t telRawCurrent = 0;
+static uint8_t  telFlags = 0;      // bit0 위치, bit1 온도, bit2 부하 OK
+static uint8_t  telCurOk = 0;
 
 // CAN 송신 실패 카운터입니다.
 static uint32_t canTxNoMailboxCount = 0;
@@ -389,61 +407,84 @@ void setReferenceAngle(uint8_t id, int16_t angleX10) {
 
 
 // ============================================================
-// Raspberry Pi로 상태 회신
+// Raspberry Pi로 상태 회신 (블로킹 분산: 한 tick에 한 항목만 UART 읽기)
 // ============================================================
-void sendServoTelemetry(uint8_t id) {
-    uint16_t step = 0;
-    int16_t angleX10 = 0;
-    uint8_t tempC = 0;
-    uint16_t rawLoad = 0;
-    uint8_t flags = 0;
-
-    if (readServoPositionStep(id, &step)) {
-        angleX10 = stepToAngleX10(step);
-        flags |= 0x01;
-    }
-
-    if (readServoTemperature(id, &tempC)) {
-        flags |= 0x02;
-    }
-
-    if (readServoLoadRaw(id, &rawLoad)) {
-        flags |= 0x04;
-    }
-
-    uint8_t frame[7] = {
-        id,
-        (uint8_t)(angleX10 & 0xFF),
-        (uint8_t)((uint16_t)angleX10 >> 8),
-        tempC,
-        (uint8_t)(rawLoad & 0xFF),
-        (uint8_t)(rawLoad >> 8),
-        flags
-    };
-
-    canSend(CAN_ID_TELEMETRY, frame, 7);
-
-    // 전류는 별도 프레임(0x202)으로 보냅니다. [motor_id, cur_lo, cur_hi, ok]
-    uint16_t rawCurrent = 0;
-    uint8_t curOk = readServoCurrentRaw(id, &rawCurrent) ? 1 : 0;
-    uint8_t curFrame[4] = {
-        id,
-        (uint8_t)(rawCurrent & 0xFF),
-        (uint8_t)(rawCurrent >> 8),
-        curOk
-    };
-    canSend(CAN_ID_CURRENT, curFrame, 4);
-}
-
+// 한 모터에 대해 stage 0→1→2→3 순으로 한 항목씩 읽어 누적하고,
+// stage 3(전류)에서 두 프레임(0x201 텔레메트리, 0x202 전류)을 한 번에 보낸 뒤
+// 다음 모터로 넘어간다. 이렇게 하면 loop가 한 번에 UART에 잡히는 시간이
+// 4읽기 → 1읽기로 줄어 그리퍼/명령 반응 지연이 크게 완화된다.
 void sendServoTelemetryTick() {
     uint32_t now = millis();
     if (lastTelemetryMs != 0 && (uint32_t)(now - lastTelemetryMs) < TELEMETRY_PERIOD_MS) return;
     lastTelemetryMs = now;
 
-    sendServoTelemetry(telemetryMotorId);
+    uint8_t id = telemetryMotorId;
 
-    telemetryMotorId++;
-    if (telemetryMotorId > SERVO_COUNT) telemetryMotorId = 1;
+    switch (telemetryStage) {
+        case 0: {  // 위치(각도)
+            uint16_t step = 0;
+            if (readServoPositionStep(id, &step)) {
+                telAngleX10 = stepToAngleX10(step);
+                telFlags |= 0x01;
+            }
+            break;
+        }
+        case 1: {  // 온도
+            uint8_t tempC = 0;
+            if (readServoTemperature(id, &tempC)) {
+                telTempC = tempC;
+                telFlags |= 0x02;
+            }
+            break;
+        }
+        case 2: {  // 부하
+            uint16_t rawLoad = 0;
+            if (readServoLoadRaw(id, &rawLoad)) {
+                telRawLoad = rawLoad;
+                telFlags |= 0x04;
+            }
+            break;
+        }
+        case 3: {  // 전류 → 이번 모터 항목 다 모았으니 두 프레임 전송
+            uint16_t rawCurrent = 0;
+            telCurOk = readServoCurrentRaw(id, &rawCurrent) ? 1 : 0;
+            telRawCurrent = telCurOk ? rawCurrent : 0;
+
+            uint8_t frame[7] = {
+                id,
+                (uint8_t)(telAngleX10 & 0xFF),
+                (uint8_t)((uint16_t)telAngleX10 >> 8),
+                telTempC,
+                (uint8_t)(telRawLoad & 0xFF),
+                (uint8_t)(telRawLoad >> 8),
+                telFlags
+            };
+            canSend(CAN_ID_TELEMETRY, frame, 7);
+
+            uint8_t curFrame[4] = {
+                id,
+                (uint8_t)(telRawCurrent & 0xFF),
+                (uint8_t)(telRawCurrent >> 8),
+                telCurOk
+            };
+            canSend(CAN_ID_CURRENT, curFrame, 4);
+            break;
+        }
+    }
+
+    // 다음 단계로. stage가 한 바퀴(0~3) 돌면 다음 모터로 + 누적버퍼 리셋.
+    telemetryStage++;
+    if (telemetryStage > 3) {
+        telemetryStage = 0;
+        telFlags = 0;
+        telAngleX10 = 0;
+        telTempC = 0;
+        telRawLoad = 0;
+        telRawCurrent = 0;
+        telCurOk = 0;
+        telemetryMotorId++;
+        if (telemetryMotorId > SERVO_COUNT) telemetryMotorId = 1;
+    }
 }
 
 
@@ -525,12 +566,16 @@ void handleCanFrame(uint16_t canId, uint8_t* buf, uint8_t len) {
 }
 
 void processCanRx() {
-    // 한 loop에서 RX FIFO를 여러 개 비웁니다.
-    for (uint8_t i = 0; i < 3; i++) {
-        uint16_t canId = 0;
-        uint8_t data[8] = {};
-        uint8_t len = 0;
+    // 한 loop에서 RX FIFO를 '비어질 때까지' 모두 비운다.
+    // (이전엔 최대 3개만 읽어, 빠르게 쌓이면 FIFO(깊이 3)가 넘쳐 프레임을 놓쳤다.)
+    // canRecv()는 FIFO가 비면 false를 반환하므로 자연히 멈춘다.
+    // RX보다 처리속도가 빠르므로 정상이면 곧 빠져나오지만, 만일을 대비해
+    // 한 loop당 처리 상한(16)을 둬서 무한루프/루프 기아를 막는다.
+    uint16_t canId = 0;
+    uint8_t data[8] = {};
+    uint8_t len = 0;
 
+    for (uint8_t i = 0; i < 16; i++) {
         if (!canRecv(&canId, data, &len)) return;
         handleCanFrame(canId, data, len);
     }
@@ -560,7 +605,8 @@ void setup() {
     Serial.println("CAN: 125kbps / sample-point 62.5%");
     Serial.println("RX 0x100: step/angle/torque/middle/gripper, TX 0x200 ACK, 0x201 telemetry, 0x202 current");
 
-    gripper.attach(GRIPPER_PWM_PIN);     // MG90 그리퍼 PWM 시작
+    // 펄스폭 범위를 명시해 attach (기본범위는 MG90S 끝단에서 계속 도는 원인이 됨)
+    gripper.attach(GRIPPER_PWM_PIN, GRIPPER_PULSE_MIN_US, GRIPPER_PULSE_MAX_US);
     gripper.write(GRIPPER_INIT_DEG);
 
     for (uint8_t id = 1; id <= SERVO_COUNT; id++) {
