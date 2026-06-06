@@ -30,6 +30,11 @@ choi/
 │   ├── rpi_current_monitor.py        전류 실시간 모니터 (0x202)
 │   ├── rpi_load_monitor.py           부하(load) 실시간 모니터 (0x201, 항상 읽힘)
 │   └── arm_ik.py                     역기구학 (좌표 → 모터각)
+├── vision/                       노트북(PC) 카메라·YOLO·IK
+│   ├── detect_and_ik_calib.py        감지 → IK각 계산/표시 (C=출력)
+│   ├── ik.py                         역기구학 (캘리 반영본, MOTOR_LIMITS 포함)
+│   ├── list_cameras.py               USB 캠 인덱스 찾기
+│   └── (best.pt·*.npz 는 대용량/세팅값이라 Git 제외, 별도 공유)
 └── docs/
     ├── 로봇팔_작업정리.md            전체 작업 정리 (프로토콜·영점·IK·과열 등)
     └── CAN_통신_규약.md              CAN 통신 규약 (브링업·트러블슈팅)
