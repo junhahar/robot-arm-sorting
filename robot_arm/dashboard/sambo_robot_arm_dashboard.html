@@ -862,12 +862,12 @@ const state={
   mode:"TEACHING",demo:true,ws:null,wpList:[],logCount:0,lastFrame:0,events:[],
   system:{server_connected:false,can_status:"OK",camera_status:"WAIT",ai_status:"RUNNING",estop:false},
   robot:{joints:[
-    {id:"J1",name:"Base",current:174.73,target:174.73,temp:41.2,load:35,status:"OK"},
-    {id:"J2",name:"Shoulder",current:35.17,target:35.17,temp:45.0,load:52,status:"OK"},
-    {id:"J3",name:"Elbow",current:324.83,target:324.83,temp:49.5,load:55,status:"OK"},
-    {id:"J4",name:"Wrist Pitch",current:36.95,target:36.95,temp:39.1,load:30,status:"OK"},
-    {id:"J5",name:"Wrist Roll",current:332.77,target:332.77,temp:38.5,load:28,status:"OK"},
-    {id:"J6",name:"End Assist",current:178.80,target:178.80,temp:37.8,load:25,status:"OK"}
+    {id:"J1",name:"Base",current:180,target:180,temp:41.2,load:35,status:"OK"},
+    {id:"J2",name:"Shoulder",current:180,target:180,temp:45.0,load:52,status:"OK"},
+    {id:"J3",name:"Elbow",current:180,target:180,temp:49.5,load:55,status:"OK"},
+    {id:"J4",name:"Wrist Pitch",current:180,target:180,temp:39.1,load:30,status:"OK"},
+    {id:"J5",name:"Wrist Roll",current:180,target:180,temp:38.5,load:28,status:"OK"},
+    {id:"J6",name:"End Assist",current:180,target:180,temp:37.8,load:25,status:"OK"}
   ],end_effector:{x:120.5,y:85.2,z:48.2}},
   human_pose:{available:true,source:"MPU6050 × 3",confidence:.94,shoulder_motion:42,elbow_bend:78,wrist_direction:15,hand_delta_x:12,hand_delta_y:-8,status:"STABLE",mpu:[
     {id:"#1 상완",yaw:12.4,pitch:41.7,roll:-3.1},{id:"#2 전완",yaw:16.1,pitch:78.2,roll:5.4},{id:"#3 손등",yaw:15,pitch:11.8,roll:2.8}
@@ -932,6 +932,12 @@ function addLog(message,type="info"){
 function debug(message){$("debugLog").textContent=`[${currentTime()}] ${message}\n`+$("debugLog").textContent.slice(0,2400)}
 
 /* ===== Header, status panel, and mode changes ===== */
+function setAllMotorsHomeAngles(){
+  state.robot.joints.forEach((j,i)=>{j.target=HOME_ANGLES[i];j.current=HOME_ANGLES[i]});
+  collisionGuard.lastSafe.current=Object.fromEntries(state.robot.joints.map((j,i)=>[j.id,HOME_ANGLES[i]]));
+  collisionGuard.lastSafe.target=Object.fromEntries(state.robot.joints.map((j,i)=>[j.id,HOME_ANGLES[i]]));
+  state.collision={blocked:false,messages:[]};
+}
 function setMode(mode,fromSocket=false){
   mode=mode==="AUTO RUN"?"AUTO_RUN":mode;
   if(state.system.estop&&mode!=="E_STOP")return;
@@ -939,6 +945,7 @@ function setMode(mode,fromSocket=false){
   state.mode=mode;
   document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.mode===state.mode));
   const manual=state.mode==="MANUAL",teaching=state.mode==="TEACHING";
+  if(manual)setAllMotorsHomeAngles();
   activeFocusView=state.mode==="AUTO_RUN"?"MONITOR":"ROBOT_3D";
   if(manual)renderManualStage();else renderStandardStage();
   if(!fromSocket)addLog(`모드 전환: ${teaching?"티칭 모드":manual?"수동 시험":"자동 운전"}`,"info");
@@ -1589,10 +1596,7 @@ function sendDashboardCommand(command,payload={}){
 }
 function goHome(){
   if(!confirm("로봇팔을 HOME 자세로 복귀할까요? 실제 장비 주변에 사람이 없는지 먼저 확인하세요."))return;
-  state.robot.joints.forEach((j,i)=>{j.target=HOME_ANGLES[i];j.current=HOME_ANGLES[i]});
-  collisionGuard.lastSafe.current=Object.fromEntries(state.robot.joints.map((j,i)=>[j.id,HOME_ANGLES[i]]));
-  collisionGuard.lastSafe.target=Object.fromEntries(state.robot.joints.map((j,i)=>[j.id,HOME_ANGLES[i]]));
-  state.collision={blocked:false,messages:[]};
+  setAllMotorsHomeAngles();
   state.path.current_step="HOME";state.path.progress_percent=0;state.precheck.home_confirmed=true;state.calibration.servo="OK";
   const sent=sendDashboardCommand("HOME",{motor_angles_deg:Object.fromEntries(state.robot.joints.map((j,i)=>[i+1,Number(HOME_ANGLES[i])]))});addLog(`${sent?"HOME 복귀 명령 송신":"DEMO HOME 자세 복귀"} — 시작 위치 확인`,"ok");renderAll();draw3D();
 }
