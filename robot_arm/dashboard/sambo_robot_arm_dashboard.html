@@ -1582,7 +1582,7 @@ function sendManualJoint(i){
 function manualAction(name){if(!confirm(`${name} 명령을 실행할까요? 실제 장비 주변 안전을 먼저 확인하세요.`))return;addLog(`수동 시험 명령: ${name}`,"warn")}
 function toggleGripper(){state.gripper.state=state.gripper.state==="OPEN"?"CLOSED":"OPEN";state.gripper.sg90_angle=state.gripper.state==="OPEN"?90:30;addLog(`그리퍼 ${state.gripper.state==="OPEN"?"열림":"닫힘"}`,"info");renderAll()}
 function clearLogs(){$("eventLogs").innerHTML=""}
-const HOME_ANGLES=TWIN_HOME_ANGLES;
+const HOME_ANGLES=[180,180,180,180,180,180];
 function sendDashboardCommand(command,payload={}){
   if(state.ws?.readyState===WebSocket.OPEN){state.ws.send(JSON.stringify({type:"COMMAND",command,payload}));debug(`COMMAND sent: ${command}`);return true}
   debug(`[DEMO] ${command} command logged only`);return false;
@@ -1590,6 +1590,9 @@ function sendDashboardCommand(command,payload={}){
 function goHome(){
   if(!confirm("로봇팔을 HOME 자세로 복귀할까요? 실제 장비 주변에 사람이 없는지 먼저 확인하세요."))return;
   state.robot.joints.forEach((j,i)=>{j.target=HOME_ANGLES[i];j.current=HOME_ANGLES[i]});
+  collisionGuard.lastSafe.current=Object.fromEntries(state.robot.joints.map((j,i)=>[j.id,HOME_ANGLES[i]]));
+  collisionGuard.lastSafe.target=Object.fromEntries(state.robot.joints.map((j,i)=>[j.id,HOME_ANGLES[i]]));
+  state.collision={blocked:false,messages:[]};
   state.path.current_step="HOME";state.path.progress_percent=0;state.precheck.home_confirmed=true;state.calibration.servo="OK";
   const sent=sendDashboardCommand("HOME",{motor_angles_deg:Object.fromEntries(state.robot.joints.map((j,i)=>[i+1,Number(HOME_ANGLES[i])]))});addLog(`${sent?"HOME 복귀 명령 송신":"DEMO HOME 자세 복귀"} — 시작 위치 확인`,"ok");renderAll();draw3D();
 }
