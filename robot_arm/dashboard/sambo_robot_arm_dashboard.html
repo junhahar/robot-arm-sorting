@@ -901,12 +901,12 @@ function motorToJointDelta(id,angle){
 }
 function jointAngleMap(field="current"){return Object.fromEntries(state.robot.joints.map(j=>[j.id,Number(j[field]??j.current??0)]))}
 function getTwinPose(field="current"){
-  return getTwinPoseFromAngles(getCollisionSafeAngleMap(field));
+  return getTwinPoseFromAngles(jointAngleMap(field));
 }
 function twinStatus(){
   const c=getTwinPose("current"),t=getTwinPose("target");
   const err=Math.max(...state.robot.joints.map(j=>Math.abs((j.target??0)-(j.current??0))));
-  const collision=getCollisionReport("current");
+  const collision=state.collision||getCollisionReport("current");
   return{current:c,target:t,error:err,ok:c.mirrorMismatch<=3&&err<=8&&!collision.blocked,collision};
 }
 let view={yaw:.82,pitch:1.13,zoom:1},drag=null,simT=0,lastAutoLog=0;
@@ -1107,7 +1107,7 @@ function getTeachingQuality(){
 }
 function getAlerts(){
   const alerts=[];state.robot.joints.forEach(j=>{if(j.temp>=65||j.load>=90)alerts.push({cls:"err",text:`${j.id} ${j.name}: 즉시 확인 · ${fmt(j.temp,0)}°C / 부하 ${fmt(j.load,0)}%`});else if(j.temp>55||j.load>=80)alerts.push({cls:"warn",text:`${j.id} ${j.name}: 주의 · ${fmt(j.temp,0)}°C / 부하 ${fmt(j.load,0)}%`})});
-  const collision=getCollisionReport("current");
+  const collision=state.collision||getCollisionReport("current");
   if(collision.blocked)alerts.push({cls:"err",text:`디지털 트윈 충돌 제한 · ${collision.messages[0]}`});
   if(state.system.can_status!=="OK")alerts.push({cls:"err",text:"CAN 통신 상태를 확인하세요."});
   if(state.system.estop)alerts.push({cls:"err",text:"E-STOP 상태 · 하드웨어 전원 차단 확인 필요"});
@@ -1260,6 +1260,46 @@ function getTwinPoseFromAngles(A){
 function stlRotationsFromTwin(p){
   return{base:p.base,shoulder:-58+p.shoulder*.72,elbow:82-p.elbow*.62,wristPitch:p.wristPitch*.55,wristRoll:p.wristRoll*.8,endAssist:p.endAssist*.35};
 }
+const STL_SAFE_STANDBY={J1:174.73,J2:92,J3:268,J4:36.95,J5:332.77,J6:178.80};
+function applyStlAngles(r,A){
+  if(!r?.ready)return;
+  const G=r.groups,rot=stlRotationsFromTwin(getTwinPoseFromAngles(A));
+  rotateStlJoint(G[0],"y",rot.base);
+  rotateStlJoint(G[1],"x",rot.shoulder);
+  rotateStlJoint(G[2],"x",rot.elbow);
+  rotateStlJoint(G[3],"x",rot.wristPitch);
+  rotateStlJoint(G[4],"z",rot.wristRoll);
+  rotateStlJoint(G[5],"z",rot.endAssist);
+}
+function makeBox3(T,min,max){return new T.Box3(new T.Vector3(min[0],min[1],min[2]),new T.Vector3(max[0],max[1],max[2]))}
+function stlCollisionReport(T,r){
+  const messages=[];if(!r?.ready)return{blocked:false,messages};
+  r.modelRoot.updateMatrixWorld(true);r.sortBins?.updateMatrixWorld(true);
+  const floorY=.018,boxes=(r.dynamicCollisionObjects||[]).map(obj=>({obj,name:obj.userData.collisionName||"로봇 파트",box:new T.Box3().setFromObject(obj)}));
+  const floorHit=boxes.find(x=>x.box.min.y<floorY);
+  if(floorHit)messages.push(`${floorHit.name} 바닥 관통`);
+  for(const keepout of (r.staticKeepouts||[])){
+    const solid=makeBox3(T,keepout.min,keepout.max);
+    const hit=boxes.find(x=>x.box.intersectsBox(solid));
+    if(hit)messages.push(`${hit.name} ↔ ${keepout.label} 간섭`);
+  }
+  return{blocked:messages.length>0,messages};
+}
+function getStlSafeAngleMap(T,r,field="current"){
+  const requested=jointAngleMap(field);
+  applyStlAngles(r,requested);
+  const report=stlCollisionReport(T,r);
+  if(!report.blocked){
+    collisionGuard.lastSafe[field]=cloneAngles(requested);
+    if(field==="current")state.collision=report;
+    return requested;
+  }
+  const fallback=collisionGuard.lastSafe[field]||STL_SAFE_STANDBY;
+  applyStlAngles(r,fallback);
+  const fallbackReport=stlCollisionReport(T,r);
+  if(field==="current")state.collision={blocked:true,messages:report.messages,visualFrozen:true,fallbackBlocked:fallbackReport.blocked};
+  return fallback;
+}
 const SORT_CELLS=[
   {key:"BOLT",label:"볼트 통",en:"BOLT BIN",x:-2.05,z:-1.20,color:0x26b97a,accent:0x4ade80},
   {key:"NUT",label:"너트 통",en:"NUT BIN",x:2.05,z:-1.20,color:0x3478d4,accent:0x60a5fa}
@@ -1324,6 +1364,13 @@ async function loadActualStlRobot(T,r){
   placeLocal(wristHouse,G[3],[-26,119,348],[29,0,0]);placeLocal(wristPlate,G[3],[-26,119,348],[29,0,0]);
   placeLocal(wristRoll,G[4],[-26,118,351],[30,0,0]);placeLocal(cameraBracket,G[4],[58,90,398],[120,0,0]);
   placeLocal(gripper,G[5],[-25,75,424],[-169,-90,-19]);
+  [[arm1,"1번 링크"],[arm2,"2번 링크"],[wristHouse,"손목 하우징"],[wristPlate,"손목 플레이트"],[wristRoll,"손목 롤"],[gripper,"그리퍼"],[cameraBracket,"카메라 브라켓"],[j4Hub,"J4 허브"],[j4Mark,"J4 표시부"]].forEach(([obj,name])=>obj.userData.collisionName=name);
+  r.dynamicCollisionObjects=[arm1,arm2,wristHouse,wristPlate,wristRoll,gripper,cameraBracket,j4Hub,j4Mark];
+  r.staticKeepouts=[
+    {label:"베이스 하우징",min:[-.62,.02,-.58],max:[.62,.44,.58]},
+    {label:"볼트 통 프레임",min:[-2.55,.00,-1.70],max:[-1.55,.58,-.70]},
+    {label:"너트 통 프레임",min:[1.55,.00,-1.70],max:[2.55,.58,-.70]}
+  ];
   r.groups=G;r.j4Hub=j4Hub;r.j4Mark=j4Mark;r.gripperMesh=gripper;r.ready=true;
 }
 function initThreeRobot(canvas){
@@ -1351,20 +1398,16 @@ function drawThreeRobot(){
   const r=threeRobot,w=canvas.clientWidth,h=canvas.clientHeight;
   if(w!==r.lastW||h!==r.lastH){r.lastW=w;r.lastH=h;r.camera.aspect=w/h;r.camera.updateProjectionMatrix();r.renderer.setSize(w,h,false)}
   if(r.ready){
-    const G=r.groups,rot=stlRotationsFromTwin(getTwinPose("current"));
-    rotateStlJoint(G[0],"y",rot.base);
-    rotateStlJoint(G[1],"x",rot.shoulder);
-    rotateStlJoint(G[2],"x",rot.elbow);
-    rotateStlJoint(G[3],"x",rot.wristPitch);
-    rotateStlJoint(G[4],"z",rot.wristRoll);
-    rotateStlJoint(G[5],"z",rot.endAssist);
+    const visualAngles=getStlSafeAngleMap(window.THREE,r,"current");
+    applyStlAngles(r,visualAngles);
     r.gripperMesh.material.emissive.setHex(state.gripper.state==="OPEN"?0x062d36:0x32190a);
   }
   const dist=8.60/view.zoom,phi=view.pitch,theta=view.yaw;
   r.camera.position.set(dist*Math.sin(phi)*Math.cos(theta),1.28+dist*Math.cos(phi),dist*Math.sin(phi)*Math.sin(theta));r.camera.lookAt(0,1.45,.35);
   r.renderer.render(r.scene,r.camera);
   const pose=fk();state.robot.end_effector={x:pose.end.x,y:pose.end.z,z:pose.end.y};
-  $("eeHud").innerHTML=r.loadError?"실제 STL 모델<br>불러오기 실패":r.ready?`실제 CAD 모델<br>END EFFECTOR<br>X ${fmt(pose.end.x)} mm · Y ${fmt(pose.end.z)} mm · Z ${fmt(pose.end.y)} mm`:"실제 STL 모델<br>불러오는 중...";
+  const collision=state.collision;
+  $("eeHud").innerHTML=r.loadError?"실제 STL 모델<br>불러오기 실패":r.ready?`${collision?.visualFrozen?`충돌 제한 표시<br>${collision.messages[0]}<br>`:"실제 CAD 모델<br>END EFFECTOR<br>"}X ${fmt(pose.end.x)} mm · Y ${fmt(pose.end.z)} mm · Z ${fmt(pose.end.y)} mm`:"실제 STL 모델<br>불러오는 중...";
   $("simLabels").innerHTML=(state.path.steps||[]).slice(0,-1).map(s=>`<span class="${s===state.path.current_step?"now":""}">${s}</span>`).join("");
   return true;
 }
@@ -1413,6 +1456,18 @@ function warnCollisionLimit(report){
   if(now-collisionGuard.lastManualWarn<900)return;
   collisionGuard.lastManualWarn=now;
   addLog(`충돌 제한: ${report.messages[0]} — 자세를 되돌렸습니다.`,"warn");
+}
+function getManualTargetCollisionReport(){
+  const report=getCollisionReport("target");
+  if(report.blocked)return report;
+  if(threeRobot?.ready&&window.THREE){
+    const restore=collisionGuard.lastSafe.current||jointAngleMap("current");
+    applyStlAngles(threeRobot,jointAngleMap("target"));
+    const stlReport=stlCollisionReport(window.THREE,threeRobot);
+    applyStlAngles(threeRobot,restore);
+    return stlReport;
+  }
+  return report;
 }
 function fk(){
   return fkFromAngles(getCollisionSafeAngleMap("current"));
@@ -1494,7 +1549,7 @@ function setManualJointTarget(i,value){
     const pair=state.robot.joints[pairIndex];
     pair.target=clamp(MANUAL_MIRROR_SUM-next,0,manualJointMax(pair));pair.current=pair.target;
   }
-  const report=getCollisionReport("target");
+  const report=getManualTargetCollisionReport();
   if(report.blocked){
     state.robot.joints.forEach((j,n)=>{j.current=prev[n].current;j.target=prev[n].target});
     warnCollisionLimit(report);
@@ -1517,6 +1572,8 @@ function manualStep(i,v){setManualJointTarget(i,state.robot.joints[i].target+v);
 function manualAngleKey(e,i){if(e.key==="Enter"){e.preventDefault();sendManualJoint(i)}}
 function sendManualJoint(i){
   const j=state.robot.joints[i];if(!j)return false;
+  const report=getManualTargetCollisionReport();
+  if(report.blocked){warnCollisionLimit(report);return false}
   const sent=sendDashboardCommand("SET_JOINT_ANGLE",{motor_id:i+1,angle_deg:Number(j.target)});
   state.digital_twin.last_cmd=`CMD_SET_ANGLE M${i+1} ${fmt(j.target)}°`;
   addLog(`${j.id} 목표각 ${fmt(j.target)}° ${sent?"송신":"DEMO 적용"}`,sent?"ok":"info");
