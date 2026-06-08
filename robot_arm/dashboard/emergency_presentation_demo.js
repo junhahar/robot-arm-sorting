@@ -52,7 +52,8 @@
     HOME:{x:0,y:.12,z:1.08}
   };
 
-  const HOME_JOINTS=[180,360,0,360,180,180];
+  const HOME_JOINTS=[174.73,35.17,324.83,36.95,332.77,178.80];
+  const IK_GAINS=[-0.8433,+0.7129,-0.7129,-0.9224,+2.3401,-1.122];
 
   // Temporary visual IK for the emergency demo. Replace this with measured FK/IK after hardware tests.
   function demoIK({x=0,z=1,lift=.45,elbowBias=0,wrist=0,roll=0}={}){
@@ -61,13 +62,14 @@
     const reach=limit((radial-.28)/.82,0,1);
     const shoulder=limit(8+reach*20+(1-lift)*8+elbowBias*.12,0,52);
     const elbow=limit(10+reach*38+(1-lift)*12+elbowBias*.35,0,68);
+    const motor=(index,jointAngle)=>limit(HOME_JOINTS[index]+IK_GAINS[index]*jointAngle,0,360);
     return[
-      limit(180+base,0,360),
-      limit(360-shoulder,0,360),
-      shoulder,
-      limit(360-elbow,0,360),
-      limit(180+wrist,0,360),
-      limit(180+roll,0,360)
+      motor(0,base),
+      motor(1,shoulder),
+      motor(2,shoulder),
+      motor(3,elbow),
+      motor(4,wrist),
+      motor(5,roll)
     ];
   }
 

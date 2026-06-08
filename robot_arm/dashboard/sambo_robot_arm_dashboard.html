@@ -862,19 +862,19 @@ const state={
   mode:"TEACHING",demo:true,ws:null,wpList:[],logCount:0,lastFrame:0,events:[],
   system:{server_connected:false,can_status:"OK",camera_status:"WAIT",ai_status:"RUNNING",estop:false},
   robot:{joints:[
-    {id:"J1",name:"Base",current:180.0,target:180.0,temp:41.2,load:35,status:"OK"},
-    {id:"J2",name:"Shoulder",current:360.0,target:360.0,temp:45.0,load:52,status:"OK"},
-    {id:"J3",name:"Elbow",current:0.0,target:0.0,temp:49.5,load:81,status:"WARN"},
-    {id:"J4",name:"Wrist Pitch",current:360.0,target:360.0,temp:39.1,load:30,status:"OK"},
-    {id:"J5",name:"Wrist Roll",current:180.0,target:180.0,temp:38.5,load:28,status:"OK"},
-    {id:"J6",name:"End Assist",current:180.0,target:180.0,temp:37.8,load:25,status:"OK"}
+    {id:"J1",name:"Base",current:174.73,target:174.73,temp:41.2,load:35,status:"OK"},
+    {id:"J2",name:"Shoulder",current:35.17,target:35.17,temp:45.0,load:52,status:"OK"},
+    {id:"J3",name:"Elbow",current:324.83,target:324.83,temp:49.5,load:55,status:"OK"},
+    {id:"J4",name:"Wrist Pitch",current:36.95,target:36.95,temp:39.1,load:30,status:"OK"},
+    {id:"J5",name:"Wrist Roll",current:332.77,target:332.77,temp:38.5,load:28,status:"OK"},
+    {id:"J6",name:"End Assist",current:178.80,target:178.80,temp:37.8,load:25,status:"OK"}
   ],end_effector:{x:120.5,y:85.2,z:48.2}},
   human_pose:{available:true,source:"MPU6050 × 3",confidence:.94,shoulder_motion:42,elbow_bend:78,wrist_direction:15,hand_delta_x:12,hand_delta_y:-8,status:"STABLE",mpu:[
     {id:"#1 상완",yaw:12.4,pitch:41.7,roll:-3.1},{id:"#2 전완",yaw:16.1,pitch:78.2,roll:5.4},{id:"#3 손등",yaw:15,pitch:11.8,roll:2.8}
   ]},
   gripper:{state:"OPEN",sg90_angle:90,tof_mm:48.2,object_detected:true,pick_ready:true},
-  vision:{target:"BOLT",confidence:.94,stable_frames:3,bbox:{x:320,y:210,w:95,h:80},correction:{dx_mm:2.1,dy_mm:-1.8}},
-  path:{current_step:"PRE_GRASP",steps:["HOME","SCAN","DETECT","PRE_GRASP","GRASP","LIFT","CARRY","PLACE","HOME"],progress_percent:42},
+  vision:{target:"NONE",confidence:.0,stable_frames:0,bbox:null,correction:{dx_mm:0,dy_mm:0}},
+  path:{current_step:"HOME",steps:["HOME","SCAN","DETECT","PRE_GRASP","GRASP","LIFT","CARRY","PLACE","HOME"],progress_percent:0},
   precheck:{home_confirmed:true,path_loaded:true,servo_ready:true,sg90_ready:true,tof_ready:true},
   can_health:{received:1842,errors:0,delay_ms:18,last_rx_ms:22},
   calibration:{tof:"OK",camera:"OK",mpu:"OK",servo:"OK"},
@@ -886,18 +886,22 @@ let activeFocusView="ROBOT_3D";
 
 /* ===== Digital twin mapping: Raspberry Pi logical axis -> STM32 physical feedback -> 3D pose ===== */
 const TWIN_AXIS_CONFIG=[
-  {id:"J1",motor:1,label:"M1 Base",sign:+1,cal:180,home:180,can:"0x100 angle"},
-  {id:"J2",motor:2,label:"M2 Shoulder A",sign:-1,cal:360,home:360,can:"mirror pair"},
-  {id:"J3",motor:3,label:"M3 Shoulder B",sign:+1,cal:0,home:0,can:"mirror pair"},
-  {id:"J4",motor:4,label:"M4 Elbow",sign:-1,cal:360,home:360,can:"gain x5"},
-  {id:"J5",motor:5,label:"M5 Wrist Pitch",sign:+1,cal:180,home:180,can:"0x100 angle"},
-  {id:"J6",motor:6,label:"M6 Wrist Roll",sign:+1,cal:180,home:180,can:"0x100 angle"}
+  {id:"J1",motor:1,label:"M1 Base",sign:-1,cal:174.73,home:174.73,gain:-0.8433,can:"0x100 angle"},
+  {id:"J2",motor:2,label:"M2 Shoulder A",sign:+1,cal:35.17,home:35.17,gain:+0.7129,can:"mirror pair"},
+  {id:"J3",motor:3,label:"M3 Shoulder B",sign:-1,cal:324.83,home:324.83,gain:-0.7129,can:"mirror pair"},
+  {id:"J4",motor:4,label:"M4 Elbow",sign:-1,cal:36.95,home:36.95,gain:-0.9224,can:"gain x5"},
+  {id:"J5",motor:5,label:"M5 Wrist Pitch",sign:+1,cal:332.77,home:332.77,gain:+2.3401,can:"0x100 angle"},
+  {id:"J6",motor:6,label:"M6 Wrist Roll",sign:-1,cal:178.80,home:178.80,gain:-1.122,can:"0x100 angle"}
 ];
 const TWIN_HOME_ANGLES=TWIN_AXIS_CONFIG.map(a=>a.home);
+const TWIN_AXIS_BY_ID=Object.fromEntries(TWIN_AXIS_CONFIG.map(a=>[a.id,a]));
+function motorToJointDelta(id,angle){
+  const cfg=TWIN_AXIS_BY_ID[id],gain=Number(cfg?.gain||1);
+  return (Number(angle??cfg?.home??0)-Number(cfg?.home??0))/gain;
+}
 function jointAngleMap(field="current"){return Object.fromEntries(state.robot.joints.map(j=>[j.id,Number(j[field]??j.current??0)]))}
 function getTwinPose(field="current"){
-  const A=jointAngleMap(field),shoulder=((360-A.J2)+A.J3)/2,mirrorMismatch=Math.abs((A.J2+A.J3)-360);
-  return{base:A.J1-180,shoulder,elbow:360-A.J4,wristPitch:A.J5-180,wristRoll:A.J6-180,endAssist:A.J6-180,mirrorMismatch};
+  return getTwinPoseFromAngles(jointAngleMap(field));
 }
 function twinStatus(){
   const c=getTwinPose("current"),t=getTwinPose("target");
@@ -1198,7 +1202,7 @@ function poly(ctx,n,r){ctx.beginPath();for(let i=0;i<n;i++){const a=i*Math.PI*2/
 
 /* ===== Three.js STL robot model: actual project CAD parts ===== */
 let threeRobot=null;
-const STL_SCALE=.006,STL_HOME={J1:180,J2:360,J3:0,J4:360,J5:180,J6:180};
+const STL_SCALE=.006,STL_HOME={J1:174.73,J2:35.17,J3:324.83,J4:36.95,J5:332.77,J6:178.80};
 const STL_PARTS={
   base:"./models/base/base.stl",basecover:"./models/base/basecover1.stl",shoulder:"./models/shorder/shorder.stl",
   arm1:"./models/arm1/arm1.stl",arm2:"./models/arm2/arm2.stl",
@@ -1235,8 +1239,20 @@ function placeLocal(mesh,parent,position,rotation=[0,0,0]){
 function rotateStlJoint(group,axis,angle){group.rotation.set(0,0,0);group.rotation[axis]=angle*Math.PI/180}
 function shoulderMirrorAngle(A){return getTwinPoseFromAngles(A).shoulder}
 function getTwinPoseFromAngles(A){
-  const shoulder=((360-A.J2)+A.J3)/2;
-  return{base:A.J1-180,shoulder,elbow:360-A.J4,wristPitch:A.J5-180,wristRoll:A.J6-180,endAssist:A.J6-180,mirrorMismatch:Math.abs((A.J2+A.J3)-360)};
+  const base=motorToJointDelta("J1",A.J1);
+  const shoulderM2=motorToJointDelta("J2",A.J2);
+  const shoulderM3=motorToJointDelta("J3",A.J3);
+  const shoulder=(shoulderM2+shoulderM3)/2;
+  const wristRoll=motorToJointDelta("J6",A.J6);
+  return{
+    base,
+    shoulder,
+    elbow:motorToJointDelta("J4",A.J4),
+    wristPitch:motorToJointDelta("J5",A.J5),
+    wristRoll,
+    endAssist:wristRoll,
+    mirrorMismatch:Math.abs(shoulderM2-shoulderM3)
+  };
 }
 function stlRotationsFromTwin(p){
   return{base:p.base,shoulder:-58+p.shoulder*.72,elbow:82-p.elbow*.62,wristPitch:p.wristPitch*.55,wristRoll:p.wristRoll*.8,endAssist:p.endAssist*.35};
@@ -1468,7 +1484,7 @@ function goHome(){
   if(!confirm("로봇팔을 HOME 자세로 복귀할까요? 실제 장비 주변에 사람이 없는지 먼저 확인하세요."))return;
   state.robot.joints.forEach((j,i)=>{j.target=HOME_ANGLES[i];j.current=HOME_ANGLES[i]});
   state.path.current_step="HOME";state.path.progress_percent=0;state.precheck.home_confirmed=true;state.calibration.servo="OK";
-  const sent=sendDashboardCommand("HOME");addLog(`${sent?"HOME 복귀 명령 송신":"DEMO HOME 자세 복귀"} — 시작 위치 확인`,"ok");renderAll();draw3D();
+  const sent=sendDashboardCommand("HOME",{motor_angles_deg:Object.fromEntries(state.robot.joints.map((j,i)=>[i+1,Number(HOME_ANGLES[i])]))});addLog(`${sent?"HOME 복귀 명령 송신":"DEMO HOME 자세 복귀"} — 시작 위치 확인`,"ok");renderAll();draw3D();
 }
 function blobDownload(name,text,type="text/plain;charset=utf-8"){
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),0);
@@ -1564,7 +1580,7 @@ function applyCanFrame(frame){
 /* ===== Demo data: visibly labeled, never presented as hardware data ===== */
 function demoTick(now){
   if(!state.demo||state.system.estop||state.mode==="MANUAL")return;simT+=.018;
-  const base=[180,360,0,360,180,180],amp=[18,0,0,0,15,12],mirrorSwing=Math.abs(Math.sin(simT*.72))*28,elbowSwing=Math.abs(Math.sin(simT*.55))*46;state.robot.joints.forEach((j,i)=>{j.current=base[i]+Math.sin(simT*(.65+i*.07))*amp[i];if(i===1)j.current=360-mirrorSwing;if(i===2)j.current=mirrorSwing;if(i===3)j.current=360-elbowSwing;j.target=i===1?360-mirrorSwing:i===2?mirrorSwing:i===3?360-elbowSwing:j.current+Math.sin(simT+i)*2;j.temp=clamp(j.temp+(Math.random()-.5)*.18,35,57);j.load=clamp(j.load+(Math.random()-.5)*1.8,18,i===2?86:70)});
+  state.robot.joints.forEach((j,i)=>{const home=TWIN_HOME_ANGLES[i];j.current=home;j.target=home;j.temp=clamp(j.temp+(Math.random()-.5)*.08,35,52);j.load=clamp(j.load+(Math.random()-.5)*.5,18,62);j.status="OK"});
   const h=state.human_pose;h.shoulder_motion=42+Math.sin(simT*.8)*7;h.elbow_bend=78+Math.sin(simT*.92)*11;h.wrist_direction=15+Math.cos(simT)*8;h.hand_delta_x=12+Math.sin(simT)*5;h.hand_delta_y=-8+Math.cos(simT*.7)*4;h.mpu.forEach((m,i)=>{m.yaw+=Math.sin(simT+i)*.04;m.pitch+=Math.cos(simT*.7+i)*.05});
   state.gripper.tof_mm=48.2+Math.sin(simT*.8)*2.2;state.vision.confidence=.91+Math.sin(simT)*.03;state.vision.correction.dx_mm=2.1+Math.sin(simT*.6)*.8;state.vision.correction.dy_mm=-1.8+Math.cos(simT*.5)*.6;
   state.can_health.received+=Math.floor(Math.random()*3);state.can_health.last_rx_ms=Math.round(16+Math.abs(Math.sin(simT))*12);state.can_health.delay_ms=Math.round(12+Math.abs(Math.cos(simT*.7))*10);
