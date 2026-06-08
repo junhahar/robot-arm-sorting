@@ -1294,6 +1294,11 @@ function stlCollisionReport(T,r){
 }
 function getStlSafeAngleMap(T,r,field="current"){
   const requested=jointAngleMap(field);
+  if(state.mode==="MANUAL"){
+    collisionGuard.lastSafe[field]=cloneAngles(requested);
+    if(field==="current")state.collision={blocked:false,messages:[]};
+    return requested;
+  }
   applyStlAngles(r,requested);
   const report=stlCollisionReport(T,r);
   if(!report.blocked){
@@ -1465,6 +1470,7 @@ function warnCollisionLimit(report){
   addLog(`충돌 제한: ${report.messages[0]} — 자세를 되돌렸습니다.`,"warn");
 }
 function getManualTargetCollisionReport(){
+  if(state.mode==="MANUAL")return{blocked:false,messages:[]};
   const report=getCollisionReport("target");
   if(report.blocked)return report;
   if(threeRobot?.ready&&window.THREE){
