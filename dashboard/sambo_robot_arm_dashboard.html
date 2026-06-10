@@ -363,20 +363,21 @@ button{cursor:pointer}
 
 /* ===== Manual mode ===== */
 .manual-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;height:100%}
-.manual-controls{padding:10px;overflow:auto}
-.manual-row{display:grid;grid-template-columns:112px minmax(95px,1fr) 76px;gap:6px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(28,56,85,.45);font-size:11px}
+.manual-controls{padding:6px 10px 8px;overflow:hidden}
+.manual-row{display:grid;grid-template-columns:102px minmax(88px,1fr) 70px;gap:5px;align-items:center;padding:4px 0;border-bottom:1px solid rgba(28,56,85,.45);font-size:10px}
 .manual-row input[type=range]{width:100%;accent-color:var(--cyan)}
 .manual-angle-input{width:100%;box-sizing:border-box;padding:6px 7px;border:1px solid rgba(32,213,232,.32);border-radius:5px;color:var(--text);background:#07121e;font-size:11px;text-align:right}
 .manual-angle-input:focus{outline:1px solid var(--cyan);border-color:var(--cyan)}
 .manual-row.coupled{background:rgba(32,213,232,.045)}
-.manual-row small{display:block;margin-top:3px;color:var(--cyan);font-size:8px;letter-spacing:.3px}
+.manual-row small{display:block;margin-top:1px;color:var(--cyan);font-size:8px;letter-spacing:.3px}
 .manual-row-actions{grid-column:2 / 4;display:flex;justify-content:flex-end;gap:6px}
-.manual-row-actions button{min-width:44px;padding-left:7px;padding-right:7px}
-.manual-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.manual-row-actions button{min-width:40px;padding:6px 6px}
+.manual-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
 .manual-twin{margin-bottom:10px;padding:10px;border:1px solid rgba(32,213,232,.28);border-radius:7px;background:rgba(9,21,34,.78)}
 .manual-twin-head{display:flex;align-items:center;gap:7px;margin-bottom:8px;color:var(--text);font-size:12px;font-weight:900}
 .manual-twin-head::before{content:"";width:4px;height:14px;border-radius:3px;background:var(--cyan)}
 .manual-twin .compact-body{padding:0}
+.manual-safe-note{margin-bottom:8px;padding:8px 9px;border:1px solid rgba(247,201,72,.26);border-radius:6px;background:rgba(247,201,72,.06);color:#f5df93;font-size:10px;line-height:1.45}
 
 /* ===== Modal ===== */
 .modal-backdrop{display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;background:rgba(1,7,13,.76);backdrop-filter:blur(4px)}
@@ -592,7 +593,7 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
     </div>
     <div class="status-chip header-hidden mode-chip" id="modeChip">TEACHING</div>
     <div class="status-chip"><i class="dot warn" id="serverDot"></i><span><b id="serverText">서버 대기</b><small id="serverSub">Raspberry Pi 연결</small></span></div>
-    <div class="status-chip has-tip" id="canChip"><i class="dot ok" id="canDot"></i><span><b id="canText">CAN 정상</b><small>125 kbps · ID 11-bit</small></span><div class="chip-tip mono" id="canTip"></div></div>
+    <div class="status-chip has-tip" id="canChip"><i class="dot ok" id="canDot"></i><span><b id="canText">CAN 정상</b><small>제어기 연결 대기</small></span><div class="chip-tip mono" id="canTip"></div></div>
     <div class="status-chip header-hidden"><i class="dot warn" id="cameraDot"></i><span><b id="cameraText">카메라 대기</b><small>Human · Gripper Cam</small></span></div>
     <div class="status-chip header-hidden"><i class="dot run" id="aiDot"></i><span><b id="aiText">YOLO 실행 중</b><small>AI 판단</small></span></div>
     <div class="status-chip header-hidden demo-banner" id="dataBanner"><i class="dot warn"></i><span>DEMO MODE<small>시뮬레이션 데이터</small></span></div>
@@ -702,12 +703,12 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
       <div class="architecture">
         <div class="arch-box"><b>상위 제어 / AI</b>Raspberry Pi 5 + Hailo 8L<br>카메라 입력 · YOLO 판단<br>위치 보정 · 경로 관리</div>
         <div class="arch-arrow">→</div>
-        <div class="arch-box"><b>CAN 통신</b>CANable Pro · CANH/CANL<br>125 kbps · Sample Point 62.5%<br>Standard 11-bit ID</div>
+        <div class="arch-box"><b>제어 통신</b>Raspberry Pi 명령 전달<br>하위 제어기 상태 수신<br>모터·센서 상태 확인</div>
         <div class="arch-arrow">→</div>
         <div class="arch-box"><b>실시간 제어</b>Arduino Nano + MCP2515<br>URT 보드 UART 통신<br>STS3215 × 6 · SG90 · ToF</div>
       </div>
       <div class="can-details">
-        <div>명령 ID<b class="mono">0x100</b></div><div>상태 / ACK<b class="mono">0x200</b></div><div>센서 보고<b class="mono">0x300</b></div><div>서보 전원<b class="mono">7.4~7.5 V</b></div>
+        <div>명령 전달<b>Pi → 제어기</b></div><div>상태 확인<b>제어기 → Pi</b></div><div>센서 보고<b>ToF · 안전 상태</b></div><div>서보 전원<b class="mono">7.4~7.5 V</b></div>
       </div>
       <p class="yellow" style="font-size:11px;margin:12px 0 0">E-STOP은 화면 버튼만으로 끝나지 않습니다. 실제 장비에서는 NC 접점 또는 릴레이/컨택터로 STS3215 서보 전원 라인을 물리 차단해야 합니다.</p>
     </div>
@@ -720,11 +721,11 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
     <div class="modal-head">CAN 및 데이터 상세 / Diagnostics <button onclick="closeModal('canModal')">×</button></div>
     <div class="modal-body">
       <div class="can-details" style="margin-top:0">
-        <div>서버 주소<b class="mono" id="wsUrlLabel">ws://localhost:8765</b></div><div>CAN 속도<b class="mono">125 kbps</b></div><div>Sample Point<b class="mono">62.5%</b></div><div>프레임 ID<b class="mono">Standard 11-bit</b></div>
+        <div>서버 주소<b class="mono" id="wsUrlLabel">ws://localhost:8765</b></div><div>통신 상태<b>연결 확인</b></div><div>최근 수신<b>지연 시간 확인</b></div><div>오류 상태<b>작업 전 점검</b></div>
       </div>
       <details open><summary>상세 로그 / Debug Log</summary><pre id="debugLog">[DEMO] WebSocket 연결을 기다리는 중입니다.
 [INFO] 실제 데이터 수신 시 DEMO MODE가 자동 해제됩니다.
-[INFO] 0x100: 모터 명령 / 0x200: ACK·상태 / 0x300: 센서 데이터</pre></details>
+[INFO] 명령, 상태, 센서 데이터는 작업자 화면에서 읽기 쉬운 상태로 표시됩니다.</pre></details>
       <details><summary>WebSocket JSON 입력 예시</summary><pre>{
   "mode": "AUTO_RUN",
   "system": {"can_status":"OK","camera_status":"OK","ai_status":"RUNNING"},
@@ -830,8 +831,8 @@ function rebuildSplash(){
             <path d="M555 515 C486 515 468 438 419 402"/>
           </svg>
           <article class="flow-card flow-pi"><b>Raspberry Pi 5 + Hailo</b><span>그리퍼 카메라 입력<br>YOLO 감지 · 위치 보정</span><em>AI 판단</em></article>
-          <article class="flow-card flow-can"><b>CANable Pro</b><span>Raspberry Pi ↔ CAN Bus<br>Standard 11-bit ID</span><em>125 kbps · SP 62.5%</em></article>
-          <article class="flow-card flow-nano"><b>Arduino Nano</b><span>MCP2515 CAN 노드<br>ToF · 센서 상태 보고</span><em>CAN ID 0x300</em></article>
+          <article class="flow-card flow-can"><b>CANable Pro</b><span>Raspberry Pi ↔ 제어 통신<br>명령·상태 전달</span><em>연결 상태 확인</em></article>
+          <article class="flow-card flow-nano"><b>Arduino Nano</b><span>MCP2515 제어 노드<br>ToF · 안전 상태 보고</span><em>센서 상태 확인</em></article>
           <article class="flow-card flow-servo"><b>STS3215 × 6</b><span>URT · UART Servo Bus<br>각도 · 온도 · 부하 피드백</span><em>6-AXIS MOTION</em></article>
           <div class="intro-robot-card">
             <svg class="intro-robot" viewBox="0 0 360 420" aria-label="6축 로봇팔 일러스트">
@@ -884,7 +885,9 @@ const JOINT_NAMES={J1:"Base",J2:"Shoulder",J3:"Elbow",J4:"Wrist Pitch",J5:"Wrist
 const STEP_LABELS={HOME:"HOME 복귀",SCAN:"스캔 중",DETECT:"물체 감지",PRE_GRASP:"집기 전 접근",GRASP:"집기",LIFT:"들어 올리기",CARRY:"운반",PLACE:"분류통 배치",TEACHING:"티칭 중",PAUSED:"일시 정지",ERROR:"오류 정지"};
 const OBJECT_LABELS={BOLT:"볼트",NUT:"너트",WASHER:"와셔",NONE:"대기"};
 const PHOTO_HOME_ANGLES=[180,180,180,180,180,180];
+const SERVO_RAW_HOME_ANGLES=[180,179,181,179,179,180];
 window.SAMBO_PHOTO_HOME_ANGLES=PHOTO_HOME_ANGLES.slice();
+window.SAMBO_SERVO_RAW_HOME_ANGLES=SERVO_RAW_HOME_ANGLES.slice();
 const state={
   mode:"AUTO_RUN",demo:true,ws:null,wpList:[],logCount:0,lastFrame:0,events:[],auto:{running:false},camera:{gripper_url:""},sorting:{bolt:0,nut:0,total:0,cycle_s:null,last:null},
   system:{server_connected:false,can_status:"OK",camera_status:"WAIT",ai_status:"RUNNING",estop:false},
@@ -922,6 +925,11 @@ const TWIN_AXIS_CONFIG=[
 ];
 const TWIN_HOME_ANGLES=TWIN_AXIS_CONFIG.map(a=>a.home);
 const TWIN_AXIS_BY_ID=Object.fromEntries(TWIN_AXIS_CONFIG.map(a=>[a.id,a]));
+function jointIndexById(id){return state.robot.joints.findIndex(j=>j.id===id)}
+function rawToLogicalAngleByIndex(i,raw){return Number(raw)-Number(SERVO_RAW_HOME_ANGLES[i]??PHOTO_HOME_ANGLES[i]??180)+Number(PHOTO_HOME_ANGLES[i]??180)}
+function logicalToRawAngleByIndex(i,logical){return Number(logical)+Number(SERVO_RAW_HOME_ANGLES[i]??PHOTO_HOME_ANGLES[i]??180)-Number(PHOTO_HOME_ANGLES[i]??180)}
+function rawToLogicalAngleById(id,raw){const i=jointIndexById(id);return i>=0?rawToLogicalAngleByIndex(i,raw):Number(raw)}
+function logicalToRawAngleById(id,logical){const i=jointIndexById(id);return i>=0?logicalToRawAngleByIndex(i,logical):Number(logical)}
 function motorToJointDelta(id,angle){
   const cfg=TWIN_AXIS_BY_ID[id],gain=Number(cfg?.gain||1);
   return (Number(angle??cfg?.home??0)-Number(cfg?.home??0))/gain;
@@ -939,7 +947,7 @@ function twinStatus(){
 let view={yaw:.82,pitch:1.13,zoom:1},drag=null,simT=0,lastAutoLog=0;
 const MANUAL_KEY_STEP=1;
 const J4_VISUAL_HOME_OFFSET_DEG=-21;
-const J5_VISUAL_HOME_OFFSET_DEG=61;
+const J5_VISUAL_HOME_OFFSET_DEG=57;
 const MANUAL_KEY_BINDINGS={q:[0,1],a:[0,-1],w:[1,1],s:[1,-1],e:[3,1],d:[3,-1],r:[4,1],f:[4,-1],t:[5,1],g:[5,-1]};
 
 /* ===== Helpers ===== */
@@ -968,6 +976,21 @@ function setAllMotorsHomeAngles(){
   collisionGuard.lastSafe.current=Object.fromEntries(state.robot.joints.map((j,i)=>[j.id,HOME_ANGLES[i]]));
   collisionGuard.lastSafe.target=Object.fromEntries(state.robot.joints.map((j,i)=>[j.id,HOME_ANGLES[i]]));
   state.collision={blocked:false,messages:[]};
+}
+function stopPresentationDemoForManual(){
+  const demo=window.samboEmergencyPresentationDemo;
+  if(demo&&typeof demo.stop==="function"){
+    try{demo.stop(false)}catch(e){debug(`presentation demo stop failed: ${e.message}`)}
+  }
+}
+function resetManualHomePreview(){
+  setAllMotorsHomeAngles();
+  setManualGripperAngle(GRIPPER_VISUAL.openServo);
+  state.gripper.state="OPEN";
+  state.gripper.pick_ready=false;
+  state.gripper.object_detected=false;
+  state.path.current_step="HOME";
+  state.path.progress_percent=0;
 }
 function updateRunHeaderControls(){
   const running=!!state.auto?.running&&!state.system.estop;
@@ -1010,12 +1033,16 @@ function applyAutoDemoPose(now){
 function setMode(mode,fromSocket=false){
   mode=mode==="AUTO RUN"?"AUTO_RUN":mode;
   if(state.system.estop&&mode!=="E_STOP")return;
-  if(state.mode===mode&&$("robot3dCanvas"))return;
+  const manual=mode==="MANUAL",teaching=mode==="TEACHING";
+  if(manual)stopPresentationDemoForManual();
+  if(state.mode===mode&&$("robot3dCanvas")){
+    if(manual){resetManualHomePreview();renderAll();draw3D()}
+    return;
+  }
   state.mode=mode;
   if(mode!=="AUTO_RUN"&&state.auto)state.auto.running=false;
   document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.mode===state.mode));
-  const manual=state.mode==="MANUAL",teaching=state.mode==="TEACHING";
-  if(manual)setAllMotorsHomeAngles();
+  if(manual)resetManualHomePreview();
   activeFocusView=state.mode==="AUTO_RUN"?"MONITOR":"ROBOT_3D";
   if(manual)renderManualStage();else renderStandardStage();
   if(!fromSocket)addLog(`모드 전환: ${teaching?"티칭 모드":manual?"수동 시험":"자동 운전"}`,"info");
@@ -1073,7 +1100,7 @@ function setGripperStream(url){
   applyGripperStream();
 }
 function promptGripperUrl(){
-  const u=prompt("그리퍼 카메라 MJPEG 주소를 입력하세요.\\n예: http://<라즈베리파이-IP>:8090/stream.mjpg",state.camera?.gripper_url||"");
+  const u=prompt("그리퍼 카메라 MJPEG 주소를 입력하세요.\\n예: http://<라즈베리파이-IP>:8091/?action=stream",state.camera?.gripper_url||"");
   if(u!=null)setGripperStream(u.trim());
 }
 function applyGripperStream(){
@@ -1118,9 +1145,9 @@ function renderManualStage(){
   $("mainStage").className="main-stage manual-stage";
   $("mainStage").innerHTML=`
     <article class="panel" id="primaryPanel"><div class="panel-head">수동 시험 / Manual Test <small>실제 장비 연결 전 주변 안전을 확인하세요.</small></div>
-      <div class="manual-controls"><div class="manual-twin"><div class="manual-twin-head">디지털 트윈 / Manual Angle Input <span class="head-right"><span class="source-tag live">RPi↔STM</span></span></div><div class="compact-body" id="manualDigitalTwinCard"></div></div><div id="manualRows"></div><div class="manual-actions action-control">
+      <div class="manual-controls"><div id="manualRows"></div><div class="manual-actions action-control">
       <button class="small-btn" onclick="goHome()">HOME 이동</button><button class="small-btn" onclick="toggleGripper()">그리퍼 열기 / 닫기</button>
-      <button class="small-btn" onclick="manualAction('CAN Ping 테스트')">CAN Ping 테스트</button><button class="small-btn" onclick="manualAction('서보 Torque ON/OFF')">서보 Torque ON/OFF</button>
+      <button class="small-btn" onclick="manualAction('연결 확인')">연결 확인</button><button class="small-btn" onclick="manualAction('서보 Torque ON/OFF')">서보 Torque ON/OFF</button>
       </div></div></article>
     <article class="panel media-panel" id="robot3dPanel"><div class="panel-head">로봇 3D 분류 셀 / Sorting Twin
       <span class="head-right sim3d-tools"><button onclick="rotateView(-.18)">↶ 회전</button><button onclick="rotateView(.18)">회전 ↷</button><button onclick="reset3DView()">기본 시점</button></span>
@@ -1144,7 +1171,6 @@ function renderManualRows(){
     <input class="manual-angle-input mono action-control" data-manual-gripper-angle type="number" min="${GRIPPER_SERVO_MIN}" max="${GRIPPER_SERVO_MAX}" step="1" value="${fmt(g.sg90_angle,0)}" oninput="manualGripper(this.value)" onwheel="manualGripperWheel(event)" onkeydown="manualGripperKey(event)" aria-label="그리퍼 SG90 각도 입력">
     <div class="manual-row-actions"><button class="small-btn action-control" onclick="manualGripperStep(-5)">-5°</button><button class="small-btn action-control" onclick="manualGripperStep(5)">+5°</button><button class="small-btn action-control" onclick="sendManualGripper()">적용</button></div></div>`;
   $("manualRows").innerHTML=jointRows+gripperRow;
-  renderManualTwinCard();
 }
 function renderPrimary(){
   if(state.mode==="MANUAL"||!$("primaryTitle"))return;
@@ -1171,9 +1197,9 @@ function renderRightPanel(){
   $("jointRows").innerHTML=state.robot.joints.map(j=>{const d=Math.abs(j.target-j.current),st=d>10?"확인 필요":d>5?"주의":"정상",sc=d>10?"err":d>5?"warn":"ok";
     return `<div class="joint-row mono"><b>${j.id} <span class="joint-name">${j.name}</span></b><span class="joint-value">${deg(j.current)}</span><span class="joint-value">${deg(j.target)}</span><span class="joint-diff ${sc}">${deg(d)}</span><span class="pill ${sc}">${st}</span></div>`}).join("")
     +(()=>{const gr=state.gripper,o=gr.state==="OPEN";return `<div class="joint-row gripper-row mono"><b>그리퍼 <span class="joint-name">Gripper · SG90</span></b><span class="joint-value">${deg(gr.sg90_angle)}</span><span class="joint-value">${deg(gr.sg90_angle)}</span><span class="joint-diff ok">0.0°</span><span class="pill ${o?"ok":""}">${o?"열림":"닫힘"}</span></div>`})();
-  $("motorRows").innerHTML=state.robot.joints.map(j=>{const danger=j.temp>=65||j.load>=90,warn=j.temp>55||j.load>=80,sc=danger?"err":warn?"warn":"ok";
+  $("motorRows").innerHTML=state.robot.joints.map(j=>{const danger=j.temp>=65||j.load>=90,warn=j.temp>55||j.load>=80,sc=danger?"err":warn?"warn":"ok",fresh=j._rx&&(Date.now()-j._rx<1500),csc=state.demo?sc:(!j._rx?"":!fresh?"err":((j._flags&7)===7?"ok":"warn")),ctext=state.demo?(danger?"위험":warn?"주의":"정상"):(!j._rx?"대기":!fresh?"끊김":((j._flags&7)===7?"정상":"주의"));
     return `<div class="motor-row mono"><b>${j.id}</b><div><div class="meter"><i class="temp" style="width:${clamp(j.temp/75*100,0,100)}%"></i></div><span class="meter-label">${fmt(j.temp,0)}°C</span></div>
-      <div><div class="meter"><i style="width:${clamp(j.load,0,100)}%;background:${danger?"var(--red)":warn?"var(--yellow)":"var(--cyan)"}"></i></div><span class="meter-label">${fmt(j.load,0)}%</span></div><span class="pill ${sc}">${danger?"위험":warn?"주의":"정상"}</span></div>`}).join("");
+      <div><div class="meter"><i style="width:${clamp(j.load,0,100)}%;background:${danger?"var(--red)":warn?"var(--yellow)":"var(--cyan)"}"></i></div><span class="meter-label">${fmt(j.load,0)}%</span></div><span class="pill ${csc}">${ctext}</span></div>`}).join("");
   const g=state.gripper,approach=getApproachGuide(),so=state.sorting||{};
   const tb=$("tofBody");
   if(tb)tb.innerHTML=`<div class="tof-big mono">${fmt(g.tof_mm)}<span class="unit">mm</span></div>
@@ -1239,7 +1265,7 @@ function renderOperationalInsights(){
 }
 function digitalTwinMarkup(){
   const twin=twinStatus(),dt=state.digital_twin,collision=twin.collision;
-  return `<div class="compact-grid"><div class="compact-metric">Pi 명령<b class="mono">${dt.cmd_id}</b></div><div class="compact-metric">STM 피드백<b class="mono">${dt.telemetry_id}</b></div><div class="compact-metric">자세 오차<b class="mono ${twin.error>8?"yellow":"green"}">${fmt(twin.error)}°</b></div><div class="compact-metric">M2·M3 차이<b class="mono ${twin.current.mirrorMismatch>3?"yellow":"green"}">${fmt(twin.current.mirrorMismatch)}°</b></div></div><div class="compact-line"><span>키보드 입력</span><b class="green">숫자 입력 후 Enter 또는 적용</b></div><div class="compact-line"><span>현재 자세 변환</span><b class="${twin.ok?"green":"yellow"}">${twin.ok?"트윈 안정":"각도 보정 확인"}</b></div><div class="compact-line"><span>충돌 제한</span><b class="${collision.blocked?"red":"green"}">${collision.blocked?collision.messages[0]:"바닥/프레임 여유 OK"}</b></div><div class="compact-line"><span>전류 피드백</span><b class="mono">${dt.current_id} · ${dt.latency_ms} ms</b></div>`;
+  return `<div class="compact-grid"><div class="compact-metric">입력 방식<b>조그 + 숫자</b></div><div class="compact-metric">명령 단계<b>적용 버튼</b></div><div class="compact-metric">자세 오차<b class="mono ${twin.error>8?"yellow":"green"}">${fmt(twin.error)}°</b></div><div class="compact-metric">연동 상태<b class="${twin.current.mirrorMismatch>3?"yellow":"green"}">${twin.current.mirrorMismatch>3?"보정 확인":"정상"}</b></div></div><div class="compact-line"><span>조작 원칙</span><b class="green">작게 조정 후 적용</b></div><div class="compact-line"><span>현재 자세 변환</span><b class="${twin.ok?"green":"yellow"}">${twin.ok?"트윈 안정":"각도 보정 확인"}</b></div><div class="compact-line"><span>충돌 제한</span><b class="${collision.blocked?"red":"green"}">${collision.blocked?collision.messages[0]:"바닥/프레임 여유 OK"}</b></div><div class="compact-line"><span>최근 응답</span><b class="mono">${dt.latency_ms} ms</b></div>`;
 }
 function renderManualTwinCard(){
   const card=$("manualDigitalTwinCard");if(card)card.innerHTML=digitalTwinMarkup();
@@ -1378,6 +1404,23 @@ function placeLocal(mesh,parent,position,rotation=[0,0,0]){
   mesh.rotation.set(rotation[0]*rad,rotation[1]*rad,rotation[2]*rad);parent.add(mesh);
 }
 function rotateStlJoint(group,axis,angle){group.rotation.set(0,0,0);group.rotation[axis]=angle*Math.PI/180}
+function makeLocalRollAssembly(T,parent,position,rotation,pivotMm){
+  const holder=new T.Group(),rad=Math.PI/180,pivot=new T.Vector3(pivotMm[0],pivotMm[1],pivotMm[2]).multiplyScalar(STL_SCALE);
+  placeLocal(holder,parent,position,rotation);
+  holder.position.add(pivot.clone().applyEuler(holder.rotation));
+  holder.userData.baseRotation=rotation.slice();
+  return holder;
+}
+function attachToRollAssembly(root,holder,object){
+  root.updateMatrixWorld(true);
+  holder.updateMatrixWorld(true);
+  holder.attach(object);
+}
+function rotateLocalRollHolder(holder,angle){
+  if(!holder)return;
+  const rad=Math.PI/180,base=holder.userData.baseRotation||[0,0,0];
+  holder.rotation.set(base[0]*rad,base[1]*rad,(base[2]+angle)*rad);
+}
 function shoulderMirrorAngle(A){return getTwinPoseFromAngles(A).shoulder}
 function getTwinPoseFromAngles(A){
   const base=motorToJointDelta("J1",A.J1);
@@ -1400,7 +1443,7 @@ function stlRotationsFromTwin(p){
   const l1=HOME_LINK_ANGLES.L1+p.shoulder*.72;
   const l2=HOME_LINK_ANGLES.L2+p.elbow*.62;
   const l3=HOME_LINK_ANGLES.L3+p.wristPitch*.55;
-  return{base:p.base,shoulder:l1,elbow:l2-l1,wristPitch:l3-l2,wristRoll:p.wristRoll*.8,endAssist:p.endAssist*.35};
+  return{base:p.base,shoulder:l1,elbow:l2-l1,wristPitch:l3-l2,wristRoll:p.wristRoll*.8,endAssist:0};
 }
 const STL_SAFE_STANDBY={J1:180,J2:180,J3:180,J4:180,J5:180,J6:180};
 function applyStlAngles(r,A){
@@ -1410,8 +1453,9 @@ function applyStlAngles(r,A){
   rotateStlJoint(G[1],"x",rot.shoulder);
   rotateStlJoint(G[2],"x",rot.elbow);
   rotateStlJoint(G[3],"x",rot.wristPitch);
-  rotateStlJoint(G[4],"z",rot.wristRoll);
-  rotateStlJoint(G[5],"z",rot.endAssist);
+  rotateStlJoint(G[4],"z",0);
+  rotateStlJoint(G[5],"z",0);
+  rotateLocalRollHolder(r.rollAssembly,rot.wristRoll);
 }
 function makeBox3(T,min,max){return new T.Box3(new T.Vector3(min[0],min[1],min[2]),new T.Vector3(max[0],max[1],max[2]))}
 function stlCollisionReport(T,r){
@@ -1503,7 +1547,7 @@ function addThreeSortBins(T,r){
   r.scene.add(group);r.sortBins=group;
 }
 async function loadActualStlRobot(T,r){
-  const root=r.modelRoot,M=r.materials,C={J1:[0,77,0],J2:[0,118,-5],J3:[-23,291,165],J4:[-17,138,311],J5:[-26,99,394],J6:[-25,75,424]};
+  const root=r.modelRoot,M=r.materials,C={J1:[0,77,0],J2:[0,118,-5],J3:[-23,291,165],J4:[-17,138,311],J5:[-26,118,351],J6:[-25,75,424]};
   root.userData.center=[0,0,0];
   const G=[addPivot(T,root,C.J1),null,null,null,null,null];
   G[1]=addPivot(T,G[0],C.J2,C.J1);G[2]=addPivot(T,G[1],C.J3,C.J2);G[3]=addPivot(T,G[2],C.J4,C.J3);G[4]=addPivot(T,G[3],C.J5,C.J4);G[5]=addPivot(T,G[4],C.J6,C.J5);
@@ -1517,17 +1561,22 @@ async function loadActualStlRobot(T,r){
   const j4Hub=new T.Mesh(new T.CylinderGeometry(.13,.13,.07,36),M.link),j4Mark=new T.Mesh(new T.BoxGeometry(.055,.055,.2),M.accent);
   j4Hub.rotation.z=Math.PI/2;j4Mark.position.set(0,.145,0);j4Hub.castShadow=j4Mark.castShadow=true;G[2].add(j4Hub);G[2].add(j4Mark);
   placeLocal(wristHouse,G[3],[-26,119,348],[29,0,0]);placeLocal(wristPlate,G[3],[-26,119,348],[29,0,0]);
-  placeLocal(wristRoll,G[4],[-26,118,351],[30,0,0]);placeLocal(cameraBracket,G[4],[58,90,398],[120,0,0]);
+  const rollAssembly=makeLocalRollAssembly(T,G[4],[-26,118,351],[30,0,0],[0,-1,53.5]);
+  placeLocal(wristRoll,G[4],[-26,118,351],[30,0,0]);
+  placeLocal(cameraBracket,G[4],[58,90,398],[120,0,0]);
   const animatedGripper=makeAnimatedGripper(T,gripper,M.gripper);
   placeLocal(animatedGripper,G[5],[-25,75,424],[-169,-90,-19]);
-  [[arm1,"1번 링크"],[arm2,"2번 링크"],[wristHouse,"손목 하우징"],[wristPlate,"손목 플레이트"],[wristRoll,"손목 롤"],[animatedGripper,"그리퍼"],[cameraBracket,"카메라 브라켓"],[j4Hub,"J4 허브"],[j4Mark,"J4 표시부"]].forEach(([obj,name])=>obj.userData.collisionName=name);
-  r.dynamicCollisionObjects=[arm1,arm2,wristHouse,wristPlate,wristRoll,animatedGripper,cameraBracket,j4Hub,j4Mark];
+  attachToRollAssembly(root,rollAssembly,wristRoll);
+  attachToRollAssembly(root,rollAssembly,cameraBracket);
+  attachToRollAssembly(root,rollAssembly,animatedGripper);
+  [[arm1,"1번 링크"],[arm2,"2번 링크"],[wristHouse,"손목 하우징"],[wristPlate,"손목 플레이트"],[rollAssembly,"J6 롤 어셈블리"],[j4Hub,"J4 허브"],[j4Mark,"J4 표시부"]].forEach(([obj,name])=>obj.userData.collisionName=name);
+  r.dynamicCollisionObjects=[arm1,arm2,wristHouse,wristPlate,rollAssembly,j4Hub,j4Mark];
   r.staticKeepouts=[
     {label:"베이스 하우징",min:[-.62,.02,-.58],max:[.62,.44,.58]},
     {label:"볼트 통 프레임",min:[-2.55,.00,-1.70],max:[-1.55,.58,-.70]},
     {label:"너트 통 프레임",min:[1.55,.00,-1.70],max:[2.55,.58,-.70]}
   ];
-  r.groups=G;r.j4Hub=j4Hub;r.j4Mark=j4Mark;r.gripperMesh=animatedGripper;updateAnimatedGripper(r);r.ready=true;
+  r.groups=G;r.j4Hub=j4Hub;r.j4Mark=j4Mark;r.rollAssembly=rollAssembly;r.gripperMesh=animatedGripper;updateAnimatedGripper(r);r.ready=true;
 }
 function initThreeRobot(canvas){
   const T=window.THREE,scene=new T.Scene(),camera=new T.PerspectiveCamera(42,1,.1,100);
@@ -1734,7 +1783,7 @@ function syncManualGripperRow(){
 function manualGripper(v){setManualGripperAngle(v);syncManualGripperRow();renderRightPanel();draw3D()}
 function manualGripperStep(v){manualGripper(Number(state.gripper.sg90_angle||0)+v)}
 function manualGripperWheel(e){e.preventDefault();manualGripperStep(e.deltaY<0?5:-5)}
-function manualGripperKey(e){if(e.key==="Enter"){e.preventDefault();sendManualGripper()}}
+function manualGripperKey(e){if(e.key==="Enter"){e.preventDefault();e.target.blur();addLog("그리퍼 목표각 미리보기 완료 — 적용 버튼을 누르면 송신됩니다.","info")}}
 function sendManualGripper(){
   const sent=sendDashboardCommand("GRIPPER",{sg90_angle_deg:Number(state.gripper.sg90_angle),state:state.gripper.state});
   addLog(`그리퍼 목표각 SG90 ${fmt(state.gripper.sg90_angle,0)}° ${sent?"송신":"DEMO 적용"}`,sent?"ok":"info");
@@ -1743,7 +1792,7 @@ function sendManualGripper(){
 function manualStep(i,v){setManualJointTarget(i,state.robot.joints[i].target+v);syncManualRows();renderRightPanel();draw3D()}
 function manualWheel(e,i){e.preventDefault();manualStep(i,e.deltaY<0?1:-1);const angle=document.querySelector(`[data-manual-angle="${i}"]`);if(angle)angle.value=fmt(state.robot.joints[i].target)}
 function manualKeyboardStep(key){const binding=MANUAL_KEY_BINDINGS[key.toLowerCase()];if(!binding||state.mode!=="MANUAL"||state.system.estop)return false;manualStep(binding[0],binding[1]*MANUAL_KEY_STEP);return true}
-function manualAngleKey(e,i){if(e.key==="Enter"){e.preventDefault();sendManualJoint(i)}}
+function manualAngleKey(e,i){if(e.key==="Enter"){e.preventDefault();e.target.blur();addLog(`${state.robot.joints[i]?.id||"축"} 목표각 미리보기 완료 — 적용 버튼을 누르면 송신됩니다.`,"info")}}
 function sendManualJoint(i){
   const j=state.robot.joints[i];if(!j)return false;
   const report=getManualTargetCollisionReport();
@@ -1753,7 +1802,7 @@ function sendManualJoint(i){
   let sent=false;
   for(const n of commandIndexes){
     const cmdJoint=state.robot.joints[n];
-    sent=sendDashboardCommand("SET_JOINT_ANGLE",{motor_id:n+1,angle_deg:Number(cmdJoint.target)})||sent;
+    sent=sendDashboardCommand("SET_JOINT_ANGLE",{motor_id:n+1,angle_deg:Number(logicalToRawAngleByIndex(n,cmdJoint.target)),logical_angle_deg:Number(cmdJoint.target)})||sent;
   }
   if(pairIndex!=null){
     const j2=state.robot.joints[1],j3=state.robot.joints[2];
@@ -1768,6 +1817,7 @@ function sendManualJoint(i){
 function toggleGripper(){state.gripper.state=state.gripper.state==="OPEN"?"CLOSED":"OPEN";state.gripper.sg90_angle=state.gripper.state==="OPEN"?GRIPPER_VISUAL.openServo:GRIPPER_VISUAL.closedServo;addLog(`그리퍼 ${state.gripper.state==="OPEN"?"열림":"닫힘"}`,"info");renderAll();draw3D()}
 function clearLogs(){$("eventLogs").innerHTML=""}
 const HOME_ANGLES=PHOTO_HOME_ANGLES.slice();
+const HOME_RAW_ANGLES=SERVO_RAW_HOME_ANGLES.slice();
 function sendDashboardCommand(command,payload={}){
   if(state.ws?.readyState===WebSocket.OPEN){state.ws.send(JSON.stringify({type:"COMMAND",command,payload}));debug(`COMMAND sent: ${command}`);return true}
   debug(`[DEMO] ${command} command logged only`);return false;
@@ -1776,7 +1826,7 @@ function goHome(){
   if(!confirm("로봇팔을 HOME 자세로 복귀할까요? 실제 장비 주변에 사람이 없는지 먼저 확인하세요."))return;
   setAllMotorsHomeAngles();
   state.path.current_step="HOME";state.path.progress_percent=0;state.precheck.home_confirmed=true;state.calibration.servo="OK";
-  const sent=sendDashboardCommand("HOME",{motor_angles_deg:Object.fromEntries(state.robot.joints.map((j,i)=>[i+1,Number(HOME_ANGLES[i])]))});addLog(`${sent?"HOME 복귀 명령 송신":"DEMO HOME 자세 복귀"} — 시작 위치 확인`,"ok");renderAll();draw3D();
+  const sent=sendDashboardCommand("HOME",{motor_angles_deg:Object.fromEntries(state.robot.joints.map((j,i)=>[i+1,Number(HOME_RAW_ANGLES[i])])),logical_home_deg:Object.fromEntries(state.robot.joints.map((j,i)=>[i+1,Number(HOME_ANGLES[i])]))});addLog(`${sent?"HOME 복귀 명령 송신":"DEMO HOME 자세 복귀"} — 시작 위치 확인`,"ok");renderAll();draw3D();
 }
 function blobDownload(name,text,type="text/plain;charset=utf-8"){
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),0);
@@ -1840,16 +1890,16 @@ function connectWS(){
   let ws;try{ws=new WebSocket(wsUrl)}catch{return}
   state.ws=ws;
   ws.onopen=()=>{state.demo=false;state.system.server_connected=true;addLog("서버 연결 — 실제 데이터 수신 대기","ok");debug("WebSocket connected");renderAll()};
-  ws.onmessage=e=>{try{const d=JSON.parse(e.data);applyIncoming(d);state.demo=false;state.system.server_connected=true;state.lastFrame=Date.now();renderAll()}catch(err){debug("JSON parse error: "+err.message)}};
+  ws.onmessage=e=>{try{const d=JSON.parse(e.data);applyIncoming(d);state.demo=false;state.system.server_connected=true;state.lastFrame=Date.now();requestUiRender()}catch(err){debug("JSON parse error: "+err.message)}};
   ws.onclose=()=>{state.demo=true;state.system.server_connected=false;debug(`${wsUrl} disconnected. DEMO MODE enabled.`);renderAll();setTimeout(connectWS,2400)};
   ws.onerror=()=>{try{ws.close()}catch{}};
 }
 function applyIncoming(d){
   if(d.mode)setMode(d.mode,true);if(d.system)Object.assign(state.system,d.system);
-  if(d.robot?.joints){d.robot.joints.forEach(n=>{const j=state.robot.joints.find(x=>x.id===n.id);if(j)Object.assign(j,n)});if(d.robot.end_effector)state.robot.end_effector=d.robot.end_effector}
-  else state.robot.joints.forEach(j=>{if(d[j.id]!=null){j.current=Number(d[j.id]);j.target=Number(d[j.id])}});
+  if(d.robot?.joints){d.robot.joints.forEach(n=>{const i=jointIndexById(n.id),j=state.robot.joints[i];if(j){const next=Object.assign({},n);if(next.current!=null)next.current=rawToLogicalAngleByIndex(i,next.current);if(next.target!=null)next.target=rawToLogicalAngleByIndex(i,next.target);Object.assign(j,next)}});if(d.robot.end_effector)state.robot.end_effector=d.robot.end_effector}
+  else state.robot.joints.forEach((j,i)=>{if(d[j.id]!=null){const logical=rawToLogicalAngleByIndex(i,d[j.id]);j.current=logical;j.target=logical}});
   if(d.digital_twin)Object.assign(state.digital_twin,d.digital_twin);
-  if(d.command?.motor_id&&d.command.angle_deg!=null){const j=state.robot.joints[d.command.motor_id-1];if(j){j.target=Number(d.command.angle_deg);state.digital_twin.last_cmd=`CMD_SET_ANGLE M${d.command.motor_id} ${fmt(j.target)}°`}}
+  if(d.command?.motor_id&&d.command.angle_deg!=null){const i=d.command.motor_id-1,j=state.robot.joints[i];if(j){j.target=rawToLogicalAngleByIndex(i,d.command.angle_deg);state.digital_twin.last_cmd=`CMD_SET_ANGLE M${d.command.motor_id} ${fmt(j.target)}°`}}
   if(d.can_frame)applyCanFrame(d.can_frame);
   if(d.human_pose)Object.assign(state.human_pose,d.human_pose);if(d.gripper)Object.assign(state.gripper,typeof d.gripper==="string"?{state:d.gripper.toUpperCase()}:d.gripper);
   if(d.vision){Object.assign(state.vision,d.vision);if(d.vision.correction)Object.assign(state.vision.correction,d.vision.correction)}
@@ -1860,8 +1910,8 @@ function applyIncoming(d){
 function applyCanFrame(frame){
   const id=typeof frame.id==="string"?parseInt(frame.id,16):Number(frame.id),data=frame.data||[];
   if(id===0x201&&data.length>=7){
-    const motorId=data[0],angle=((data[2]<<8)|data[1])/10,temp=data[3],load=(data[5]<<8)|data[4],flags=data[6],j=state.robot.joints[motorId-1];
-    if(j){if(flags&1)j.current=angle;if(flags&2)j.temp=temp;if(flags&4)j.load=Math.min(100,Math.round(load/10));j.status=j.load>=80?"WARN":"OK"}
+    const motorId=data[0],angle=((data[2]<<8)|data[1])/10,temp=data[3],load=(((data[5]<<8)|data[4])&0x3FF),flags=data[6],j=state.robot.joints[motorId-1];
+    if(j){j._rx=Date.now();j._flags=flags;if(flags&1)j.current=rawToLogicalAngleByIndex(motorId-1,angle);if(flags&2)j.temp=temp;if(flags&4)j.load=Math.min(100,Math.round(load/10));j.status=j.load>=80?"WARN":"OK"}
     state.digital_twin.last_ack=`STM 0x201 M${motorId} 피드백`;
   }else if(id===0x202&&data.length>=4){
     const motorId=data[0],raw=(data[2]<<8)|data[1],ok=!!data[3],j=state.robot.joints[motorId-1];
@@ -1883,15 +1933,31 @@ function demoTick(now){
 }
 
 /* ===== Main render loop ===== */
+const UI_RENDER_MIN_MS=120;
+const PANEL_RENDER_MIN_MS=160;
+let uiRenderQueued=false,lastUiRenderAt=0,lastPanelRenderAt=0;
+function requestUiRender(force=false){
+  const now=performance.now();
+  const wait=Math.max(0,UI_RENDER_MIN_MS-(now-lastUiRenderAt));
+  if(uiRenderQueued&&!force)return;
+  uiRenderQueued=true;
+  const run=()=>{uiRenderQueued=false;lastUiRenderAt=performance.now();renderAll()};
+  if(force||wait<=0)requestAnimationFrame(run);
+  else setTimeout(()=>requestAnimationFrame(run),wait);
+}
 function renderAll(){
   renderHeader();renderPrimary();renderPath();renderRightPanel();if(state.mode==="MANUAL")renderManualRows();applyFocusView();
 }
-function frame(now){demoTick(now);drawHumanPose();drawGripper();draw3D();drawTopDown();renderRightPanel();requestAnimationFrame(frame)}
+function frame(now){
+  demoTick(now);drawHumanPose();drawGripper();draw3D();drawTopDown();
+  if(now-lastPanelRenderAt>=PANEL_RENDER_MIN_MS){lastPanelRenderAt=now;renderRightPanel()}
+  requestAnimationFrame(frame);
+}
 setInterval(()=>{const now=currentTime();setText("clock",now);const sc=$("splashClock");if(sc)sc.textContent=now;const timer=$("recordTimer");if(timer){const s=Math.floor((Date.now()-bootTime)/1000);timer.textContent=`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`}},1000);
 const bootTime=Date.now();
 const initialWsUrl=getWsUrl();if($("wsUrlLabel"))$("wsUrlLabel").textContent=initialWsUrl;
 addLog("시뮬레이션 데이터 표시 — 서버 연결 대기","warn");addLog(`WebSocket ${initialWsUrl} 연결 대기`,"info");addLog("6축 STS3215 상태 패널 준비 완료","ok");
-try{const u=localStorage.getItem("gripperCamUrl");if(u){if(!state.camera)state.camera={gripper_url:""};state.camera.gripper_url=u}}catch(e){};setMode("AUTO_RUN");connectWS();requestAnimationFrame(frame);
+try{let u=localStorage.getItem("gripperCamUrl");if(!u){u="http://"+location.hostname+":8091/?action=stream"}if(!state.camera)state.camera={gripper_url:""};state.camera.gripper_url=u;applyGripperStream()}catch(e){};setMode("AUTO_RUN");connectWS();requestAnimationFrame(frame);
 </script>
 <script src="./emergency_presentation_demo.js"></script>
 </body>
