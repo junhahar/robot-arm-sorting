@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const VERSION = "2026-06-13-vision-floor-overlay";
+  const VERSION = "2026-06-13-premium-floor-no-logo";
   const STALE_MS = 2400;
   const BASE_PICK_MM = { x: 35, y: 175, z: 0 };
   const SCENE_SCALE = { x: 1 / 180, z: 1 / 178, h: 1 / 220 };
@@ -21,6 +21,14 @@
     red: 0xff5b5b,
     white: 0xe6f7ff,
     metal: 0xb9c7d3
+  };
+  const FLOOR = {
+    width: 6.7,
+    depth: 4.85,
+    y: -0.008,
+    zOffset: 0.18,
+    gridStep: 0.72,
+    scan: { x: 0, z: 1.5, width: 3.0, depth: 1.8 }
   };
 
   let externalDetection = null;
@@ -329,6 +337,187 @@
     return group;
   }
 
+  function softenNativeFloor(r) {
+    if (!r?.scene || r.scene.userData?.samboBrandedFloorReady) return;
+    r.scene.userData = r.scene.userData || {};
+    r.scene.traverse?.(child => {
+      if (!child || child.name === "sambo-branded-floor") return;
+      if (child.type === "GridHelper") {
+        child.visible = false;
+      }
+      if (child.material && child.geometry?.type === "PlaneGeometry" && /ground|floor|grid/i.test(child.name || "")) {
+        child.material.transparent = true;
+        child.material.opacity = Math.min(num(child.material.opacity, 1), 0.28);
+      }
+    });
+    r.scene.userData.samboBrandedFloorReady = true;
+  }
+
+  function makeLineSegments(T, positions, color, opacity) {
+    const geometry = new T.BufferGeometry();
+    geometry.setAttribute("position", new T.BufferAttribute(new Float32Array(positions), 3));
+    const lines = new T.LineSegments(geometry, new T.LineBasicMaterial({
+      color,
+      transparent: opacity < 1,
+      opacity,
+      depthWrite: false
+    }));
+    return lines;
+  }
+
+  function addFloorPanel(T, group, name, x, z, w, d, color, opacity, yOffset = 0.012, rotation = 0, order = 2) {
+    const panel = new T.Mesh(new T.PlaneGeometry(w, d), material(T, color, opacity, {
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1
+    }));
+    panel.name = name;
+    panel.rotation.x = -Math.PI / 2;
+    panel.rotation.z = rotation;
+    panel.position.set(x, FLOOR.y + yOffset, z);
+    panel.renderOrder = order;
+    group.add(panel);
+    return panel;
+  }
+
+  function addFloorGrid(T, group) {
+    const positions = [];
+    const edge = [];
+    const hw = FLOOR.width / 2;
+    const hd = FLOOR.depth / 2;
+    const y = FLOOR.y + 0.008;
+    const z0 = FLOOR.zOffset - hd;
+    const z1 = FLOOR.zOffset + hd;
+    for (let x = -hw; x <= hw + 0.001; x += FLOOR.gridStep) {
+      positions.push(x, y, z0, x, y, z1);
+    }
+    for (let z = z0; z <= z1 + 0.001; z += FLOOR.gridStep) {
+      positions.push(-hw, y, z, hw, y, z);
+    }
+    edge.push(-hw, y + 0.002, z0, hw, y + 0.002, z0);
+    edge.push(hw, y + 0.002, z0, hw, y + 0.002, z1);
+    edge.push(hw, y + 0.002, z1, -hw, y + 0.002, z1);
+    edge.push(-hw, y + 0.002, z1, -hw, y + 0.002, z0);
+
+    const grid = makeLineSegments(T, positions, 0x31577d, 0.13);
+    grid.name = "sambo-floor-soft-grid";
+    grid.renderOrder = 3;
+    group.add(grid);
+
+    const outline = makeLineSegments(T, edge, 0x67e8f9, 0.52);
+    outline.name = "sambo-floor-outline";
+    outline.renderOrder = 4;
+    group.add(outline);
+  }
+
+  function addPerimeterLightBars(T, group) {
+    const hw = FLOOR.width / 2 - 0.22;
+    const hd = FLOOR.depth / 2 - 0.24;
+    const y = FLOOR.y + 0.026;
+    const z0 = FLOOR.zOffset - hd;
+    const z1 = FLOOR.zOffset + hd;
+    const x0 = -hw;
+    const x1 = hw;
+    const cyan = [
+      x0, y, z1, x0 + 1.35, y, z1,
+      x1 - 1.35, y, z1, x1, y, z1,
+      x0, y, z0, x0 + 0.98, y, z0,
+      x1 - 0.98, y, z0, x1, y, z0
+    ];
+    const amber = [
+      x0, y + 0.003, z0 + 0.52, x0, y + 0.003, z0 + 1.42,
+      x1, y + 0.003, z0 + 0.52, x1, y + 0.003, z0 + 1.42
+    ];
+    const cyanLines = makeLineSegments(T, cyan, 0x22d3ee, 0.7);
+    cyanLines.name = "sambo-floor-perimeter-cyan";
+    cyanLines.renderOrder = 7;
+    group.add(cyanLines);
+    const amberLines = makeLineSegments(T, amber, 0xfbbf24, 0.58);
+    amberLines.name = "sambo-floor-perimeter-amber";
+    amberLines.renderOrder = 7;
+    group.add(amberLines);
+  }
+
+  function addScanCornerBrackets(T, group) {
+    const s = FLOOR.scan;
+    const x0 = s.x - s.width / 2 - 0.06;
+    const x1 = s.x + s.width / 2 + 0.06;
+    const z0 = s.z - s.depth / 2 - 0.06;
+    const z1 = s.z + s.depth / 2 + 0.06;
+    const y = FLOOR.y + 0.045;
+    const l = 0.36;
+    const positions = [
+      x0, y, z0, x0 + l, y, z0, x0, y, z0, x0, y, z0 + l,
+      x1, y, z0, x1 - l, y, z0, x1, y, z0, x1, y, z0 + l,
+      x0, y, z1, x0 + l, y, z1, x0, y, z1, x0, y, z1 - l,
+      x1, y, z1, x1 - l, y, z1, x1, y, z1, x1, y, z1 - l
+    ];
+    const brackets = makeLineSegments(T, positions, 0x22d3ee, 0.86);
+    brackets.name = "sambo-scan-corner-brackets";
+    brackets.renderOrder = 20;
+    group.add(brackets);
+  }
+
+  function addSortingRoute(T, group, name, points, color, opacity, phase) {
+    const curve = new T.CatmullRomCurve3(points.map(p => new T.Vector3(p[0], FLOOR.y + 0.052, p[1])));
+    const geometry = new T.BufferGeometry().setFromPoints(curve.getPoints(44));
+    const mat = new T.LineBasicMaterial({
+      color,
+      transparent: true,
+      opacity,
+      depthWrite: false
+    });
+    const line = new T.Line(geometry, mat);
+    line.name = name;
+    line.renderOrder = 18;
+    group.add(line);
+    group.userData.pulseMaterials = group.userData.pulseMaterials || [];
+    group.userData.pulseMaterials.push({ mat, base: opacity, amp: 0.14, phase });
+  }
+
+  function addSortingRoutes(T, group) {
+    addSortingRoute(T, group, "sambo-route-to-bolt-bin", [
+      [-1.58, 0.52], [-2.03, 0.2], [-2.18, -0.52], [-2.05, -1.08]
+    ], 0x4ade80, 0.56, 0);
+    addSortingRoute(T, group, "sambo-route-to-nut-bin", [
+      [1.58, 0.52], [2.04, 0.16], [2.22, -0.52], [2.05, -1.08]
+    ], 0x60a5fa, 0.54, 1.7);
+  }
+
+  function addFloorPanels(T, group) {
+    addFloorPanel(T, group, "sambo-floor-left-service-plate", -2.35, 0.72, 0.62, 3.18, 0x0c2740, 0.45, 0.014, 0.02, 3);
+    addFloorPanel(T, group, "sambo-floor-right-service-plate", 2.35, 0.72, 0.62, 3.18, 0x0c2740, 0.45, 0.014, -0.02, 3);
+    addFloorPanel(T, group, "sambo-floor-front-apron", 0, -1.72, 5.9, 0.42, 0x10243a, 0.54, 0.015, 0.015, 3);
+    addFloorPanel(T, group, "sambo-floor-rear-data-rail", 0, 2.78, 5.8, 0.32, 0x0e263b, 0.42, 0.016, -0.015, 3);
+  }
+
+  function makeBrandedFloor(T, r) {
+    const group = new T.Group();
+    group.name = "sambo-branded-floor";
+    group.userData = { pulseMaterials: [] };
+    const floor = new T.Mesh(new T.PlaneGeometry(FLOOR.width, FLOOR.depth), material(T, 0x081321, 0.92));
+    floor.name = "sambo-floor-plate";
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(0, FLOOR.y, FLOOR.zOffset);
+    floor.renderOrder = 1;
+    group.add(floor);
+
+    const sheen = new T.Mesh(new T.PlaneGeometry(FLOOR.width * 0.86, FLOOR.depth * 0.78), material(T, 0x164766, 0.18));
+    sheen.name = "sambo-floor-sheen";
+    sheen.rotation.x = -Math.PI / 2;
+    sheen.rotation.z = 0.055;
+    sheen.position.set(0.18, FLOOR.y + 0.005, FLOOR.zOffset - 0.04);
+    sheen.renderOrder = 2;
+    group.add(sheen);
+
+    addFloorPanels(T, group);
+    addFloorGrid(T, group);
+    addPerimeterLightBars(T, group);
+    addScanCornerBrackets(T, group);
+    addSortingRoutes(T, group);
+    return group;
+  }
+
   function ensureThreeOverlay() {
     const T = window.THREE;
     const r = dashThreeRobot();
@@ -336,10 +525,16 @@
     if (overlay?.scene === r.scene) return overlay;
     if (overlay?.root?.parent) overlay.root.parent.remove(overlay.root);
 
+    softenNativeFloor(r);
+
     const root = new T.Group();
     root.name = "sambo-object-vision-floor-overlay";
     root.renderOrder = 30;
+    const floor = makeBrandedFloor(T, r);
+    root.add(floor);
+
     const target = new T.Group();
+    target.visible = false;
     root.add(target);
 
     const disk = new T.Mesh(new T.CircleGeometry(0.16, 80), material(T, COLORS.cyan, 0.16));
@@ -384,7 +579,9 @@
     root.add(approachLine);
 
     r.scene.add(root);
-    overlay = { T, scene: r.scene, robot: r, root, target, disk, ring, outerRing, beam, vertical, parts, label, approachLine };
+    approachLine.visible = false;
+
+    overlay = { T, scene: r.scene, robot: r, root, floor, target, disk, ring, outerRing, beam, vertical, parts, label, approachLine };
     return overlay;
   }
 
@@ -404,10 +601,20 @@
     });
   }
 
+  function updateFloorMotion(floor, now) {
+    const pulses = floor?.userData?.pulseMaterials || [];
+    pulses.forEach(item => {
+      item.mat.opacity = item.base + Math.sin(now * 0.0024 + item.phase) * item.amp;
+    });
+  }
+
   function updateThree(detection, now) {
     const o = ensureThreeOverlay();
     if (!o) return;
-    o.root.visible = !!detection;
+    o.root.visible = true;
+    o.target.visible = !!detection;
+    o.approachLine.visible = !!detection;
+    updateFloorMotion(o.floor, now);
     if (!detection) return;
 
     const p = mmToScene(detection.xMm, detection.yMm, detection.zMm);
@@ -439,17 +646,19 @@
     const style = document.createElement("style");
     style.id = "samboObjectOverlayStyle";
     style.textContent = `
-.sambo-vision-hud{position:absolute;left:16px;bottom:16px;z-index:8;width:min(320px,calc(100% - 32px));pointer-events:none;color:#e6f7ff;font-family:Malgun Gothic,Segoe UI,sans-serif}
-.sambo-vision-hud .box{border:1px solid rgba(32,213,232,.78);background:linear-gradient(180deg,rgba(5,12,20,.86),rgba(8,20,34,.78));box-shadow:0 0 22px rgba(32,213,232,.18);border-radius:8px;padding:10px 12px}
-.sambo-vision-hud .top{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;font-weight:800;letter-spacing:0;color:#20d5e8}
-.sambo-vision-hud .lock{display:flex;align-items:center;gap:7px;white-space:nowrap}
-.sambo-vision-hud .dot{width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 14px #4ade80}
+.sambo-vision-hud{position:absolute;left:14px;top:14px;bottom:auto;z-index:8;width:min(232px,calc(100% - 28px));pointer-events:none;color:#e6f7ff;font-family:Malgun Gothic,Segoe UI,sans-serif}
+.sambo-vision-hud .box{border:1px solid rgba(32,213,232,.72);background:linear-gradient(180deg,rgba(5,12,20,.78),rgba(8,20,34,.68));box-shadow:0 0 18px rgba(32,213,232,.14);border-radius:7px;padding:8px 10px}
+.sambo-vision-hud .top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:9px;font-weight:800;letter-spacing:0;color:#20d5e8}
+.sambo-vision-hud .lock{display:flex;align-items:center;gap:6px;white-space:nowrap;min-width:0}
+.sambo-vision-hud .top span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sambo-vision-hud .dot{width:7px;height:7px;border-radius:50%;background:#4ade80;box-shadow:0 0 12px #4ade80}
 .sambo-vision-hud.search .dot{background:#f7c948;box-shadow:0 0 14px #f7c948}
-.sambo-vision-hud .object{margin-top:6px;font-size:19px;font-weight:900;line-height:1.15}
-.sambo-vision-hud .coords{margin-top:5px;display:grid;grid-template-columns:1fr 1fr;gap:6px;font:700 12px Consolas,monospace;color:#cdeaff}
-.sambo-vision-hud .meta{margin-top:6px;font:700 10px Consolas,monospace;color:rgba(230,247,255,.68);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sambo-vision-hud .bar{height:4px;margin-top:8px;background:rgba(148,163,184,.24);border-radius:999px;overflow:hidden}
+.sambo-vision-hud .object{margin-top:5px;font-size:15px;font-weight:900;line-height:1.12}
+.sambo-vision-hud .coords{margin-top:5px;display:grid;grid-template-columns:1fr 1fr;gap:5px;font:700 10px Consolas,monospace;color:#cdeaff}
+.sambo-vision-hud .meta{margin-top:5px;font:700 9px Consolas,monospace;color:rgba(230,247,255,.64);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sambo-vision-hud .bar{height:3px;margin-top:7px;background:rgba(148,163,184,.22);border-radius:999px;overflow:hidden}
 .sambo-vision-hud .bar span{display:block;height:100%;background:linear-gradient(90deg,#20d5e8,#4ade80);border-radius:inherit}
+@media (max-width:720px){.sambo-vision-hud{left:10px;top:10px;width:min(210px,calc(100% - 20px))}.sambo-vision-hud .top{font-size:8px}.sambo-vision-hud .object{font-size:14px}.sambo-vision-hud .coords{font-size:9px}}
 `;
     document.head.appendChild(style);
   }
