@@ -23,6 +23,16 @@ import time
 import can
 import websockets
 
+try:
+    from sambo_vision_state import load_latest_runtime_state
+except Exception as e:
+    print(f"[VISION] sambo_vision_state disabled: {e}")
+
+    def load_latest_runtime_state():
+        return {"vision": {"target": "NONE", "confidence": 0.0, "stable_frames": 0,
+                           "bbox": None, "correction": {"dx_mm": 0.0, "dy_mm": 0.0}},
+                "gripper": {"state": "OPEN", "sg90_angle": 60.0, "fresh": False}}
+
 CAN_INTERFACE = "can0"
 WS_HOST = "0.0.0.0"
 WS_PORT = 8765
@@ -272,8 +282,16 @@ def build_snapshot():
                     j[k] = m[k]
             joints.append(j)
         hp = dict(health)
+    runtime = load_latest_runtime_state()
+    vision = runtime.get("vision", {})
+    gripper = runtime.get("gripper", {})
+    system = {"server_connected": True, "can_status": derive_can_status(comms)}
+    if vision.get("fresh"):
+        system.update({"camera_status": "OK", "ai_status": "RUNNING"})
     return {"robot": {"joints": joints},
-            "system": {"server_connected": True, "can_status": derive_can_status(comms)},
+            "system": system,
+            "vision": vision,
+            "gripper": gripper,
             "can_health": hp}
 
 

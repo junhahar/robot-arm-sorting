@@ -2152,6 +2152,7 @@ const initialWsUrl=getWsUrl();if($("wsUrlLabel"))$("wsUrlLabel").textContent=ini
 addLog("시뮬레이션 데이터 표시 — 서버 연결 대기","warn");addLog(`WebSocket ${initialWsUrl} 연결 대기`,"info");addLog("6축 STS3215 상태 패널 준비 완료","ok");
 try{let u=localStorage.getItem("gripperCamUrl");if(!u){u="http://"+location.hostname+":8091/?action=stream"}if(!state.camera)state.camera={gripper_url:""};state.camera.gripper_url=u;applyGripperStream()}catch(e){};setMode("AUTO_RUN");connectWS();requestAnimationFrame(frame);
 </script>
+<script src="./sambo_object_overlay.js"></script>
 </body>
 </html>
 
