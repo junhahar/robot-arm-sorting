@@ -85,6 +85,10 @@ motion = {"seq": None, "gen": 0, "label": "", "min_dur": MIN_DURATION}
 glock = threading.Lock()
 gripper_req = {"angle": None, "gen": 0}
 
+# MG90S 그리퍼는 위치 피드백이 없다(STS3215처럼 현재각을 못 읽음).
+# 따라서 '마지막으로 STM에 내린 명령각'을 그대로 현재각으로 보고한다(open-loop). lock 으로 보호.
+gripper_state = {"angle": None}
+
 
 def can_reader():
     while True:
@@ -180,9 +184,13 @@ def request_motion(seq, label, min_dur=MIN_DURATION):
 
 def request_gripper(angle):
     """가장 최근 그리퍼 목표각으로 교체(이전 요청 선점)."""
+    a = float(angle)
     with glock:
-        gripper_req["angle"] = float(angle)
+        gripper_req["angle"] = a
         gripper_req["gen"] += 1
+    # 명령하는 즉시 현재각으로 기록(피드백이 없으므로 명령각 = 현재각).
+    with lock:
+        gripper_state["angle"] = int(max(GRIPPER_MIN, min(GRIPPER_MAX, round(a))))
 
 
 def _move_to(bus, targets, my_gen, min_dur=MIN_DURATION):
@@ -282,9 +290,13 @@ def build_snapshot():
                     j[k] = m[k]
             joints.append(j)
         hp = dict(health)
+        ga = gripper_state["angle"]
     runtime = load_latest_runtime_state()
     vision = runtime.get("vision", {})
-    gripper = runtime.get("gripper", {})
+    # 그리퍼(MG90S)는 피드백이 없다. 브리지가 마지막에 STM으로 내린 명령각을 현재각으로 덮어쓴다.
+    gripper = dict(runtime.get("gripper", {}))
+    if ga is not None:
+        gripper["sg90_angle"] = ga
     system = {"server_connected": True, "can_status": derive_can_status(comms)}
     if vision.get("fresh"):
         system.update({"camera_status": "OK", "ai_status": "RUNNING"})
