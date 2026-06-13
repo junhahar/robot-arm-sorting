@@ -136,6 +136,8 @@ def can_reader():
                         if m:
                             m["target"] = ((d[3] << 8) | d[2]) / 10.0
                             m["cmd_rx"] = now
+                    elif aid == 0x100 and len(d) >= 2 and d[0] == CMD_GRIPPER:
+                        gripper_state["angle"] = int(max(GRIPPER_MIN, min(GRIPPER_MAX, d[1])))
                 last = now
         except Exception as e:
             print("[CAN] error:", e); time.sleep(1)
@@ -297,6 +299,10 @@ def build_snapshot():
     gripper = dict(runtime.get("gripper", {}))
     if ga is not None:
         gripper["sg90_angle"] = ga
+        gripper["state"] = "OPEN" if ga < (GRIPPER_MIN + GRIPPER_MAX) / 2 else "CLOSED"
+        gripper["source"] = "dashboard_bridge_cmd"
+        gripper["fresh"] = True
+        gripper["reason"] = "bridge_command"
     system = {"server_connected": True, "can_status": derive_can_status(comms)}
     if vision.get("fresh"):
         system.update({"camera_status": "OK", "ai_status": "RUNNING"})
