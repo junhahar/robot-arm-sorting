@@ -23,6 +23,16 @@ import time
 import can
 import websockets
 
+try:
+    from sambo_vision_state import load_latest_runtime_state
+except Exception as e:
+    print(f"[VISION] sambo_vision_state disabled: {e}")
+
+    def load_latest_runtime_state():
+        return {"vision": {"target": "NONE", "confidence": 0.0, "stable_frames": 0,
+                           "bbox": None, "correction": {"dx_mm": 0.0, "dy_mm": 0.0}},
+                "gripper": {"state": "OPEN", "sg90_angle": 60.0, "fresh": False}}
+
 CAN_INTERFACE = "can0"
 WS_HOST = "0.0.0.0"
 WS_PORT = 8765
@@ -238,9 +248,22 @@ def gripper_worker():
         print(f"[GRIP] {ang:.0f}°")
 
 
+def derive_can_status(comms):
+    """모터별 comm(WAIT/STALE/PARTIAL/OK)을 CAN 버스 전체 상태로 집계.
+    OK=전 노드 정상, WARN=일부만 수신/플래그 부분, STALE=버스 침묵 또는 수신 끊김."""
+    if all(c == "WAIT" for c in comms):
+        return "STALE"          # 한 번도 수신 없음 = 버스 침묵(끊김)
+    if any(c == "STALE" for c in comms):
+        return "STALE"          # 수신하다 끊긴 모터 존재
+    if any(c in ("WAIT", "PARTIAL") for c in comms):
+        return "WARN"           # 일부만 수신 / 텔레메트리 플래그 부분
+    return "OK"
+
+
 def build_snapshot():
     now = time.monotonic()
     joints = []
+    comms = []
     with lock:
         for i in range(1, 7):
             m = motors[i]
@@ -252,14 +275,23 @@ def build_snapshot():
                 comm = "PARTIAL"
             else:
                 comm = "OK"
+            comms.append(comm)
             j = {"id": NAMES[i], "comm": comm}
             for k in ("current", "temp", "load", "target", "current_ma"):
                 if m[k] is not None:
                     j[k] = m[k]
             joints.append(j)
         hp = dict(health)
+    runtime = load_latest_runtime_state()
+    vision = runtime.get("vision", {})
+    gripper = runtime.get("gripper", {})
+    system = {"server_connected": True, "can_status": derive_can_status(comms)}
+    if vision.get("fresh"):
+        system.update({"camera_status": "OK", "ai_status": "RUNNING"})
     return {"robot": {"joints": joints},
-            "system": {"server_connected": True, "can_status": "OK"},
+            "system": system,
+            "vision": vision,
+            "gripper": gripper,
             "can_health": hp}
 
 

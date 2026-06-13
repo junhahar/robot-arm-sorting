@@ -227,6 +227,8 @@ button{cursor:pointer}
 .head-right{margin-left:auto;display:flex;align-items:center;gap:7px}
 .source-tag{padding:3px 6px;border:1px solid var(--line);border-radius:4px;color:var(--dim);font-size:9px}
 .source-tag.demo{color:var(--yellow);border-color:rgba(247,201,72,.42);background:rgba(247,201,72,.08)}
+#eeHud{display:none!important}#primarySource{display:none!important}
+.zoom-pct{display:inline-block;min-width:46px;text-align:center;font:800 11px/1 var(--mono);color:var(--cyan);padding:0 5px;vertical-align:middle}
 .source-tag.live{color:var(--green);border-color:rgba(74,222,128,.42);background:rgba(74,222,128,.08)}
 
 /* ===== Center stage ===== */
@@ -363,8 +365,11 @@ button{cursor:pointer}
 
 /* ===== Manual mode ===== */
 .manual-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;height:100%}
-.manual-controls{padding:6px 10px 8px;overflow:hidden}
-.manual-row{display:grid;grid-template-columns:102px minmax(88px,1fr) 70px;gap:5px;align-items:center;padding:4px 0;border-bottom:1px solid rgba(28,56,85,.45);font-size:10px}
+.manual-controls{padding:6px 10px 8px;display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+#manualRows{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+#manualRows::-webkit-scrollbar{width:7px}
+#manualRows::-webkit-scrollbar-thumb{background:rgba(32,213,232,.3);border-radius:4px}
+.manual-row{display:grid;grid-template-columns:102px minmax(88px,1fr) 70px;gap:5px;align-items:center;padding:3px 0;border-bottom:1px solid rgba(28,56,85,.45);font-size:10px}
 .manual-row input[type=range]{width:100%;accent-color:var(--cyan)}
 .manual-angle-input{width:100%;box-sizing:border-box;padding:6px 7px;border:1px solid rgba(32,213,232,.32);border-radius:5px;color:var(--text);background:#07121e;font-size:11px;text-align:right}
 .manual-angle-input:focus{outline:1px solid var(--cyan);border-color:var(--cyan)}
@@ -372,7 +377,7 @@ button{cursor:pointer}
 .manual-row small{display:block;margin-top:1px;color:var(--cyan);font-size:8px;letter-spacing:.3px}
 .manual-row-actions{grid-column:2 / 4;display:flex;justify-content:flex-end;gap:6px}
 .manual-row-actions button{min-width:40px;padding:6px 6px}
-.manual-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.manual-actions{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;padding-top:7px;border-top:1px solid rgba(28,56,85,.55)}
 .manual-twin{margin-bottom:10px;padding:10px;border:1px solid rgba(32,213,232,.28);border-radius:7px;background:rgba(9,21,34,.78)}
 .manual-twin-head{display:flex;align-items:center;gap:7px;margin-bottom:8px;color:var(--text);font-size:12px;font-weight:900}
 .manual-twin-head::before{content:"";width:4px;height:14px;border-radius:3px;background:var(--cyan)}
@@ -594,7 +599,7 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
     </div>
     <div class="status-chip header-hidden mode-chip" id="modeChip">TEACHING</div>
     <div class="status-chip"><i class="dot warn" id="serverDot"></i><span><b id="serverText">서버 대기</b><small id="serverSub">Raspberry Pi 연결</small></span></div>
-    <div class="status-chip has-tip" id="canChip"><i class="dot ok" id="canDot"></i><span><b id="canText">CAN 정상</b><small>제어기 연결 대기</small></span><div class="chip-tip mono" id="canTip"></div></div>
+    <div class="status-chip has-tip" id="canChip"><i class="dot warn" id="canDot"></i><span><b id="canText">CAN 대기</b><small>제어기 연결 대기</small></span><div class="chip-tip mono" id="canTip"></div></div>
     <div class="status-chip header-hidden"><i class="dot warn" id="cameraDot"></i><span><b id="cameraText">카메라 대기</b><small>Human · Gripper Cam</small></span></div>
     <div class="status-chip header-hidden"><i class="dot run" id="aiDot"></i><span><b id="aiText">YOLO 실행 중</b><small>AI 판단</small></span></div>
     <div class="status-chip header-hidden demo-banner" id="dataBanner"><i class="dot warn"></i><span>DEMO MODE<small>시뮬레이션 데이터</small></span></div>
@@ -893,7 +898,7 @@ window.SAMBO_PHOTO_HOME_ANGLES=PHOTO_HOME_ANGLES.slice();
 window.SAMBO_SERVO_RAW_HOME_ANGLES=SERVO_RAW_HOME_ANGLES.slice();
 const state={
   mode:"AUTO_RUN",demo:true,ws:null,wpList:[],logCount:0,lastFrame:0,events:[],auto:{running:false},camera:{gripper_url:""},sorting:{bolt:0,nut:0,total:0,cycle_s:null,last:null},
-  system:{server_connected:false,can_status:"OK",camera_status:"WAIT",ai_status:"RUNNING",estop:false,ws_errors:0},
+  system:{server_connected:false,can_status:"WAIT",camera_status:"WAIT",ai_status:"RUNNING",estop:false,ws_errors:0},
   robot:{joints:[
     {id:"J1",name:"Base",current:PHOTO_HOME_ANGLES[0],target:PHOTO_HOME_ANGLES[0],temp:41.2,load:35,status:"OK"},
     {id:"J2",name:"Shoulder",current:PHOTO_HOME_ANGLES[1],target:PHOTO_HOME_ANGLES[1],temp:45.0,load:52,status:"OK"},
@@ -1018,7 +1023,8 @@ function twinStatus(){
   const collision=state.collision||getCollisionReport("current");
   return{current:c,target:t,error:err,ok:c.mirrorMismatch<=3&&err<=8&&!collision.blocked,collision};
 }
-let view={yaw:.82,pitch:1.13,zoom:1},drag=null,simT=0,lastAutoLog=0;
+let view={yaw:340*Math.PI/180,pitch:25*Math.PI/180,zoom:1.2},drag=null,simT=0,lastAutoLog=0;
+let ZOOM_MIN=0.75,ZOOM_MAX=3.0,ZOOM_DEF=1.5;
 const MANUAL_KEY_STEP=1;
 const J4_VISUAL_HOME_OFFSET_DEG=-21;
 const J5_VISUAL_HOME_OFFSET_DEG=57;
@@ -1161,7 +1167,7 @@ function renderHeader(){
   setText("modeChip",isEstop?"E-STOP":state.mode==="AUTO_RUN"?"AUTO RUN":state.mode);
   $("modeChip").style.color=isEstop?"var(--red)":state.mode==="TEACHING"?"var(--green)":"var(--cyan)";
   setHeaderStatus("server",s.server_connected?"서버 연결":"서버 대기",s.server_connected?"ok":"warn");
-  setHeaderStatus("can",s.can_status==="OK"?"CAN 정상":s.can_status==="WARN"?"CAN 지연":"CAN 끊김",statusClass(s.can_status));
+  setHeaderStatus("can",!s.server_connected?"CAN 대기":s.can_status==="OK"?"CAN 정상":s.can_status==="WARN"?"CAN 지연":"CAN 끊김",!s.server_connected?"warn":statusClass(s.can_status));
   setHeaderStatus("camera",s.camera_status==="OK"?"카메라 연결":s.camera_status==="ERROR"?"카메라 오류":"카메라 대기",statusClass(s.camera_status));
   setHeaderStatus("ai",s.ai_status==="RUNNING"?"YOLO 실행 중":s.ai_status==="ERROR"?"검출 실패":"AI 대기",s.ai_status==="RUNNING"?"run":s.ai_status==="ERROR"?"err":"warn");
   $("dataBanner").style.display=state.demo?"flex":"none";
@@ -1170,7 +1176,7 @@ function renderHeader(){
   setText("diagLatency",state.lastFrame?`${Math.max(0,Date.now()-state.lastFrame)}ms 전`:"수신 없음");
   setText("diagError",`통신 오류 ${s.ws_errors||0}건`);
   const _dt=state.digital_twin||{},_ct=$("canTip");
-  if(_ct)_ct.innerHTML=`CAN 125 kbps · 종단 60Ω<br>노드 STM32(서보6) · Nano#1(ToF)<br>명령 ${_dt.cmd_id||"0x100"} · 텔레 ${_dt.telemetry_id||"0x201"} · 전류 ${_dt.current_id||"0x202"} · ToF 0x300<br>상태 ${s.can_status==="OK"?"정상":s.can_status==="WARN"?"지연":"끊김"}`;
+  if(_ct)_ct.innerHTML=`CAN 125 kbps · 종단 60Ω<br>노드 STM32(서보6) · Nano#1(ToF)<br>명령 ${_dt.cmd_id||"0x100"} · 텔레 ${_dt.telemetry_id||"0x201"} · 전류 ${_dt.current_id||"0x202"} · ToF 0x300<br>상태 ${!s.server_connected?"서버 미연결":s.can_status==="OK"?"정상":s.can_status==="WARN"?"지연":"끊김"}`;
   updateRunHeaderControls();
 }
 function setHeaderStatus(prefix,text,cls){setText(prefix+"Text",text);const d=$(prefix+"Dot");if(d)d.className=`dot ${cls}`}
@@ -1216,7 +1222,7 @@ function renderStandardStage(){
       </div>
     </article>
     <article class="panel media-panel" id="robot3dPanel"><div class="panel-head">로봇 3D 분류 셀 / Sorting Twin
-      <span class="head-right sim3d-tools"><button onclick="rotateView(-.18)">회전</button><button onclick="rotateView(.18)">회전</button><button onclick="reset3DView()">기본 시점</button></span>
+      <span class="head-right sim3d-tools"><button onclick="rotateView(-15)" title="좌회전 15°">↶ 15°</button><span class="zoom-pct" id="rotDeg">340°</span><button onclick="rotateView(15)" title="우회전 15°">15° ↷</button><button onclick="reset3DView()">기본 시점</button><button onclick="zoomStep(-1)" title="축소">−</button><span class="zoom-pct" id="zoomPct">80%</span><button onclick="zoomStep(1)" title="확대">+</button></span>
       </div><div class="media-wrap"><canvas id="robot3dCanvas"></canvas><div class="hud hud-right mono" id="eeHud"></div><div class="sim-labels" id="simLabels"></div></div>
     </article>`;
   applyGripperStream();bind3DDrag();
@@ -1231,7 +1237,7 @@ function renderManualStage(){
       <button class="small-btn" onclick="manualAction('연결 확인')">연결 확인</button><button class="small-btn" onclick="manualAction('서보 Torque ON/OFF')">서보 Torque ON/OFF</button>
       </div></div></article>
     <article class="panel media-panel" id="robot3dPanel"><div class="panel-head">로봇 3D 분류 셀 / Sorting Twin
-      <span class="head-right sim3d-tools"><button onclick="rotateView(-.18)">↶ 회전</button><button onclick="rotateView(.18)">회전 ↷</button><button onclick="reset3DView()">기본 시점</button></span>
+      <span class="head-right sim3d-tools"><button onclick="rotateView(-15)" title="좌회전 15°">↶ 15°</button><span class="zoom-pct" id="rotDeg">340°</span><button onclick="rotateView(15)" title="우회전 15°">15° ↷</button><button onclick="reset3DView()">기본 시점</button><button onclick="zoomStep(-1)" title="축소">−</button><span class="zoom-pct" id="zoomPct">80%</span><button onclick="zoomStep(1)" title="확대">+</button></span>
       </div><div class="media-wrap"><canvas id="robot3dCanvas"></canvas><div class="hud hud-right mono" id="eeHud"></div><div class="sim-labels" id="simLabels"></div></div>
     </article>`;
   renderManualRows();bind3DDrag();
@@ -1242,10 +1248,15 @@ function restoreVideos(){
 }
 function renderManualRows(){
   if(!$("manualRows"))return;
-  const jointRows=state.robot.joints.map((j,i)=>`<div class="manual-row ${j.id==="J2"||j.id==="J3"?"coupled":""}"><b>${JOINT_DISPLAY[i].axis} (M${i+1}) <span class="joint-name">${JOINT_DISPLAY[i].fn}</span>${j.id==="J2"||j.id==="J3"?"<small>어깨 거울쌍 (M2·M3)</small>":""}</b>
+  const jointRows=state.robot.joints.map((j,i)=>{
+    // M3(id "J3")는 M2 거울쌍의 짝. M2 슬라이더 하나가 둘을 동시 구동하므로 행은 숨긴다.
+    if(j.id==="J3")return "";
+    const coupled=j.id==="J2";
+    return `<div class="manual-row ${coupled?"coupled":""}"><b>${JOINT_DISPLAY[i].axis} (M${i+1}) <span class="joint-name">${JOINT_DISPLAY[i].fn}</span></b>
     <input class="action-control" data-manual-range="${i}" type="range" min="${manualJointMin(j)}" max="${manualJointMax(j)}" step=".1" value="${j.target}" oninput="manualJoint(${i},this.value)">
     <input class="manual-angle-input mono action-control" data-manual-angle="${i}" type="number" min="${manualJointMin(j)}" max="${manualJointMax(j)}" step=".1" value="${fmt(j.target)}" oninput="manualJoint(${i},this.value)" onwheel="manualWheel(event,${i})" onkeydown="manualAngleKey(event,${i})" aria-label="${JOINT_DISPLAY[i].axis} (M${i+1}) 목표각 입력">
-    <div class="manual-row-actions"><button class="small-btn action-control" onclick="manualJog(${i},-1)">-1°</button><button class="small-btn action-control" onclick="manualJog(${i},1)">+1°</button><button class="small-btn action-control" onclick="sendManualJoint(${i})">적용</button></div></div>`).join("");
+    <div class="manual-row-actions"><button class="small-btn action-control" onclick="manualJog(${i},-1)">-1°</button><button class="small-btn action-control" onclick="manualJog(${i},1)">+1°</button><button class="small-btn action-control" onclick="sendManualJoint(${i})">적용</button></div></div>`;
+  }).join("");
   const g=state.gripper;
   const gripperRow=`<div class="manual-row gripper-row"><b>GR <span class="joint-name">Gripper</span></b>
     <input class="action-control" data-manual-gripper-range type="range" min="${GRIPPER_SERVO_MIN}" max="${GRIPPER_SERVO_MAX}" step="1" value="${g.sg90_angle}" oninput="manualGripper(this.value)">
@@ -1315,7 +1326,7 @@ function getAlerts(){
   const alerts=[];state.robot.joints.forEach(j=>{if(j.temp>=65||j.load>=90)alerts.push({cls:"err",text:`${j.id} ${j.name}: 즉시 확인 · ${fmt(j.temp,0)}°C / 부하 ${fmt(j.load,0)}%`});else if(j.temp>55||j.load>=80)alerts.push({cls:"warn",text:`${j.id} ${j.name}: 주의 · ${fmt(j.temp,0)}°C / 부하 ${fmt(j.load,0)}%`})});
   const collision=state.collision||getCollisionReport("current");
   if(collision.blocked)alerts.push({cls:"err",text:`디지털 트윈 충돌 제한 · ${collision.messages[0]}`});
-  if(state.system.can_status!=="OK")alerts.push({cls:"err",text:"CAN 통신 상태를 확인하세요."});
+  if(state.system.server_connected&&state.system.can_status!=="OK")alerts.push({cls:"err",text:"CAN 통신 상태를 확인하세요."});
   if(state.system.estop)alerts.push({cls:"err",text:"E-STOP 상태 · 하드웨어 전원 차단 확인 필요"});
   return [...alerts,...(state.alerts||[])];
 }
@@ -1646,9 +1657,11 @@ function addThreeSortBins(T,r){
     }
     group.add(bin);
   });
-  const scanRing=new T.Mesh(new T.RingGeometry(.48,.5,64),new T.MeshBasicMaterial({color:0x20d5e8,transparent:true,opacity:.58,side:T.DoubleSide}));
-  scanRing.rotation.x=-Math.PI/2;scanRing.position.set(0,.018,.98);group.add(scanRing);
-  const scanLabel=makeSceneLabel(T,"스캔/집기 영역","#20d5e8","SCAN · PICK");scanLabel.position.set(0,.18,1.56);group.add(scanLabel);
+  const scanZone=new T.Mesh(new T.PlaneGeometry(3.0,1.8),new T.MeshBasicMaterial({color:0x808d99,transparent:true,opacity:.13,side:T.DoubleSide}));
+  scanZone.rotation.x=-Math.PI/2;scanZone.position.set(0,.018,1.5);group.add(scanZone);
+  const scanEdges=new T.LineSegments(new T.EdgesGeometry(scanZone.geometry),new T.LineBasicMaterial({color:0xa2aeb8,transparent:true,opacity:.6}));
+  scanEdges.rotation.x=-Math.PI/2;scanEdges.position.set(0,.02,1.5);group.add(scanEdges);
+  const scanLabel=makeSceneLabel(T,"스캔/집기 영역","#aab4bd","SCAN · PICK");scanLabel.position.set(0,.18,1.56);group.add(scanLabel);
   r.scene.add(group);r.sortBins=group;
 }
 async function loadActualStlRobot(T,r){
@@ -1684,7 +1697,7 @@ async function loadActualStlRobot(T,r){
   r.groups=G;r.j4Hub=j4Hub;r.j4Mark=j4Mark;r.rollAssembly=rollAssembly;r.gripperMesh=animatedGripper;updateAnimatedGripper(r);r.ready=true;
 }
 function initThreeRobot(canvas){
-  const T=window.THREE,scene=new T.Scene(),camera=new T.PerspectiveCamera(42,1,.1,100);
+  const T=window.THREE,scene=new T.Scene(),camera=new T.PerspectiveCamera(42,1,.1,500);
   scene.background=new T.Color(0x0b1729);
   const renderer=new T.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.shadowMap.enabled=true;
   scene.add(new T.HemisphereLight(0xdcecff,0x263449,1.12));
@@ -1694,10 +1707,10 @@ function initThreeRobot(canvas){
   const ground=new T.Mesh(new T.PlaneGeometry(8,8),new T.MeshStandardMaterial({color:0x0d1c31,roughness:1}));
   ground.rotation.x=-Math.PI/2;ground.position.y=-.012;ground.receiveShadow=true;scene.add(ground);
   const mat=(color,metalness=.08,roughness=.72)=>new T.MeshStandardMaterial({color,metalness,roughness,side:T.DoubleSide});
-  const modelRoot=new T.Group();modelRoot.position.y=.2;scene.add(modelRoot);
+  const modelRoot=new T.Group();modelRoot.position.y=0;scene.add(modelRoot);
   threeRobot={canvas,scene,camera,renderer,modelRoot,groups:[],gripperMesh:null,ready:false,loadError:"",lastW:0,lastH:0,materials:{
-    base:mat(0x25374a,.32,.62),basecover:mat(0x376a91,.42,.5),link:mat(0xd6dde3,.16,.58),link2:mat(0xaebbc6,.22,.6),
-    wrist:mat(0x70859a,.32,.54),accent:mat(0x0878c9,.5,.38),gripper:mat(0x303a45,.42,.52),camera:mat(0x121923,.34,.55)
+    base:mat(0x949080,.1,.62),basecover:mat(0xa4a08e,.1,.5),link:mat(0xaeaa98,.1,.6),link2:mat(0xa6a290,.12,.6),
+    wrist:mat(0x9e9a88,.12,.55),accent:mat(0x9a9684,.12,.45),gripper:mat(0xc4c4c4,.08,.6),camera:mat(0x827e6e,.15,.55)
   }};
   addThreeSortBins(T,threeRobot);
   loadActualStlRobot(T,threeRobot).catch(error=>{threeRobot.loadError=error.message;console.error("STL robot load failed",error)});
@@ -1714,8 +1727,8 @@ function drawThreeRobot(){
     applyStlAngles(r,poseAngles);
     updateAnimatedGripper(r);
   }
-  const dist=8.60/view.zoom,phi=view.pitch,theta=view.yaw;
-  r.camera.position.set(dist*Math.sin(phi)*Math.cos(theta),1.28+dist*Math.cos(phi),dist*Math.sin(phi)*Math.sin(theta));r.camera.lookAt(0,1.45,.35);
+  const dist=9.20/view.zoom,phi=view.pitch,theta=view.yaw;
+  r.camera.position.set(dist*Math.sin(phi)*Math.cos(theta),1.28+dist*Math.cos(phi),dist*Math.sin(phi)*Math.sin(theta));r.camera.lookAt(0,.5,.35);
   r.renderer.render(r.scene,r.camera);
   const pose=poseAngles?fkFromAngles(poseAngles):fk();state.robot.end_effector={x:pose.end.x,y:pose.end.z,z:pose.end.y};
   const collision=state.collision;
@@ -1797,7 +1810,7 @@ function drawNative3D(){
   $("simLabels").innerHTML=(state.path.steps||[]).slice(0,-1).map(s=>`<span class="${s===state.path.current_step?"now":""}">${s}</span>`).join("");
   state.robot.end_effector={x:pose.end.x,y:pose.end.z,z:pose.end.y};
 }
-function draw3D(){const canvas=$("robot3dCanvas");if(!canvas||canvas.clientWidth<20||canvas.clientHeight<20)return;if(!drawThreeRobot())drawNative3D()}
+function draw3D(){const canvas=$("robot3dCanvas");if(!canvas||canvas.clientWidth<20||canvas.clientHeight<20)return;updateZoomPct();updateRotDeg();updateTiltDeg();if(!drawThreeRobot())drawNative3D()}
 function drawGround(ctx,W,H){ctx.strokeStyle="rgba(75,119,150,.22)";ctx.lineWidth=1;for(let n=-300;n<=300;n+=40){line3(ctx,W,H,V(-310,0,n),V(310,0,n));line3(ctx,W,H,V(n,0,-60),V(n,0,310))}}
 function line3(ctx,W,H,a,b){const A=project(a,W,H),B=project(b,W,H);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke()}
 function drawZone3D(ctx,W,H,c,r,label,color){ctx.strokeStyle=color;ctx.fillStyle=color+"18";const pts=[];for(let i=0;i<32;i++)pts.push(project(V(c.x+Math.cos(i/32*Math.PI*2)*r,c.y,c.z+Math.sin(i/32*Math.PI*2)*r),W,H));ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.fill();ctx.stroke();const q=project(c,W,H);ctx.fillStyle=color;ctx.font="10px Segoe UI";ctx.fillText(label,q.x-28,q.y)}
@@ -1807,8 +1820,12 @@ function drawArmSegment(ctx,W,H,a,b,color,width){const A=project(a,W,H),B=projec
 function drawJoint3D(ctx,W,H,p,label,color){const q=project(p,W,H),r=clamp(15*q.scale,8,16);ctx.fillStyle="#142b42";ctx.strokeStyle=color;ctx.lineWidth=3;ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle=color;ctx.font="bold 10px Consolas";ctx.fillText(label,q.x+r+3,q.y-3)}
 function drawGripper3D(ctx,W,H,pose){const p=pose.end,side=state.gripper.state==="OPEN"?14:7,forward=armDir(pose.yaw,0),right=V(Math.cos(pose.yaw),0,-Math.sin(pose.yaw));[-1,1].forEach(s=>{const a=add(p,mul(right,side*s)),b=add(add(a,mul(forward,28)),V(0,-18,0));drawArmSegment(ctx,W,H,a,b,"#ff8b52",7)});const q=project(p,W,H);ctx.fillStyle="#4ade80";ctx.beginPath();ctx.arc(q.x,q.y,4,0,Math.PI*2);ctx.fill()}
 function drawPart3D(ctx,W,H,p,label){const q=project(p,W,H);ctx.fillStyle="#f7c948";ctx.beginPath();ctx.arc(q.x,q.y,5,0,Math.PI*2);ctx.fill();ctx.fillStyle="#e4eff7";ctx.font="9px Segoe UI";ctx.fillText(label,q.x+7,q.y-4)}
-function rotateView(delta){view.yaw+=delta}function reset3DView(){view={yaw:.82,pitch:1.13,zoom:1}}
-function bind3DDrag(){const c=$("robot3dCanvas");if(!c)return;c.onpointerdown=e=>{drag={x:e.clientX,y:e.clientY};c.setPointerCapture?.(e.pointerId)};c.onpointermove=e=>{if(!drag)return;view.yaw+=(e.clientX-drag.x)*.008;view.pitch=clamp(view.pitch+(e.clientY-drag.y)*.007,.05,1.45);drag={x:e.clientX,y:e.clientY}};c.onpointerup=e=>{drag=null;c.releasePointerCapture?.(e.pointerId)};c.onpointerleave=()=>drag=null;c.onwheel=e=>{view.zoom=clamp(view.zoom-e.deltaY*.0017,.55,2.05);e.preventDefault()}}
+function rotateView(deg){view.yaw+=deg*Math.PI/180;updateRotDeg()}function reset3DView(){view={yaw:340*Math.PI/180,pitch:25*Math.PI/180,zoom:1.2};updateZoomPct();updateRotDeg();updateTiltDeg()}
+function zoomStep(dir){const cur=view.zoom/ZOOM_DEF*100,next=dir>0?(Math.floor(cur/10)+1)*10:(Math.ceil(cur/10)-1)*10;view.zoom=clamp(next/100*ZOOM_DEF,ZOOM_MIN,ZOOM_MAX);updateZoomPct()}
+function updateZoomPct(){const e=$("zoomPct");if(e)e.textContent=Math.round(view.zoom/ZOOM_DEF*100)+"%"}
+function updateRotDeg(){const e=$("rotDeg");if(e){let d=Math.round(view.yaw*180/Math.PI)%360;if(d<0)d+=360;e.textContent=d+"°"}}
+function updateTiltDeg(){const e=$("tiltDeg");if(e)e.textContent="⤓"+Math.round(90-view.pitch*180/Math.PI)+"°"}
+function bind3DDrag(){const c=$("robot3dCanvas");if(!c)return;c.onpointerdown=e=>{drag={x:e.clientX,y:e.clientY};c.setPointerCapture?.(e.pointerId)};c.onpointermove=e=>{if(!drag)return;view.yaw+=(e.clientX-drag.x)*.008;view.pitch=clamp(view.pitch+(e.clientY-drag.y)*.007,.05,1.45);drag={x:e.clientX,y:e.clientY}};c.onpointerup=e=>{drag=null;c.releasePointerCapture?.(e.pointerId)};c.onpointerleave=()=>drag=null;c.onwheel=e=>{view.zoom=clamp(view.zoom-e.deltaY*.0017,ZOOM_MIN,ZOOM_MAX);updateZoomPct();e.preventDefault()}}
 
 /* ===== Top-down robot workspace ===== */
 function drawTopDown(){
@@ -2115,7 +2132,10 @@ function requestUiRender(force=false){
 function renderAll(){
   renderHeader();renderPrimary();renderPath();renderRightPanel();
   if(state.mode==="MANUAL"){
-    if(isManualPreviewEditing())syncManualRows();
+    // 행 DOM은 진입 시 1회만 생성. 라이브 스냅샷마다 innerHTML을 다시 쓰면
+    // 버튼이 깜빡이고, mousedown↔mouseup 사이 element가 교체돼 click이 씹힌다.
+    const rows=$("manualRows");
+    if(rows&&rows.children.length)syncManualRows();
     else renderManualRows();
   }
   applyFocusView();
@@ -2132,6 +2152,7 @@ const initialWsUrl=getWsUrl();if($("wsUrlLabel"))$("wsUrlLabel").textContent=ini
 addLog("시뮬레이션 데이터 표시 — 서버 연결 대기","warn");addLog(`WebSocket ${initialWsUrl} 연결 대기`,"info");addLog("6축 STS3215 상태 패널 준비 완료","ok");
 try{let u=localStorage.getItem("gripperCamUrl");if(!u){u="http://"+location.hostname+":8091/?action=stream"}if(!state.camera)state.camera={gripper_url:""};state.camera.gripper_url=u;applyGripperStream()}catch(e){};setMode("AUTO_RUN");connectWS();requestAnimationFrame(frame);
 </script>
+<script src="./sambo_object_overlay.js"></script>
 </body>
 </html>
 
