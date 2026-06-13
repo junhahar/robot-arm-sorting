@@ -431,6 +431,7 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 .run-btn.start.active,.run-btn.start:hover{background:linear-gradient(180deg,#14734d,#0b3c31);color:#b8ffd9;box-shadow:0 0 0 2px rgba(74,222,128,.16),0 10px 24px rgba(0,0,0,.28)}
 .run-btn.stop{border:1px solid rgba(255,119,119,.92);background:linear-gradient(180deg,#d42634,#941925);color:#fff}
 .run-btn.stop.active,.run-btn.stop:hover{filter:brightness(1.08);box-shadow:0 0 0 2px rgba(255,91,91,.16),0 10px 24px rgba(0,0,0,.28)}
+.run-btn.halt{border:1px solid rgba(247,201,72,.85);background:rgba(36,28,7,.9);color:#f7c948}.run-btn.halt:hover,.run-btn.halt:active{background:linear-gradient(180deg,#cba32f,#8a6d12);color:#1a1402;box-shadow:0 0 0 2px rgba(247,201,72,.18),0 10px 24px rgba(0,0,0,.28)}
 .operation-header .header-status{gap:12px;flex:1}
 .operation-header .status-chip{height:48px;min-width:228px;border-radius:9px;padding:0 14px;background:#0b1728;border-color:#1d4164;font-size:12px;box-shadow:inset 0 1px rgba(255,255,255,.04)}
 .operation-header .status-chip b{font-size:15px;color:var(--text)}
@@ -525,7 +526,7 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 .placeholder-body{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:14px;color:var(--dim);font-size:11px;text-align:center}
 .ai-fab{position:fixed;right:24px;bottom:24px;z-index:70;width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(32,213,232,.6);background:rgba(32,213,232,.18);color:var(--cyan);font-weight:900;font-size:17px;letter-spacing:.5px;opacity:.6;backdrop-filter:blur(6px);box-shadow:0 12px 28px rgba(0,0,0,.45);transition:.18s}
 .ai-fab:hover{opacity:1;background:var(--cyan);color:#04161b;transform:translateY(-3px);box-shadow:0 16px 34px rgba(32,213,232,.3)}
-.ai-fab span{line-height:1}
+.ai-fab span{line-height:0;display:flex;align-items:center;justify-content:center}.ai-fab svg{display:block}
 @media (max-width:1200px){.layout{grid-template-columns:1fr;height:auto;overflow:visible}.right-panel{grid-column:1;grid-row:auto}.bottom-strip{grid-template-columns:1fr}.main-stage.split-stage{grid-template-columns:1fr}}
 </style>
 </head>
@@ -584,11 +585,11 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 <header class="header">
   <div class="brand brand-with-logo">
     <img class="brand-logo-img" src="sambo_motors_logo_transparent.png" alt="SAMBO MOTORS">
-    <div class="brand-caption">로봇팔 자동 분류 시스템<br>비전 티칭 · CAN 제어 · 센서 피드백</div>
   </div>
   <div class="header-status">
     <div class="run-controls">
       <button class="run-btn start" id="startBtn" onclick="startAutoRun()"><b>▶ 시작</b><small>AUTO RUN</small></button>
+      <button class="run-btn halt" id="haltBtn" onclick="haltRobot()"><b>⏸ 중지</b><small>HALT</small></button>
       <button class="run-btn stop active" id="stopBtn" onclick="stopAutoRun()"><b>■ 정지</b><small>STOP</small></button>
     </div>
     <div class="status-chip header-hidden mode-chip" id="modeChip">TEACHING</div>
@@ -673,7 +674,7 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
   </section>
 </main>
 
-<button class="ai-fab" id="aiFab" onclick="toggleAiChat()" title="AI 작업 도우미" aria-label="AI 작업 도우미"><span>AI</span></button>
+<button class="ai-fab" id="aiFab" onclick="toggleAiChat()" title="AI 작업 도우미" aria-label="AI 작업 도우미"><span class="ai-fab-bot"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6V4"/><circle cx="12" cy="3.2" r="0.95"/><rect x="4.4" y="6" width="15.2" height="12" rx="4.3"/><path d="M3.5 10.4v3M20.5 10.4v3"/><circle cx="9.3" cy="11.2" r="1.45" fill="currentColor" stroke="none"/><circle cx="14.7" cy="11.2" r="1.45" fill="currentColor" stroke="none"/><path d="M9.5 14.6Q12 16.3 14.5 14.6"/></svg></span></button>
 
 <!-- ===== Camera modal ===== -->
 <div class="modal-backdrop" id="cameraModal">
@@ -1050,12 +1051,6 @@ function setAllMotorsHomeAngles(){
   collisionGuard.lastSafe.target=Object.fromEntries(state.robot.joints.map((j,i)=>[j.id,HOME_ANGLES[i]]));
   state.collision={blocked:false,messages:[]};
 }
-function stopPresentationDemoForManual(){
-  const demo=window.samboEmergencyPresentationDemo;
-  if(demo&&typeof demo.stop==="function"){
-    try{demo.stop(false)}catch(e){debug(`presentation demo stop failed: ${e.message}`)}
-  }
-}
 function resetManualHomePreview(){
   /* live STM cmd: no home reset */
   setManualGripperAngle(GRIPPER_VISUAL.openServo);
@@ -1090,6 +1085,13 @@ function stopAutoRun(){
   addLog(sent?"자동 운전 정지 명령 송신 (RPi)":"자동 운전 정지 — 현재 자세 유지","warn");
   renderHeader();renderPath();draw3D();
 }
+function haltRobot(){
+  // 중지(즉시정지): 확인창 없음(지연 방지). 진행 중 이동을 현재 위치에서 그대로 멈춤.
+  if(state.auto)state.auto.running=false;
+  const sent=sendDashboardCommand("HALT");
+  addLog(sent?"중지 — 로봇팔 현재 위치에서 즉시 정지 (RPi)":"중지 — DEMO: 동작 정지","warn");
+  renderHeader();renderPath();draw3D();
+}
 function applyAutoDemoPose(now){
   const poses=[
     [180,180,180,180,180,180],[176,166,194,173,190,178],[178,151,209,164,204,180],
@@ -1108,7 +1110,6 @@ function setMode(mode,fromSocket=false){
   mode=mode==="AUTO RUN"?"AUTO_RUN":mode;
   if(state.system.estop&&mode!=="E_STOP")return;
   const manual=mode==="MANUAL",teaching=mode==="TEACHING";
-  if(manual)stopPresentationDemoForManual();
   if(state.mode===mode&&$("robot3dCanvas")){
     if(manual){resetManualHomePreview();renderAll();draw3D()}
     return;
@@ -1241,14 +1242,14 @@ function restoreVideos(){
 }
 function renderManualRows(){
   if(!$("manualRows"))return;
-  const jointRows=state.robot.joints.map((j,i)=>`<div class="manual-row ${j.id==="J2"||j.id==="J3"?"coupled":""}"><b>${j.id} <span class="joint-name">${j.name}</span>${j.id==="J2"||j.id==="J3"?"<small>J2 ↔ J3 거울 연동</small>":""}</b>
+  const jointRows=state.robot.joints.map((j,i)=>`<div class="manual-row ${j.id==="J2"||j.id==="J3"?"coupled":""}"><b>${JOINT_DISPLAY[i].axis} (M${i+1}) <span class="joint-name">${JOINT_DISPLAY[i].fn}</span>${j.id==="J2"||j.id==="J3"?"<small>어깨 거울쌍 (M2·M3)</small>":""}</b>
     <input class="action-control" data-manual-range="${i}" type="range" min="${manualJointMin(j)}" max="${manualJointMax(j)}" step=".1" value="${j.target}" oninput="manualJoint(${i},this.value)">
-    <input class="manual-angle-input mono action-control" data-manual-angle="${i}" type="number" min="${manualJointMin(j)}" max="${manualJointMax(j)}" step=".1" value="${fmt(j.target)}" oninput="manualJoint(${i},this.value)" onwheel="manualWheel(event,${i})" onkeydown="manualAngleKey(event,${i})" aria-label="${j.id} 목표각 입력">
+    <input class="manual-angle-input mono action-control" data-manual-angle="${i}" type="number" min="${manualJointMin(j)}" max="${manualJointMax(j)}" step=".1" value="${fmt(j.target)}" oninput="manualJoint(${i},this.value)" onwheel="manualWheel(event,${i})" onkeydown="manualAngleKey(event,${i})" aria-label="${JOINT_DISPLAY[i].axis} (M${i+1}) 목표각 입력">
     <div class="manual-row-actions"><button class="small-btn action-control" onclick="manualJog(${i},-1)">-1°</button><button class="small-btn action-control" onclick="manualJog(${i},1)">+1°</button><button class="small-btn action-control" onclick="sendManualJoint(${i})">적용</button></div></div>`).join("");
   const g=state.gripper;
-  const gripperRow=`<div class="manual-row gripper-row"><b>GR <span class="joint-name">Gripper</span><small>SG90 그리퍼 각도</small></b>
+  const gripperRow=`<div class="manual-row gripper-row"><b>GR <span class="joint-name">Gripper</span></b>
     <input class="action-control" data-manual-gripper-range type="range" min="${GRIPPER_SERVO_MIN}" max="${GRIPPER_SERVO_MAX}" step="1" value="${g.sg90_angle}" oninput="manualGripper(this.value)">
-    <input class="manual-angle-input mono action-control" data-manual-gripper-angle type="number" min="${GRIPPER_SERVO_MIN}" max="${GRIPPER_SERVO_MAX}" step="1" value="${fmt(g.sg90_angle,0)}" oninput="manualGripper(this.value)" onwheel="manualGripperWheel(event)" onkeydown="manualGripperKey(event)" aria-label="그리퍼 SG90 각도 입력">
+    <input class="manual-angle-input mono action-control" data-manual-gripper-angle type="number" min="${GRIPPER_SERVO_MIN}" max="${GRIPPER_SERVO_MAX}" step="1" value="${fmt(g.sg90_angle,0)}" oninput="manualGripper(this.value)" onwheel="manualGripperWheel(event)" onkeydown="manualGripperKey(event)" aria-label="그리퍼 각도 입력">
     <div class="manual-row-actions"><button class="small-btn action-control" onclick="manualGripperJog(-5)">-5°</button><button class="small-btn action-control" onclick="manualGripperJog(5)">+5°</button><button class="small-btn action-control" onclick="sendManualGripper()">적용</button></div></div>`;
   $("manualRows").innerHTML=jointRows+gripperRow;
 }
@@ -1276,7 +1277,7 @@ function renderRightPanel(){
   if(!$("jointRows"))return;
   $("jointRows").innerHTML=state.robot.joints.map((j,i)=>{const d=Math.abs(j.target-j.current),st=d>10?"확인 필요":d>5?"주의":"정상",sc=d>10?"err":d>5?"warn":"ok";
     return `<div class="joint-row mono"><b>${JOINT_DISPLAY[i].axis} (M${i+1}) <span class="joint-name">${JOINT_DISPLAY[i].fn}</span></b><span class="joint-value">${deg(j.current)}</span><span class="joint-value">${deg(j.target)}</span><span class="joint-diff ${sc}">${deg(d)}</span><span class="pill ${sc}">${st}</span></div>`}).join("")
-    +(()=>{const gr=state.gripper,o=gr.state==="OPEN";return `<div class="joint-row gripper-row mono"><b>그리퍼 <span class="joint-name">Gripper</span></b><span class="joint-value">${deg(gr.sg90_angle)}</span><span class="joint-value">${deg(gr.sg90_angle)}</span><span class="joint-diff ok">0.0°</span><span class="pill ${o?"ok":""}">${o?"열림":"닫힘"}</span></div>`})();
+    +(()=>{const gr=state.gripper,o=gr.state==="OPEN";return `<div class="joint-row gripper-row mono"><b>GR <span class="joint-name">Gripper</span></b><span class="joint-value">${deg(gr.sg90_angle)}</span><span class="joint-value">${deg(gr.sg90_angle)}</span><span class="joint-diff ok">0.0°</span><span class="pill ${o?"ok":""}">${o?"열림":"닫힘"}</span></div>`})();
   $("motorRows").innerHTML=state.robot.joints.map((j,i)=>{const danger=j.temp>=65||j.load>=90,warn=j.temp>55||j.load>=80,sc=danger?"err":warn?"warn":"ok",csc=state.demo?sc:(j.comm==="OK"?"ok":j.comm==="PARTIAL"?"warn":j.comm==="STALE"?"err":""),ctext=state.demo?(danger?"위험":warn?"주의":"정상"):(j.comm==="OK"?"정상":j.comm==="PARTIAL"?"주의":j.comm==="STALE"?"끊김":"대기");
     return `<div class="motor-row mono"><b>${JOINT_DISPLAY[i].axis} (M${i+1})</b><div><div class="meter"><i class="temp" style="width:${clamp(j.temp/75*100,0,100)}%"></i></div><span class="meter-label">${fmt(j.temp,0)}°C</span></div>
       <div><div class="meter"><i style="width:${clamp(j.load,0,100)}%;background:${danger?"var(--red)":warn?"var(--yellow)":"var(--cyan)"}"></i></div><span class="meter-label">${fmt(j.load,0)}%</span></div><span class="pill ${csc}">${ctext}</span></div>`}).join("");
@@ -1323,7 +1324,7 @@ function getPrecheckItems(){
   return [
     ["CAN 통신",state.system.can_status==="OK","125 kbps 연결 상태"],
     ["서보 6축",p.servo_ready,"STS3215 상태 피드백"],
-    ["그리퍼 SG90",p.sg90_ready,"열림/닫힘 확인"],
+    ["그리퍼",p.sg90_ready,"열림/닫힘 확인"],
     ["ToF 거리 센서",p.tof_ready&&c.tof==="OK",`${fmt(state.gripper.tof_mm)} mm 수신`],
     ["HOME 자세",p.home_confirmed,"시작 위치 복귀 확인"],
     ["하드웨어 E-STOP",!state.system.estop,"물리 스위치 위치 확인"]
@@ -1941,7 +1942,7 @@ function manualGripperKey(e){if(e.key==="Enter"){e.preventDefault();e.target.blu
 function sendManualGripper(){
   clearManualPreviewReset();
   const sent=sendDashboardCommand("GRIPPER",{sg90_angle_deg:Number(state.gripper.sg90_angle),state:state.gripper.state});
-  addLog(`그리퍼 목표각 SG90 ${fmt(state.gripper.sg90_angle,0)}° ${sent?"송신":"DEMO 적용"}`,sent?"ok":"info");
+  addLog(`그리퍼 목표각 ${fmt(state.gripper.sg90_angle,0)}° ${sent?"송신":"DEMO 적용"}`,sent?"ok":"info");
   renderRightPanel();draw3D();return sent;
 }function manualJoint(i,v){captureManualPreviewBaseline();if(setManualJointTarget(i,v))scheduleManualPreviewReset();syncManualRows();renderRightPanel();draw3D()}
 function manualStep(i,v){captureManualPreviewBaseline();if(setManualJointTarget(i,state.robot.joints[i].target+v))scheduleManualPreviewReset();syncManualRows();renderRightPanel();draw3D()}
@@ -2024,10 +2025,10 @@ function getAiDashboardState(){
   return{data_source:state.demo?"DEMO MODE":"LIVE WebSocket",mode:state.mode,system:state.system,joints:state.robot.joints,gripper:state.gripper,vision:state.vision,path:state.path,alerts:getAlerts(),can_health:state.can_health,teaching_quality:getTeachingQuality(),approach:getApproachGuide()};
 }
 function localEasyAssistant(question){
-  const q=question.toLowerCase(),j3=state.robot.joints.find(j=>j.id==="J3"),a=getApproachGuide(),alerts=getAlerts(),source=state.demo?"현재 화면은 DEMO MODE 샘플 데이터입니다. 실제 장비 측정값은 아닙니다.":"현재 화면은 WebSocket으로 수신한 LIVE 데이터입니다.";
+  const q=question.toLowerCase(),j3=state.robot.joints[3],a=getApproachGuide(),alerts=getAlerts(),source=state.demo?"현재 화면은 DEMO MODE 샘플 데이터입니다. 실제 장비 측정값은 아닙니다.":"현재 화면은 WebSocket으로 수신한 LIVE 데이터입니다.";
   if(q.includes("발표"))return `${source}\n\n[한 줄 설명]\n이 시스템은 MPU 티칭, 그리퍼 카메라 AI 인식, CAN 통신, 6축 서보 피드백을 한 화면에서 연결해 보여주는 로봇팔 자동 분류 시스템입니다.\n\n[현장 흐름]\n사람 동작 티칭 → 물체 감지 → 위치 보정 → 접근 → 집기 → 분류통 배치`;
   if(q.includes("can"))return `${source}\n\n[현재 상태]\nCAN 상태: ${state.system.can_status==="OK"?"정상":"확인 필요"}\n최근 수신: ${state.can_health.last_rx_ms} ms\n오류: ${state.can_health.errors}건\n\n[설명]\nCAN은 Raspberry Pi 쪽 판단 결과와 하위 제어기의 모터·센서 상태를 주고받는 통신 통로입니다.`;
-  if(q.includes("j3")||q.includes("모터"))return `${source}\n\n[J3 Elbow]\n현재각 ${deg(j3.current)} / 목표각 ${deg(j3.target)}\n온도 ${fmt(j3.temp,0)}°C / 부하 ${fmt(j3.load,0)}%\n\n[판단]\n${j3.load>=80?"부하가 80% 이상입니다. 팔꿈치 축 간섭이나 작업물 저항을 먼저 확인하세요.":"현재 즉시 조치가 필요한 부하는 아닙니다."}`;
+  if(q.includes("j3")||q.includes("모터"))return `${source}\n\n[J3 (M4) Elbow]\n현재각 ${deg(j3.current)} / 목표각 ${deg(j3.target)}\n온도 ${fmt(j3.temp,0)}°C / 부하 ${fmt(j3.load,0)}%\n\n[판단]\n${j3.load>=80?"부하가 80% 이상입니다. 팔꿈치 축 간섭이나 작업물 저항을 먼저 확인하세요.":"현재 즉시 조치가 필요한 부하는 아닙니다."}`;
   if(q.includes("그리퍼")||q.includes("집"))return `${source}\n\n[그리퍼 판단]\nToF 거리: ${fmt(state.gripper.tof_mm)} mm\n대상: ${objectLabel(state.vision.target)} ${(state.vision.confidence*100).toFixed(0)}%\n판단: ${a.ready?"집기 가능":a.label}\n\n[다음 확인]\n안정 검출 ${state.vision.stable_frames}/3 프레임과 위치 보정값을 함께 확인하세요.`;
   return `${source}\n\n[현재 요약]\n모드: ${state.mode}\n현재 단계: ${STEP_LABELS[state.path.current_step]||state.path.current_step}\n알림: ${alerts.length?alerts.map(x=>x.text).join(" / "):"즉시 조치가 필요한 경고 없음"}\n\n[먼저 볼 것]\nCAN 상태, J3 부하, ToF 거리, 안정 검출 3/3 여부를 순서대로 확인하세요.`;
 }
@@ -2131,7 +2132,6 @@ const initialWsUrl=getWsUrl();if($("wsUrlLabel"))$("wsUrlLabel").textContent=ini
 addLog("시뮬레이션 데이터 표시 — 서버 연결 대기","warn");addLog(`WebSocket ${initialWsUrl} 연결 대기`,"info");addLog("6축 STS3215 상태 패널 준비 완료","ok");
 try{let u=localStorage.getItem("gripperCamUrl");if(!u){u="http://"+location.hostname+":8091/?action=stream"}if(!state.camera)state.camera={gripper_url:""};state.camera.gripper_url=u;applyGripperStream()}catch(e){};setMode("AUTO_RUN");connectWS();requestAnimationFrame(frame);
 </script>
-<script src="./emergency_presentation_demo.js"></script>
 </body>
 </html>
 

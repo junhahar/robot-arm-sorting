@@ -6,6 +6,7 @@ Sambo dashboard WS bridge v3 = v2(스냅샷 텔레메트리) + 모션 명령.
 추가: 대시보드 WS 명령 {"type":"COMMAND","command":...} 수신 시 모터 이동.
   AUTO_START → 스캔자세로 이동
   AUTO_STOP  → 스캔자세 복귀 후 원점(전 모터 180°)
+  HALT       → 즉시정지(진행 이동 선점 + 현재 실측각에 토크 홀드)
   PING       → 무동작(수신 경로 검증용)
 
 이동은 ik_server.move_axis 와 동일한 S-curve 동기 이동(AXIS_SPEED 20°/s).
@@ -300,6 +301,18 @@ async def ws_handler(ws):
                     request_motion([(SCAN_POSE, "스캔복귀"), (HOME_POSE, "원점180")],
                                    "STOP → 스캔 후 원점")
                     print("[CMD] AUTO_STOP → 스캔 후 원점 이동")
+                elif cmd == "HALT":
+                    # 즉시정지: 진행 중 이동을 선점하고 각 모터를 현재 실측각에 짧게 홀드(토크 유지).
+                    with lock:
+                        hold = {m: motors[m]["current"] for m in range(1, 7)
+                                if motors[m]["current"] is not None}
+                    if hold:
+                        request_motion([(hold, "HALT 현재각 홀드")],
+                                       "HALT 즉시정지", min_dur=0.05)
+                        print(f"[CMD] HALT → 현재각 홀드 {sorted(hold)}")
+                    else:
+                        request_motion([], "HALT 선점")  # 현재각 미수신: 진행 이동만 선점
+                        print("[CMD] HALT: 현재각 없음 — 진행 이동만 선점")
                 elif cmd == "MANUAL_MOVE":
                     # payload.targets: [{motor_id, angle_deg(raw)}, ...]  여러 모터 동시 S-curve.
                     targets = {}
@@ -353,7 +366,7 @@ async def main():
     threading.Thread(target=motion_worker, daemon=True).start()
     threading.Thread(target=gripper_worker, daemon=True).start()
     print(f"Sambo WS Bridge v4 — ws://0.0.0.0:{WS_PORT}, snapshot {SEND_HZ}Hz, "
-          f"motion+manual+gripper enabled")
+          f"motion+manual+gripper+halt enabled")
     async with websockets.serve(ws_handler, WS_HOST, WS_PORT):
         await broadcaster()
 
