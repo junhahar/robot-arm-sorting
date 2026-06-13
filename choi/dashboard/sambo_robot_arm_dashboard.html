@@ -1002,7 +1002,7 @@ function twinStatus(){
   const collision=state.collision||getCollisionReport("current");
   return{current:c,target:t,error:err,ok:c.mirrorMismatch<=3&&err<=8&&!collision.blocked,collision};
 }
-let view={yaw:340*Math.PI/180,pitch:25*Math.PI/180,zoom:1.2},drag=null,simT=0,lastAutoLog=0;
+let view={yaw:340*Math.PI/180,pitch:25*Math.PI/180,zoom:1.2,panX:0,panZ:0},drag=null,simT=0,lastAutoLog=0;
 let ZOOM_MIN=0.75,ZOOM_MAX=3.0,ZOOM_DEF=1.5;
 const MANUAL_KEY_STEP=1;
 const J4_VISUAL_HOME_OFFSET_DEG=-21;
@@ -1706,8 +1706,8 @@ function drawThreeRobot(){
     applyStlAngles(r,poseAngles);
     updateAnimatedGripper(r);
   }
-  const dist=9.20/view.zoom,phi=view.pitch,theta=view.yaw;
-  r.camera.position.set(dist*Math.sin(phi)*Math.cos(theta),1.28+dist*Math.cos(phi),dist*Math.sin(phi)*Math.sin(theta));r.camera.lookAt(0,.5,.35);
+  const dist=9.20/view.zoom,phi=view.pitch,theta=view.yaw,targetX=view.panX||0,targetZ=.35+(view.panZ||0);
+  r.camera.position.set(targetX+dist*Math.sin(phi)*Math.cos(theta),1.28+dist*Math.cos(phi),targetZ+dist*Math.sin(phi)*Math.sin(theta));r.camera.lookAt(targetX,.5,targetZ);
   r.renderer.render(r.scene,r.camera);
   const pose=poseAngles?fkFromAngles(poseAngles):fk();state.robot.end_effector={x:pose.end.x,y:pose.end.z,z:pose.end.y};
   const collision=state.collision;
@@ -1772,7 +1772,8 @@ function fk(A=null){
   return fkFromAngles(A||getCollisionSafeAngleMap("current"));
 }
 function project(p,W,H){
-  let q=rotY(p,view.yaw),cp=Math.cos(view.pitch),sp=Math.sin(view.pitch),y=q.y*cp-q.z*sp,z=q.y*sp+q.z*cp+560/view.zoom;
+  const shifted=V(p.x-(view.panX||0),p.y,p.z-(view.panZ||0));
+  let q=rotY(shifted,view.yaw),cp=Math.cos(view.pitch),sp=Math.sin(view.pitch),y=q.y*cp-q.z*sp,z=q.y*sp+q.z*cp+560/view.zoom;
   const f=550/z*view.zoom;return{x:W*.52+q.x*f,y:H*.73-y*f,z,scale:f}
 }
 function drawNative3D(){
@@ -1799,12 +1800,18 @@ function drawArmSegment(ctx,W,H,a,b,color,width){const A=project(a,W,H),B=projec
 function drawJoint3D(ctx,W,H,p,label,color){const q=project(p,W,H),r=clamp(15*q.scale,8,16);ctx.fillStyle="#142b42";ctx.strokeStyle=color;ctx.lineWidth=3;ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle=color;ctx.font="bold 10px Consolas";ctx.fillText(label,q.x+r+3,q.y-3)}
 function drawGripper3D(ctx,W,H,pose){const p=pose.end,side=state.gripper.state==="OPEN"?14:7,forward=armDir(pose.yaw,0),right=V(Math.cos(pose.yaw),0,-Math.sin(pose.yaw));[-1,1].forEach(s=>{const a=add(p,mul(right,side*s)),b=add(add(a,mul(forward,28)),V(0,-18,0));drawArmSegment(ctx,W,H,a,b,"#ff8b52",7)});const q=project(p,W,H);ctx.fillStyle="#4ade80";ctx.beginPath();ctx.arc(q.x,q.y,4,0,Math.PI*2);ctx.fill()}
 function drawPart3D(ctx,W,H,p,label){const q=project(p,W,H);ctx.fillStyle="#f7c948";ctx.beginPath();ctx.arc(q.x,q.y,5,0,Math.PI*2);ctx.fill();ctx.fillStyle="#e4eff7";ctx.font="9px Segoe UI";ctx.fillText(label,q.x+7,q.y-4)}
-function rotateView(deg){view.yaw+=deg*Math.PI/180;updateRotDeg()}function reset3DView(){view={yaw:340*Math.PI/180,pitch:25*Math.PI/180,zoom:1.2};updateZoomPct();updateRotDeg();updateTiltDeg()}
+function rotateView(deg){view.yaw+=deg*Math.PI/180;updateRotDeg()}function reset3DView(){view={yaw:340*Math.PI/180,pitch:25*Math.PI/180,zoom:1.2,panX:0,panZ:0};updateZoomPct();updateRotDeg();updateTiltDeg()}
 function zoomStep(dir){const cur=view.zoom/ZOOM_DEF*100,next=dir>0?(Math.floor(cur/10)+1)*10:(Math.ceil(cur/10)-1)*10;view.zoom=clamp(next/100*ZOOM_DEF,ZOOM_MIN,ZOOM_MAX);updateZoomPct()}
 function updateZoomPct(){const e=$("zoomPct");if(e)e.textContent=Math.round(view.zoom/ZOOM_DEF*100)+"%"}
 function updateRotDeg(){const e=$("rotDeg");if(e){let d=Math.round(view.yaw*180/Math.PI)%360;if(d<0)d+=360;e.textContent=d+"°"}}
 function updateTiltDeg(){const e=$("tiltDeg");if(e)e.textContent="⤓"+Math.round(90-view.pitch*180/Math.PI)+"°"}
-function bind3DDrag(){const c=$("robot3dCanvas");if(!c)return;c.onpointerdown=e=>{drag={x:e.clientX,y:e.clientY};c.setPointerCapture?.(e.pointerId)};c.onpointermove=e=>{if(!drag)return;view.yaw+=(e.clientX-drag.x)*.008;view.pitch=clamp(view.pitch+(e.clientY-drag.y)*.007,.05,1.45);drag={x:e.clientX,y:e.clientY}};c.onpointerup=e=>{drag=null;c.releasePointerCapture?.(e.pointerId)};c.onpointerleave=()=>drag=null;c.onwheel=e=>{view.zoom=clamp(view.zoom-e.deltaY*.0017,ZOOM_MIN,ZOOM_MAX);updateZoomPct();e.preventDefault()}}
+function pan3DView(dx,dy){
+  const theta=view.yaw,scale=(0.0105/Math.max(view.zoom,.2));
+  const rightX=Math.cos(theta+Math.PI/2),rightZ=Math.sin(theta+Math.PI/2),forwardX=Math.cos(theta),forwardZ=Math.sin(theta);
+  view.panX=clamp((view.panX||0)-dx*scale*rightX+dy*scale*forwardX,-2.8,2.8);
+  view.panZ=clamp((view.panZ||0)-dx*scale*rightZ+dy*scale*forwardZ,-2.3,2.8);
+}
+function bind3DDrag(){const c=$("robot3dCanvas");if(!c)return;c.oncontextmenu=e=>e.preventDefault();c.onpointerdown=e=>{const mode=e.button===2||e.shiftKey?"pan":"rotate";drag={x:e.clientX,y:e.clientY,mode};c.style.cursor=mode==="pan"?"grabbing":"move";c.setPointerCapture?.(e.pointerId);e.preventDefault()};c.onpointermove=e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(drag.mode==="rotate"){view.yaw+=dx*.008;view.pitch=clamp(view.pitch+dy*.007,.05,1.45);updateRotDeg();updateTiltDeg()}else pan3DView(dx,dy);drag.x=e.clientX;drag.y=e.clientY;draw3D()};c.onpointerup=e=>{drag=null;c.style.cursor="grab";c.releasePointerCapture?.(e.pointerId)};c.onpointerleave=()=>{drag=null;c.style.cursor="grab"};c.onwheel=e=>{view.zoom=clamp(view.zoom-e.deltaY*.0017,ZOOM_MIN,ZOOM_MAX);updateZoomPct();draw3D();e.preventDefault()};c.style.cursor="grab"}
 
 /* ===== Top-down robot workspace ===== */
 function drawTopDown(){
