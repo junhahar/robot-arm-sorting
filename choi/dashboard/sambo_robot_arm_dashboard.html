@@ -360,8 +360,6 @@ button{cursor:pointer}
 .alert-item.warn{border-color:var(--yellow);color:#f5df93}.alert-item.err{border-color:var(--red);color:#ffb7b7}
 .approach-track{height:8px;margin-top:6px;overflow:hidden;border-radius:7px;background:#07121e}.approach-track i{display:block;height:100%;border-radius:7px;background:linear-gradient(90deg,var(--cyan),var(--green));transition:.25s}
 .approach-zones{display:flex;justify-content:space-between;margin-top:4px;color:var(--dim);font-size:8px}
-.home-btn{color:var(--green);border-color:rgba(74,222,128,.46);background:rgba(74,222,128,.06)}
-.precheck-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.precheck-item{padding:8px;border:1px solid var(--line);border-radius:6px;background:#091522;color:var(--muted);font-size:11px}.precheck-item b{display:block;margin-bottom:3px;color:var(--text)}
 
 /* ===== Manual mode ===== */
 .manual-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;height:100%}
@@ -614,8 +612,6 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
     <button class="tab action-control" data-mode="MANUAL" onclick="setMode('MANUAL')">수동 시험</button>
   </div>
   <div class="toolbar-spacer"></div>
-  <button class="tool-btn home-btn action-control" onclick="goHome()">HOME 복귀</button>
-  <button class="tool-btn" onclick="openPrecheck()">운전 준비 점검</button>
   <button class="tool-btn" onclick="openModal('cameraModal')">카메라 보기 / 설정</button>
   <button class="tool-btn" onclick="openModal('systemModal')">시스템 연결도</button>
   <button class="tool-btn" onclick="openModal('canModal')">통신 상세</button>
@@ -738,23 +734,6 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
   "robot": {"joints":[{"id":"J1","current":92.3,"target":95.0,"temp":41.2,"load":35}]},
   "vision": {"target":"BOLT","confidence":0.94,"correction":{"dx_mm":2.1,"dy_mm":-1.8}}
 }</pre></details>
-    </div>
-  </section>
-</div>
-
-<!-- ===== Pre-run checklist modal ===== -->
-<div class="modal-backdrop" id="precheckModal">
-  <section class="modal">
-    <div class="modal-head">자동 운전 전 준비 점검 / Pre-run Checklist <button onclick="closeModal('precheckModal')">×</button></div>
-    <div class="modal-body">
-      <p class="muted" style="font-size:12px;margin-top:0">자동 운전을 시작하기 전에 연결, 센서, HOME 자세와 하드웨어 비상정지 위치를 확인합니다.</p>
-      <div class="precheck-list" id="precheckItems"></div>
-      <p class="yellow" style="font-size:11px">주의: 실제 비상정지는 하드웨어 E-STOP으로 서보 전원을 차단해야 합니다.</p>
-      <div class="modal-actions">
-        <button class="small-btn" onclick="renderPrecheck()">다시 점검</button>
-        <button class="small-btn" id="precheckAutoBtn" onclick="startAutoFromPrecheck()">점검 후 자동 운전</button>
-        <button class="small-btn" onclick="closeModal('precheckModal')">닫기</button>
-      </div>
     </div>
   </section>
 </div>
@@ -2018,13 +1997,6 @@ function generateRunReport(){
   const report={generated_at:new Date().toISOString(),data_source:state.demo?"DEMO MODE":"LIVE WebSocket",mode:state.mode,system:state.system,can_health:state.can_health,robot:state.robot,gripper:state.gripper,vision:state.vision,path:state.path,precheck:getPrecheckItems().map(([name,ok,detail])=>({name,ok,detail})),recent_events:state.events.slice(0,30)};
   blobDownload("sambo_robot_run_report.json",JSON.stringify(report,null,2),"application/json;charset=utf-8");addLog("운전 상태 리포트 저장 완료","ok");
 }
-function openPrecheck(){renderPrecheck();openModal("precheckModal")}
-function renderPrecheck(){
-  const checks=getPrecheckItems(),ready=checks.every(x=>x[1]);
-  $("precheckItems").innerHTML=checks.map(([name,ok,detail])=>`<div class="precheck-item"><b class="${ok?"green":"yellow"}">${ok?"✓":"!"} ${name}</b>${detail}</div>`).join("");
-  $("precheckAutoBtn").disabled=!ready;$("precheckAutoBtn").style.opacity=ready?"1":".42";
-}
-function startAutoFromPrecheck(){if(!getPrecheckItems().every(x=>x[1]))return;closeModal("precheckModal");setMode("AUTO_RUN");addLog("운전 준비 점검 완료 — 자동 운전 시작","ok")}
 document.addEventListener("keydown",e=>{
   const typing=/INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
   if(e.key==="Home"&&!typing){e.preventDefault();goHome();return}
