@@ -394,7 +394,7 @@ button{cursor:pointer}
 .manual-row small{display:block;margin-top:1px;color:var(--cyan);font-size:8px;letter-spacing:.3px}
 .manual-row-actions{grid-column:2 / 4;display:flex;justify-content:flex-end;gap:6px}
 .manual-row-actions button{min-width:40px;padding:6px 6px}
-.manual-actions{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;padding-top:7px;border-top:1px solid rgba(28,56,85,.55)}
+.manual-actions{flex:0 0 auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px;margin-top:7px;padding-top:7px;border-top:1px solid rgba(28,56,85,.55)}
 .manual-twin{margin-bottom:10px;padding:10px;border:1px solid rgba(32,213,232,.28);border-radius:7px;background:rgba(9,21,34,.78)}
 .manual-twin-head{display:flex;align-items:center;gap:7px;margin-bottom:8px;color:var(--text);font-size:12px;font-weight:900}
 .manual-twin-head::before{content:"";width:4px;height:14px;border-radius:3px;background:var(--cyan)}
@@ -1548,6 +1548,7 @@ function resetManualHomePreview(){
   state.gripper.object_detected=false;
   state.path.current_step="HOME";
   state.path.progress_percent=0;
+  captureManualActual();
 }
 function updateRunHeaderControls(){
   const running=!!state.auto?.running&&!state.system.estop;
@@ -1701,8 +1702,8 @@ function renderManualStage(){
   $("mainStage").innerHTML=`
     <article class="panel" id="primaryPanel"><div class="panel-head">수동 시험 / Manual Test <small>실제 장비 연결 전 주변 안전을 확인하세요.</small></div>
       <div class="manual-controls"><div id="manualRows"></div><div class="manual-actions action-control">
-      <button class="small-btn" onclick="goHome()">HOME 이동</button><button class="small-btn" onclick="toggleGripper()">그리퍼 열기 / 닫기</button>
-      <button class="small-btn" onclick="manualAction('연결 확인')">연결 확인</button><button class="small-btn" onclick="manualAction('서보 Torque ON/OFF')">서보 Torque ON/OFF</button>
+      <button class="small-btn" onclick="goHome()">HOME 이동</button>
+      <button class="small-btn" onclick="resetAllManual()">전체 초기화</button><button class="small-btn" onclick="applyAllManual()">전체 적용</button>
       </div></div></article>
     <article class="panel media-panel" id="robot3dPanel"><div class="panel-head">로봇 3D 분류 셀 / Sorting Twin
       <span class="head-right sim3d-tools"><button onclick="rotateView(-15)" title="좌회전 15°">↶ 15°</button><span class="zoom-pct" id="rotDeg">340°</span><button onclick="rotateView(15)" title="우회전 15°">15° ↷</button><button onclick="reset3DView()">기본 시점</button><button onclick="zoomStep(-1)" title="축소">−</button><span class="zoom-pct" id="zoomPct">80%</span><button onclick="zoomStep(1)" title="확대">+</button></span>
@@ -1723,13 +1724,13 @@ function renderManualRows(){
     return `<div class="manual-row ${coupled?"coupled":""}"><b>${JOINT_DISPLAY[i].axis} (M${i+1}${coupled?"·M"+(i+2):""}) <span class="joint-name">${JOINT_DISPLAY[i].fn}</span></b>
     <input class="action-control" data-manual-range="${i}" type="range" min="${manualJointMin(j)}" max="${manualJointMax(j)}" step=".1" value="${j.target}" oninput="manualJoint(${i},this.value)">
     <input class="manual-angle-input mono action-control" data-manual-angle="${i}" type="number" min="${manualJointMin(j)}" max="${manualJointMax(j)}" step=".1" value="${fmt(j.target)}" oninput="manualJoint(${i},this.value)" onwheel="manualWheel(event,${i})" onkeydown="manualAngleKey(event,${i})" aria-label="${JOINT_DISPLAY[i].axis} (M${i+1}${coupled?"·M"+(i+2):""}) 목표각 입력">
-    <div class="manual-row-actions"><button class="small-btn action-control" onclick="manualJog(${i},-1)">-1°</button><button class="small-btn action-control" onclick="manualJog(${i},1)">+1°</button><button class="small-btn action-control" onclick="sendManualJoint(${i})">적용</button></div></div>`;
+    <div class="manual-row-actions"><button class="small-btn action-control" onclick="manualJog(${i},-1)">-1°</button><button class="small-btn action-control" onclick="manualJog(${i},1)">+1°</button><button class="small-btn action-control" onclick="resetManualJoint(${i})">초기화</button><button class="small-btn action-control" onclick="sendManualJoint(${i})">적용</button></div></div>`;
   }).join("");
   const g=state.gripper;
   const gripperRow=`<div class="manual-row gripper-row"><b>GR <span class="joint-name">Gripper</span></b>
-    <input class="action-control" data-manual-gripper-range type="range" min="${GRIPPER_SERVO_MIN}" max="${GRIPPER_SERVO_MAX}" step="1" value="${g.sg90_angle}" oninput="manualGripper(this.value)">
-    <input class="manual-angle-input mono action-control" data-manual-gripper-angle type="number" min="${GRIPPER_SERVO_MIN}" max="${GRIPPER_SERVO_MAX}" step="1" value="${fmt(g.sg90_angle,0)}" oninput="manualGripper(this.value)" onwheel="manualGripperWheel(event)" onkeydown="manualGripperKey(event)" aria-label="그리퍼 각도 입력">
-    <div class="manual-row-actions"><button class="small-btn action-control" onclick="manualGripperJog(-5)">-5°</button><button class="small-btn action-control" onclick="manualGripperJog(5)">+5°</button><button class="small-btn action-control" onclick="sendManualGripper()">적용</button></div></div>`;
+    <input class="action-control" data-manual-gripper-range type="range" min="${GRIPPER_SERVO_MIN}" max="${GRIPPER_SERVO_MAX}" step="${GRIPPER_SERVO_MAX-GRIPPER_SERVO_MIN}" value="${g.sg90_angle}" oninput="manualGripper(this.value)" aria-label="그리퍼 열기(60)/닫기(180)">
+    <input class="manual-angle-input mono action-control" data-manual-gripper-angle type="number" value="${fmt(g.sg90_angle,0)}" readonly aria-label="그리퍼 각도(60 열기 / 180 닫기)">
+    <div class="manual-row-actions"><button class="small-btn action-control" onclick="manualGripper(${GRIPPER_SERVO_MIN})">열기</button><button class="small-btn action-control" onclick="manualGripper(${GRIPPER_SERVO_MAX})">닫기</button><button class="small-btn action-control" onclick="resetManualGripper()">초기화</button><button class="small-btn action-control" onclick="sendManualGripper()">적용</button></div></div>`;
   $("manualRows").innerHTML=jointRows+gripperRow;
 }
 function renderPrimary(){
@@ -2187,7 +2188,7 @@ function drawThreeRobot(){
   if(w!==r.lastW||h!==r.lastH){r.lastW=w;r.lastH=h;r.camera.aspect=w/h;r.camera.updateProjectionMatrix();r.renderer.setSize(w,h,false)}
   let poseAngles=null;
   if(r.ready){
-    const safeAngles=getStlSafeAngleMap(window.THREE,r,"current");
+    const safeAngles=getStlSafeAngleMap(window.THREE,r,state.mode==="MANUAL"?"target":"current");
     poseAngles=getVisualJointAngleMap(safeAngles);
     applyStlAngles(r,poseAngles);
     updateAnimatedGripper(r);
@@ -2324,6 +2325,38 @@ function clearWaypoints(){if(state.wpList.length&&!confirm("저장 위치 목록
 function exportCSV(){if(!state.wpList.length){addLog("저장할 위치가 없습니다.","warn");return}const keys=["seq","type","time","J1","J2","J3","J4","J5","J6","gripper"],csv=[keys.join(","),...state.wpList.map(r=>keys.map(k=>r[k]).join(","))].join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download="sambo_robot_path.csv";a.click();URL.revokeObjectURL(a.href);addLog("경로 CSV 저장 완료","ok")}
 const MANUAL_COUPLED_JOINTS={1:2,2:1};
 const MANUAL_MIRROR_SUM=360;
+/* 수동 모드 현재각 기준(초기화가 되돌릴 대상). 진입 시 캡처, 적용 시 갱신. */
+let manualActual={},manualActualGripper=null;
+function captureManualActual(){
+  manualActual=Object.fromEntries(state.robot.joints.map(j=>[j.id,Number(j.current??j.target??180)]));
+  manualActualGripper=Number(state.gripper.sg90_angle??GRIPPER_VISUAL.openServo);
+}
+function resetManualJoint(i){
+  const j=state.robot.joints[i];if(!j)return;
+  setManualJointTarget(i,Number(manualActual[j.id]??j.current??180));
+  syncManualRows();renderRightPanel();draw3D();
+}
+function resetManualGripper(){
+  setManualGripperAngle(Number(manualActualGripper??state.gripper.sg90_angle));
+  syncManualGripperRow();renderRightPanel();draw3D();
+}
+function resetAllManual(){
+  state.robot.joints.forEach((j,i)=>{if(j.id==="J3")return;setManualJointTarget(i,Number(manualActual[j.id]??j.current??180))});
+  setManualGripperAngle(Number(manualActualGripper??state.gripper.sg90_angle));
+  syncManualRows();renderRightPanel();draw3D();
+  addLog("수동 미리보기를 현재각으로 전체 초기화","info");
+}
+function applyAllManual(){
+  const report=getManualTargetCollisionReport();
+  if(report.blocked){warnCollisionLimit(report);return}
+  const targets=state.robot.joints.map((j,n)=>({motor_id:n+1,angle_deg:Number(logicalToRawAngleByIndex(n,j.target)),logical_angle_deg:Number(j.target)}));
+  const sent=sendDashboardCommand("MANUAL_MOVE",{targets});
+  sendDashboardCommand("GRIPPER",{sg90_angle_deg:Number(state.gripper.sg90_angle),state:state.gripper.state});
+  state.robot.joints.forEach(j=>{manualActual[j.id]=Number(j.target);j.current=Number(j.target)});
+  manualActualGripper=Number(state.gripper.sg90_angle);
+  addLog(`전체 적용 — 6축 + 그리퍼 목표각 ${sent?"송신":"DEMO 적용"}`,sent?"ok":"info");
+  renderRightPanel();renderManualTwinCard();draw3D();
+}
 const GRIPPER_SERVO_MIN=60,GRIPPER_SERVO_MAX=180;
 const MANUAL_JOG_STEP=1,GRIPPER_JOG_STEP=5;
 const MANUAL_PREVIEW_RESET_MS=3000;
@@ -2409,25 +2442,25 @@ function setManualGripperAngle(value){
 function syncManualGripperRow(){
   const range=document.querySelector("[data-manual-gripper-range]"),angle=document.querySelector("[data-manual-gripper-angle]");
   if(range&&range!==document.activeElement)range.value=state.gripper.sg90_angle;
-  if(angle&&angle!==document.activeElement)angle.value=fmt(state.gripper.sg90_angle,0);
+  if(angle)angle.value=fmt(state.gripper.sg90_angle,0);
 }
-function manualGripper(v){captureManualPreviewBaseline();setManualGripperAngle(v);scheduleManualPreviewReset();syncManualGripperRow();renderRightPanel();draw3D()}
+function manualGripper(v){setManualGripperAngle(Number(v)<(GRIPPER_SERVO_MIN+GRIPPER_SERVO_MAX)/2?GRIPPER_SERVO_MIN:GRIPPER_SERVO_MAX);syncManualGripperRow();renderRightPanel();draw3D()}
 function manualGripperStep(v){manualGripper(Number(state.gripper.sg90_angle||0)+v)}
-function manualGripperJog(delta){manualGripperStep(delta);sendManualGripper()}
+function manualGripperJog(delta){manualGripperStep(delta)}
 function manualGripperWheel(e){e.preventDefault();manualGripperStep(e.deltaY<0?5:-5)}
 function manualGripperKey(e){if(e.key==="Enter"){e.preventDefault();e.target.blur();addLog("그리퍼 목표각 미리보기 완료 — 적용 버튼을 누르면 송신됩니다.","info")}}
 function sendManualGripper(){
   clearManualPreviewReset();
   const sent=sendDashboardCommand("GRIPPER",{sg90_angle_deg:Number(state.gripper.sg90_angle),state:state.gripper.state});
   addLog(`그리퍼 목표각 ${fmt(state.gripper.sg90_angle,0)}° ${sent?"송신":"DEMO 적용"}`,sent?"ok":"info");
-  renderRightPanel();draw3D();return sent;
-}function manualJoint(i,v){captureManualPreviewBaseline();if(setManualJointTarget(i,v))scheduleManualPreviewReset();syncManualRows();renderRightPanel();draw3D()}
-function manualStep(i,v){captureManualPreviewBaseline();if(setManualJointTarget(i,state.robot.joints[i].target+v))scheduleManualPreviewReset();syncManualRows();renderRightPanel();draw3D()}
+  manualActualGripper=Number(state.gripper.sg90_angle);renderRightPanel();draw3D();return sent;
+}function manualJoint(i,v){setManualJointTarget(i,v);syncManualRows();renderRightPanel();draw3D()}
+function manualStep(i,v){setManualJointTarget(i,state.robot.joints[i].target+v);syncManualRows();renderRightPanel();draw3D()}
 function manualJog(i,delta){
   const joint=state.robot.joints[i];if(!joint)return;
   const base=Number(joint.target??joint.current??0);
-  if(!setManualJointTarget(i,base+delta)){syncManualRows();return}
-  syncManualRows();renderRightPanel();draw3D();sendManualJoint(i);
+  setManualJointTarget(i,base+delta);
+  syncManualRows();renderRightPanel();draw3D();
 }
 function manualWheel(e,i){e.preventDefault();manualStep(i,e.deltaY<0?1:-1);const angle=document.querySelector(`[data-manual-angle="${i}"]`);if(angle)angle.value=fmt(state.robot.joints[i].target)}
 function manualKeyboardStep(key){const binding=MANUAL_KEY_BINDINGS[key.toLowerCase()];if(!binding||state.mode!=="MANUAL"||state.system.estop)return false;manualStep(binding[0],binding[1]*MANUAL_KEY_STEP);return true}
@@ -2450,7 +2483,7 @@ function sendManualJoint(i){
     state.digital_twin.last_cmd=`CMD_SET_ANGLE M${i+1} ${fmt(j.target)}°`;
     addLog(`${j.id} 목표각 ${fmt(j.target)}° ${sent?"송신":"DEMO 적용"}`,sent?"ok":"info");
   }
-  renderRightPanel();renderManualTwinCard();draw3D();return sent;
+  commandIndexes.forEach(n=>{const jj=state.robot.joints[n];if(jj)manualActual[jj.id]=Number(jj.target)});renderRightPanel();renderManualTwinCard();draw3D();return sent;
 }function manualAction(name){if(!confirm(`${name} 명령을 실행할까요? 실제 장비 주변 안전을 먼저 확인하세요.`))return;addLog(`수동 시험 명령: ${name}`,"warn")}
 function toggleGripper(){state.gripper.state=state.gripper.state==="OPEN"?"CLOSED":"OPEN";state.gripper.sg90_angle=state.gripper.state==="OPEN"?GRIPPER_VISUAL.openServo:GRIPPER_VISUAL.closedServo;addLog(`그리퍼 ${state.gripper.state==="OPEN"?"열림":"닫힘"}`,"info");renderAll();draw3D()}
 function clearLogs(){$("eventLogs").innerHTML=""}
@@ -2462,10 +2495,11 @@ function sendDashboardCommand(command,payload={}){
   debug(`[DEMO] ${command} command logged only`);return false;
 }
 function goHome(){
-  if(!confirm("로봇팔을 HOME 자세로 복귀할까요? 실제 장비 주변에 사람이 없는지 먼저 확인하세요."))return;
+  if(!confirm("스캔 자세를 거쳐 원점(180°)으로 복귀합니다.\n실제 장비 주변에 사람이 없는지 먼저 확인하세요."))return;
   setAllMotorsHomeAngles();
   state.path.current_step="HOME";state.path.progress_percent=0;state.precheck.home_confirmed=true;state.calibration.servo="OK";
-  const sent=sendDashboardCommand("HOME",{motor_angles_deg:Object.fromEntries(state.robot.joints.map((j,i)=>[i+1,Number(HOME_RAW_ANGLES[i])])),logical_home_deg:Object.fromEntries(state.robot.joints.map((j,i)=>[i+1,Number(HOME_ANGLES[i])]))});addLog(`${sent?"HOME 복귀 명령 송신":"DEMO HOME 자세 복귀"} — 시작 위치 확인`,"ok");renderAll();draw3D();
+  // 스캔 자세 경유 후 원점: 브리지 AUTO_STOP이 [스캔자세 → 원점180]을 순서대로 수행.
+  const sent=sendDashboardCommand("AUTO_STOP");addLog(sent?"HOME 이동 — 스캔 자세 거쳐 원점 복귀 명령 송신 (RPi)":"HOME 이동 — 원점 복귀 (미연결)","ok");captureManualActual();renderAll();draw3D();
 }
 function blobDownload(name,text,type="text/plain;charset=utf-8"){
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),0);
