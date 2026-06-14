@@ -35,6 +35,13 @@ except Exception as e:
                            "bbox": None, "correction": {"dx_mm": 0.0, "dy_mm": 0.0}},
                 "gripper": {"state": "OPEN", "sg90_angle": 60.0, "fresh": False}}
 
+# ── PICK 두뇌 (pick_runner → ik_pose → ik) : 같은 폴더에 있어야 import 됨 ──
+try:
+    import pick_runner
+except Exception as e:
+    print(f"[PICK] pick_runner disabled: {e}")
+    pick_runner = None
+
 CAN_INTERFACE = "can0"
 WS_HOST = "0.0.0.0"
 WS_PORT = 8765
@@ -226,7 +233,8 @@ def save_life_usage(payload):
 
 # ── 모션 상태 (generation 기반 선점) ──
 mlock = threading.Lock()
-motion = {"seq": None, "gen": 0, "label": "", "min_dur": MIN_DURATION}
+motion = {"seq": None, "gen": 0, "label": "", "min_dur": MIN_DURATION,
+          "speed": AXIS_SPEED, "completed_gen": 0}
 
 # ── 그리퍼 요청 상태 (가장 최근 각도만 송신, gen 으로 갱신 감지) ──
 glock = threading.Lock()
@@ -321,13 +329,15 @@ def _send_gripper(bus, angle):
         pass
 
 
-def request_motion(seq, label, min_dur=MIN_DURATION):
-    """seq: [(targets_dict, sub_label), ...]. 새 요청은 진행 중 이동을 선점."""
+def request_motion(seq, label, min_dur=MIN_DURATION, speed=AXIS_SPEED):
+    """seq: [(targets_dict, sub_label), ...]. 새 요청은 진행 중 이동을 선점.
+    speed: deg/s (수동 기본 20, pick 30)."""
     with mlock:
         motion["seq"] = seq
         motion["gen"] += 1
         motion["label"] = label
         motion["min_dur"] = min_dur
+        motion["speed"] = speed
         return motion["gen"]
 
 
@@ -342,12 +352,12 @@ def request_gripper(angle):
         gripper_state["angle"] = int(max(GRIPPER_MIN, min(GRIPPER_MAX, round(a))))
 
 
-def _move_to(bus, targets, my_gen, min_dur=MIN_DURATION):
+def _move_to(bus, targets, my_gen, min_dur=MIN_DURATION, speed=AXIS_SPEED):
     with lock:
         seeds = {m: (motors[m]["current"] if motors[m]["current"] is not None else 180.0)
                  for m in targets}
     maxd = max(abs(targets[m] - seeds[m]) for m in targets)
-    dur = max(maxd / AXIS_SPEED, min_dur)
+    dur = max(maxd / speed, min_dur)
     steps = max(1, int(dur / DT))
     for i in range(steps + 1):
         with mlock:
@@ -367,7 +377,7 @@ def motion_worker():
     while True:
         with mlock:
             seq = motion["seq"]; gen = motion["gen"]; label = motion["label"]
-            min_dur = motion["min_dur"]
+            min_dur = motion["min_dur"]; speed = motion["speed"]
             motion["seq"] = None
         if seq is None:
             time.sleep(0.03); continue
@@ -379,10 +389,12 @@ def motion_worker():
         print(f"[MOVE] start: {label}")
         for targets, sub in seq:
             print(f"[MOVE]   -> {sub}")
-            if not _move_to(bus, targets, gen, min_dur):
+            if not _move_to(bus, targets, gen, min_dur, speed):
                 print(f"[MOVE]   preempted at {sub}")
                 break
         else:
+            with mlock:
+                motion["completed_gen"] = gen     # submit_and_wait가 done 판정
             print(f"[MOVE] done: {label}")
 
 
@@ -403,6 +415,107 @@ def gripper_worker():
         last_gen = gen
         _send_gripper(bus, ang)
         print(f"[GRIP] {ang:.0f}°")
+
+
+# ── PICK (단일 잡기) : pick_runner 엔진 (계약 B) ───────────────────────────
+# 대시보드 S/PICK → 게이트 통과 → 스레드로 pick_runner.run(api). auto_runner(자동루프)는 안 엮음.
+PICK_CONF_TH = 0.5         # 신뢰도 임계
+PICK_STABLE_N = 5          # 연속 안정 프레임 임계
+PICK_TTL_MS = 2500         # alive 판정(age_ms < TTL)
+PICK_SPEED = 30.0          # 잡기 속도(수동 20과 분리, M4 발열↓)
+PICK_TIMEOUT_S = 30.0      # submit_and_wait 한 phase 최대 대기(무응답 안전망)
+
+pick_state = {"status": "SCAN_READY", "step": ""}   # SCAN_READY | BUSY
+pick_lock = threading.Lock()
+
+
+def get_gen():
+    with mlock:
+        return motion["gen"]
+
+
+def get_vision():
+    return load_latest_runtime_state().get("vision", {})
+
+
+def submit_and_wait(seq, speed=PICK_SPEED, min_dur=MIN_DURATION, timeout=PICK_TIMEOUT_S):
+    """seq 제출 후 완료까지 대기 → "done" | "preempted"(HALT 등) | "timeout"(무응답).
+    내부에서 request_motion으로 gen 생성, motion_worker의 completed_gen으로 done 판정."""
+    my_gen = request_motion(seq, "pick", min_dur=min_dur, speed=speed)
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        with mlock:
+            g = motion["gen"]; done = motion["completed_gen"]
+        if g != my_gen:
+            return "preempted"      # 더 새 요청(HALT 등)이 선점
+        if done == my_gen:
+            return "done"
+        time.sleep(0.01)
+    return "timeout"
+
+
+class _PickApi:
+    """pick_runner에 주입할 DI 객체 (pick_runner가 브리지를 import 안 하게)."""
+    submit_and_wait = staticmethod(submit_and_wait)
+    request_gripper = staticmethod(request_gripper)
+    get_gen = staticmethod(get_gen)
+
+
+_pick_api = _PickApi()
+
+
+def _pick_gate(v):
+    """잡기 실행 조건: alive · 물체있음 · 신뢰도 · 안정프레임 · 좌표유효."""
+    return (v.get("age_ms", 9e9) < PICK_TTL_MS
+            and v.get("target", "NONE") != "NONE"
+            and v.get("confidence", 0.0) >= PICK_CONF_TH
+            and v.get("stable_frames", 0) >= PICK_STABLE_N
+            and v.get("x_mm") is not None and v.get("y_mm") is not None)
+
+
+def _pick_worker(v):
+    """게이트 통과한 vision 스냅샷으로 한 사이클 실행(별도 스레드)."""
+    def on_step(stage):
+        with pick_lock:
+            pick_state["step"] = stage
+    try:
+        result = pick_runner.run(
+            _pick_api, [v["x_mm"], v["y_mm"]], v.get("target", "NONE"),
+            angle_deg=v.get("angle_deg", 0.0),
+            near=v.get("near"), distance_mm=v.get("distance_mm"),
+            on_step=on_step)
+        print(f"[PICK] result: {result}")
+    except Exception as e:
+        print(f"[PICK] error: {e}")
+    finally:
+        with pick_lock:
+            pick_state["status"] = "SCAN_READY"
+            pick_state["step"] = ""
+
+
+def handle_pick():
+    """대시보드 PICK/S 명령 처리. 게이트 통과 시 스레드로 한 사이클 실행."""
+    if pick_runner is None:
+        print("[PICK] pick_runner 미탑재"); return "no_module"
+    v = get_vision()
+    with pick_lock:
+        if pick_state["status"] != "SCAN_READY":
+            print("[PICK] BUSY — 무시"); return "busy"
+        if not _pick_gate(v):
+            print("[PICK] 게이트 실패 "
+                  f"target={v.get('target')} conf={v.get('confidence')} "
+                  f"stable={v.get('stable_frames')} age={v.get('age_ms')}")
+            return "gate_fail"
+        pick_state["status"] = "BUSY"
+        pick_state["step"] = "PRE_GRASP"
+    threading.Thread(target=_pick_worker, args=(v,), daemon=True).start()
+    print(f"[PICK] start: {v.get('target')} @ ({v.get('x_mm')},{v.get('y_mm')})")
+    return "started"
+
+
+def _pick_snapshot():
+    with pick_lock:
+        return {"status": pick_state["status"], "step": pick_state["step"]}
 
 
 def derive_can_status(comms):
@@ -457,6 +570,7 @@ def build_snapshot():
             "system": system,
             "vision": vision,
             "gripper": gripper,
+            "pick": _pick_snapshot(),
             "life_usage": life_usage_snapshot(),
             "can_health": hp}
 
@@ -566,6 +680,9 @@ async def ws_handler(ws):
                         print(f"[CMD] GRIPPER → {float(ang):.0f}°")
                     else:
                         print("[CMD] GRIPPER: 각도 없음")
+                elif cmd in ("PICK", "S", "VISION_SEND"):
+                    res = handle_pick()
+                    print(f"[CMD] PICK → {res}")
                 elif cmd == "PING":
                     print("[CMD] PING (무동작, 수신확인용)")
                 else:

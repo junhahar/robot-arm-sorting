@@ -451,6 +451,8 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 .run-btn b{font-size:22px;line-height:1}.run-btn small{font-size:11px;letter-spacing:.8px;font-weight:900;line-height:1}
 .run-btn.start{border:1px solid rgba(74,222,128,.72);background:rgba(9,30,28,.86);color:#4ade80}
 .run-btn.start.active,.run-btn.start:hover{background:linear-gradient(180deg,#14734d,#0b3c31);color:#b8ffd9;box-shadow:0 0 0 2px rgba(74,222,128,.16),0 10px 24px rgba(0,0,0,.28)}
+.run-btn.pick{border:1px solid rgba(56,189,248,.7);background:rgba(8,26,40,.86);color:#38bdf8;align-items:center;justify-content:center;font-size:15px}
+.run-btn.pick.active,.run-btn.pick:hover{background:linear-gradient(180deg,#0e6390,#0a3a54);color:#bfe9ff;box-shadow:0 0 0 2px rgba(56,189,248,.16),0 10px 24px rgba(0,0,0,.28)}
 .run-btn.stop{border:1px solid rgba(255,119,119,.92);background:linear-gradient(180deg,#d42634,#941925);color:#fff}
 .run-btn.stop.active,.run-btn.stop:hover{filter:brightness(1.08);box-shadow:0 0 0 2px rgba(255,91,91,.16),0 10px 24px rgba(0,0,0,.28)}
 .run-btn.halt{border:1px solid rgba(247,201,72,.85);background:rgba(36,28,7,.9);color:#f7c948}.run-btn.halt:hover,.run-btn.halt:active{background:linear-gradient(180deg,#cba32f,#8a6d12);color:#1a1402;box-shadow:0 0 0 2px rgba(247,201,72,.18),0 10px 24px rgba(0,0,0,.28)}
@@ -647,6 +649,7 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
   </div>
   <div class="header-status">
     <div class="run-controls">
+      <button class="run-btn pick" id="pickBtn" onclick="pickRobot()">PICK</button>
       <button class="run-btn start" id="startBtn" onclick="startAutoRun()"><b>▶ 시작</b><small>AUTO RUN</small></button>
       <button class="run-btn halt" id="haltBtn" onclick="haltRobot()"><b>⏸ 정지</b><small>STOP</small></button>
       <button class="run-btn stop active" id="stopBtn" onclick="stopAutoRun()"><b>■ 종료</b><small>END</small></button>
@@ -1566,6 +1569,11 @@ function startAutoRun(){
   const sent=sendDashboardCommand("AUTO_START");
   addLog(sent?"자동 운전 시작 명령 송신 (RPi)":"자동 운전 시작 — DEMO 경로 진행","ok");
   renderHeader();renderPath();draw3D();
+}
+function pickRobot(){
+  // S 버튼과 동일: 검출된 물체 1회 잡기(확인창 없이 즉시 전송).
+  const sent=sendDashboardCommand("PICK");
+  addLog(sent?"PICK 송신 (RPi)":"PICK — 미연결: 명령 미전송",sent?"ok":"warn");
 }
 function stopAutoRun(){
   if(!confirm("스캔 자세로 복귀 후 원점(180°)으로 이동합니다.\n주변에 사람이 없는지 확인하세요."))return;
