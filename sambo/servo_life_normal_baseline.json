@@ -1,0 +1,5222 @@
+{
+  "schema": "sambo_servo_life_normal_baseline_v1",
+  "generatedAt": "2026-06-13T14:31:33.212Z",
+  "source": {
+    "autoRunDir": "C:\\Users\\KDS26\\Desktop\\삼보모터스\\수명예측 데이터 수집\\03_자동운전_예비_10회",
+    "scanThresholdDeg": 6,
+    "degreesPerEquivalentCycle": 120,
+    "movementNoiseDeg": 0.5,
+    "scanPoseDeg": {
+      "J1": 180,
+      "J2": 104.8,
+      "J3": 248.2,
+      "J4": 112.7,
+      "J5": 140.8,
+      "J6": 180
+    }
+  },
+  "selectionRules": {
+    "normalBaseline": "SCAN-to-SCAN cycle, max joint temp < 50C",
+    "cautionReference": "SCAN-to-SCAN cycle, 50C <= max joint temp < 55C",
+    "excludeHot": "SCAN-to-SCAN cycle, max joint temp >= 55C"
+  },
+  "totals": {
+    "csvFiles": 10,
+    "rows": 39026,
+    "durationS": 3919.254,
+    "detectedScanToScanCycles": 95,
+    "normalBaselineCycles": 71,
+    "cautionReferenceCycles": 10,
+    "excludeHotCycles": 14,
+    "normalPercent": 74.7,
+    "usableWithCautionPercent": 85.3
+  },
+  "joints": {
+    "J1": {
+      "name": "Base",
+      "cycleEquivalent": {
+        "count": 71,
+        "min": 0.0042,
+        "mean": 1.357,
+        "median": 1.9425,
+        "p90": 2.0242,
+        "p95": 2.2988,
+        "p99": 3.0989,
+        "max": 3.3492,
+        "std": 0.894
+      },
+      "samples": {
+        "tempC": {
+          "count": 20163,
+          "min": 26,
+          "mean": 30.49,
+          "median": 31,
+          "p90": 32,
+          "p95": 32,
+          "p99": 32,
+          "max": 41,
+          "std": 2.04
+        },
+        "currentMa": {
+          "count": 20163,
+          "min": 0,
+          "mean": 6.22,
+          "median": 6,
+          "p90": 13,
+          "p95": 20,
+          "p99": 26,
+          "max": 208,
+          "std": 9.75
+        },
+        "loadPercent": {
+          "count": 20163,
+          "min": 0,
+          "mean": 4.32,
+          "median": 3.2,
+          "p90": 10.4,
+          "p95": 13.6,
+          "p99": 17.2,
+          "max": 49.2,
+          "std": 4.49
+        }
+      },
+      "thresholds": {
+        "tempWatchC": 45,
+        "tempCoolC": 50,
+        "tempExcludeC": 55,
+        "tempStopC": 60,
+        "currentWarnMa": 100,
+        "currentStopMa": 186,
+        "loadWarnPercent": 21.6,
+        "loadStopPercent": 33.2
+      }
+    },
+    "J2": {
+      "name": "Shoulder",
+      "cycleEquivalent": {
+        "count": 71,
+        "min": 0,
+        "mean": 0.3321,
+        "median": 0.4192,
+        "p90": 0.5867,
+        "p95": 0.6183,
+        "p99": 0.6872,
+        "max": 0.7,
+        "std": 0.2239
+      },
+      "samples": {
+        "tempC": {
+          "count": 20163,
+          "min": 27,
+          "mean": 31.23,
+          "median": 32,
+          "p90": 32,
+          "p95": 32,
+          "p99": 32,
+          "max": 48,
+          "std": 1.5
+        },
+        "currentMa": {
+          "count": 20163,
+          "min": 0,
+          "mean": 3.12,
+          "median": 0,
+          "p90": 6,
+          "p95": 13,
+          "p99": 26,
+          "max": 169,
+          "std": 8.49
+        },
+        "loadPercent": {
+          "count": 20163,
+          "min": 0,
+          "mean": 1.65,
+          "median": 0,
+          "p90": 3.6,
+          "p95": 5.6,
+          "p99": 15.2,
+          "max": 29.2,
+          "std": 2.92
+        }
+      },
+      "thresholds": {
+        "tempWatchC": 45,
+        "tempCoolC": 50,
+        "tempExcludeC": 55,
+        "tempStopC": 60,
+        "currentWarnMa": 93,
+        "currentStopMa": 186,
+        "loadWarnPercent": 13.6,
+        "loadStopPercent": 31.2
+      }
+    },
+    "J3": {
+      "name": "Elbow",
+      "cycleEquivalent": {
+        "count": 71,
+        "min": 0,
+        "mean": 0.3741,
+        "median": 0.4142,
+        "p90": 0.6667,
+        "p95": 0.7105,
+        "p99": 0.7558,
+        "max": 0.7617,
+        "std": 0.2273
+      },
+      "samples": {
+        "tempC": {
+          "count": 20163,
+          "min": 25,
+          "mean": 33.21,
+          "median": 33,
+          "p90": 39,
+          "p95": 40,
+          "p99": 42,
+          "max": 42,
+          "std": 3.66
+        },
+        "currentMa": {
+          "count": 20163,
+          "min": 0,
+          "mean": 162.54,
+          "median": 169,
+          "p90": 240,
+          "p95": 260,
+          "p99": 741,
+          "max": 1398,
+          "std": 121.09
+        },
+        "loadPercent": {
+          "count": 20163,
+          "min": 0,
+          "mean": 19.91,
+          "median": 22.4,
+          "p90": 26.4,
+          "p95": 27.2,
+          "p99": 53.6,
+          "max": 72.8,
+          "std": 8.94
+        }
+      },
+      "thresholds": {
+        "tempWatchC": 45,
+        "tempCoolC": 50,
+        "tempExcludeC": 55,
+        "tempStopC": 60,
+        "currentWarnMa": 351,
+        "currentStopMa": 1186,
+        "loadWarnPercent": 35.2,
+        "loadStopPercent": 69.7
+      }
+    },
+    "J4": {
+      "name": "Wrist Pitch",
+      "cycleEquivalent": {
+        "count": 71,
+        "min": 0,
+        "mean": 0.4957,
+        "median": 0.5792,
+        "p90": 0.7608,
+        "p95": 0.8225,
+        "p99": 0.8772,
+        "max": 0.9017,
+        "std": 0.2611
+      },
+      "samples": {
+        "tempC": {
+          "count": 20163,
+          "min": 28,
+          "mean": 39.4,
+          "median": 40,
+          "p90": 45,
+          "p95": 47,
+          "p99": 49,
+          "max": 49,
+          "std": 4.26
+        },
+        "currentMa": {
+          "count": 20163,
+          "min": 0,
+          "mean": 308.08,
+          "median": 390,
+          "p90": 644,
+          "p95": 682,
+          "p99": 774,
+          "max": 994,
+          "std": 255.28
+        },
+        "loadPercent": {
+          "count": 20163,
+          "min": 0,
+          "mean": 27.16,
+          "median": 34.4,
+          "p90": 47.2,
+          "p95": 48,
+          "p99": 52,
+          "max": 61.2,
+          "std": 16.23
+        }
+      },
+      "thresholds": {
+        "tempWatchC": 45,
+        "tempCoolC": 50,
+        "tempExcludeC": 55,
+        "tempStopC": 60,
+        "currentWarnMa": 921,
+        "currentStopMa": 1238,
+        "loadWarnPercent": 57.6,
+        "loadStopPercent": 68
+      }
+    },
+    "J5": {
+      "name": "Wrist Roll",
+      "cycleEquivalent": {
+        "count": 71,
+        "min": 0,
+        "mean": 0.9453,
+        "median": 0.8258,
+        "p90": 1.4283,
+        "p95": 1.457,
+        "p99": 1.4745,
+        "max": 1.4792,
+        "std": 0.3702
+      },
+      "samples": {
+        "tempC": {
+          "count": 20163,
+          "min": 28,
+          "mean": 33.3,
+          "median": 33,
+          "p90": 35,
+          "p95": 36,
+          "p99": 37,
+          "max": 49,
+          "std": 1.96
+        },
+        "currentMa": {
+          "count": 20163,
+          "min": 0,
+          "mean": 102.42,
+          "median": 110,
+          "p90": 188,
+          "p95": 208,
+          "p99": 240,
+          "max": 325,
+          "std": 68.68
+        },
+        "loadPercent": {
+          "count": 20163,
+          "min": 0,
+          "mean": 16.7,
+          "median": 16.8,
+          "p90": 24,
+          "p95": 25.6,
+          "p99": 34,
+          "max": 40,
+          "std": 7.13
+        }
+      },
+      "thresholds": {
+        "tempWatchC": 45,
+        "tempCoolC": 50,
+        "tempExcludeC": 55,
+        "tempStopC": 60,
+        "currentWarnMa": 288,
+        "currentStopMa": 400,
+        "loadWarnPercent": 33.6,
+        "loadStopPercent": 50
+      }
+    },
+    "J6": {
+      "name": "End Assist",
+      "cycleEquivalent": {
+        "count": 71,
+        "min": 0,
+        "mean": 0.4198,
+        "median": 0.2833,
+        "p90": 1.1683,
+        "p95": 1.3933,
+        "p99": 1.466,
+        "max": 1.4858,
+        "std": 0.4643
+      },
+      "samples": {
+        "tempC": {
+          "count": 20163,
+          "min": 23,
+          "mean": 29.23,
+          "median": 30,
+          "p90": 31,
+          "p95": 31,
+          "p99": 31,
+          "max": 48,
+          "std": 2.39
+        },
+        "currentMa": {
+          "count": 20163,
+          "min": 0,
+          "mean": 4.62,
+          "median": 0,
+          "p90": 6,
+          "p95": 13,
+          "p99": 32,
+          "max": 254,
+          "std": 11.15
+        },
+        "loadPercent": {
+          "count": 20163,
+          "min": 0,
+          "mean": 3.31,
+          "median": 2.4,
+          "p90": 4.8,
+          "p95": 9.6,
+          "p99": 17.2,
+          "max": 28.4,
+          "std": 2.91
+        }
+      },
+      "thresholds": {
+        "tempWatchC": 45,
+        "tempCoolC": 50,
+        "tempExcludeC": 55,
+        "tempStopC": 60,
+        "currentWarnMa": 93,
+        "currentStopMa": 192,
+        "loadWarnPercent": 17.6,
+        "loadStopPercent": 33.2
+      }
+    }
+  },
+  "cyclePopulation": {
+    "durationS": {
+      "count": 71,
+      "min": 10.734,
+      "mean": 28.422,
+      "median": 22.587,
+      "p90": 52.199,
+      "p95": 68.394,
+      "p99": 90.485,
+      "max": 103.854,
+      "std": 18.981
+    },
+    "totalEquivalentCycles": {
+      "count": 71,
+      "min": 0.905,
+      "mean": 3.9239,
+      "median": 3.5042,
+      "p90": 6.2117,
+      "p95": 6.4433,
+      "p99": 6.721,
+      "max": 6.7333,
+      "std": 1.6724
+    },
+    "maxTempC": {
+      "count": 71,
+      "min": 34,
+      "mean": 41.93,
+      "median": 41,
+      "p90": 48,
+      "p95": 48.5,
+      "p99": 49,
+      "max": 49,
+      "std": 3.96
+    }
+  },
+  "fileSummaries": [
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_10_2026-06-12T07-20-25-241Z.csv",
+      "rows": 6786,
+      "durationS": 681.054,
+      "scanWindowCount": 10,
+      "total": 9,
+      "normal": 6,
+      "caution": 1,
+      "excludeHot": 2,
+      "normalPercent": 66.7
+    },
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_3_2026-06-13T06-49-54-793Z.csv",
+      "rows": 3142,
+      "durationS": 315.433,
+      "scanWindowCount": 10,
+      "total": 9,
+      "normal": 7,
+      "caution": 0,
+      "excludeHot": 2,
+      "normalPercent": 77.8
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T07-35-11-809Z.csv",
+      "rows": 911,
+      "durationS": 91.414,
+      "scanWindowCount": 0,
+      "total": 0,
+      "normal": 0,
+      "caution": 0,
+      "excludeHot": 0,
+      "normalPercent": null
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T07-39-11-728Z.csv",
+      "rows": 233,
+      "durationS": 23.348,
+      "scanWindowCount": 1,
+      "total": 0,
+      "normal": 0,
+      "caution": 0,
+      "excludeHot": 0,
+      "normalPercent": null
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T07-50-12-363Z.csv",
+      "rows": 4889,
+      "durationS": 490.712,
+      "scanWindowCount": 14,
+      "total": 13,
+      "normal": 11,
+      "caution": 2,
+      "excludeHot": 0,
+      "normalPercent": 84.6
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T08-34-16-981Z.csv",
+      "rows": 4934,
+      "durationS": 495.254,
+      "scanWindowCount": 14,
+      "total": 13,
+      "normal": 11,
+      "caution": 2,
+      "excludeHot": 0,
+      "normalPercent": 84.6
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-06-40-370Z.csv",
+      "rows": 2786,
+      "durationS": 279.697,
+      "scanWindowCount": 14,
+      "total": 13,
+      "normal": 9,
+      "caution": 2,
+      "excludeHot": 2,
+      "normalPercent": 69.2
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-35-18-532Z.csv",
+      "rows": 1300,
+      "durationS": 130.436,
+      "scanWindowCount": 4,
+      "total": 3,
+      "normal": 2,
+      "caution": 0,
+      "excludeHot": 1,
+      "normalPercent": 66.7
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "rows": 8599,
+      "durationS": 864.496,
+      "scanWindowCount": 24,
+      "total": 23,
+      "normal": 18,
+      "caution": 2,
+      "excludeHot": 3,
+      "normalPercent": 78.3
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T14-12-36-018Z.csv",
+      "rows": 5446,
+      "durationS": 547.41,
+      "scanWindowCount": 13,
+      "total": 12,
+      "normal": 7,
+      "caution": 1,
+      "excludeHot": 4,
+      "normalPercent": 58.3
+    }
+  ],
+  "selectedNormalCycles": [
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_10_2026-06-12T07-20-25-241Z.csv",
+      "cycleNo": 1,
+      "durationS": 52.199,
+      "maxTempC": 35,
+      "maxTempJoint": "J6",
+      "totalEquivalentCycles": 6.2117,
+      "startScanMaxDiffDeg": 3.3,
+      "endScanMaxDiffDeg": 3.9,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9858,
+          "maxTempC": 31,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 12
+        },
+        "J2": {
+          "equivalentCycles": 0.5783,
+          "maxTempC": 28,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 5.2
+        },
+        "J3": {
+          "equivalentCycles": 0.6517,
+          "maxTempC": 27,
+          "p95CurrentMa": 273,
+          "p95LoadPercent": 27.2
+        },
+        "J4": {
+          "equivalentCycles": 0.5708,
+          "maxTempC": 30,
+          "p95CurrentMa": 585,
+          "p95LoadPercent": 41.6
+        },
+        "J5": {
+          "equivalentCycles": 1.4492,
+          "maxTempC": 34,
+          "p95CurrentMa": 228,
+          "p95LoadPercent": 26.4
+        },
+        "J6": {
+          "equivalentCycles": 0.9758,
+          "maxTempC": 35,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 11.6
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_10_2026-06-12T07-20-25-241Z.csv",
+      "cycleNo": 2,
+      "durationS": 66.634,
+      "maxTempC": 38,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 5.6008,
+      "startScanMaxDiffDeg": 3.9,
+      "endScanMaxDiffDeg": 3.5,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.0183,
+          "maxTempC": 26,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 12.4
+        },
+        "J2": {
+          "equivalentCycles": 0.5592,
+          "maxTempC": 28,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4
+        },
+        "J3": {
+          "equivalentCycles": 0.6442,
+          "maxTempC": 31,
+          "p95CurrentMa": 266,
+          "p95LoadPercent": 27.2
+        },
+        "J4": {
+          "equivalentCycles": 0.66,
+          "maxTempC": 33,
+          "p95CurrentMa": 566,
+          "p95LoadPercent": 44.4
+        },
+        "J5": {
+          "equivalentCycles": 1.4558,
+          "maxTempC": 38,
+          "p95CurrentMa": 221,
+          "p95LoadPercent": 24.8
+        },
+        "J6": {
+          "equivalentCycles": 0.2633,
+          "maxTempC": 37,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_10_2026-06-12T07-20-25-241Z.csv",
+      "cycleNo": 3,
+      "durationS": 70.155,
+      "maxTempC": 35,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 6.5642,
+      "startScanMaxDiffDeg": 3.5,
+      "endScanMaxDiffDeg": 4.2,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9917,
+          "maxTempC": 26,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 11.2
+        },
+        "J2": {
+          "equivalentCycles": 0.4875,
+          "maxTempC": 29,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        },
+        "J3": {
+          "equivalentCycles": 0.5467,
+          "maxTempC": 30,
+          "p95CurrentMa": 273,
+          "p95LoadPercent": 27.2
+        },
+        "J4": {
+          "equivalentCycles": 0.7167,
+          "maxTempC": 35,
+          "p95CurrentMa": 488,
+          "p95LoadPercent": 42.8
+        },
+        "J5": {
+          "equivalentCycles": 1.4725,
+          "maxTempC": 35,
+          "p95CurrentMa": 228,
+          "p95LoadPercent": 24.8
+        },
+        "J6": {
+          "equivalentCycles": 1.3492,
+          "maxTempC": 29,
+          "p95CurrentMa": 58,
+          "p95LoadPercent": 12.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_10_2026-06-12T07-20-25-241Z.csv",
+      "cycleNo": 4,
+      "durationS": 42.38,
+      "maxTempC": 40,
+      "maxTempJoint": "J6",
+      "totalEquivalentCycles": 5.5525,
+      "startScanMaxDiffDeg": 4.2,
+      "endScanMaxDiffDeg": 4,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9617,
+          "maxTempC": 27,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 12
+        },
+        "J2": {
+          "equivalentCycles": 0.5208,
+          "maxTempC": 28,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 5.2
+        },
+        "J3": {
+          "equivalentCycles": 0.5825,
+          "maxTempC": 31,
+          "p95CurrentMa": 299,
+          "p95LoadPercent": 28
+        },
+        "J4": {
+          "equivalentCycles": 0.6567,
+          "maxTempC": 36,
+          "p95CurrentMa": 630,
+          "p95LoadPercent": 44
+        },
+        "J5": {
+          "equivalentCycles": 1.4792,
+          "maxTempC": 33,
+          "p95CurrentMa": 228,
+          "p95LoadPercent": 26
+        },
+        "J6": {
+          "equivalentCycles": 0.3517,
+          "maxTempC": 40,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_10_2026-06-12T07-20-25-241Z.csv",
+      "cycleNo": 5,
+      "durationS": 16.438,
+      "maxTempC": 37,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 1.5242,
+      "startScanMaxDiffDeg": 4,
+      "endScanMaxDiffDeg": 5,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.0258,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        },
+        "J2": {
+          "equivalentCycles": 0,
+          "maxTempC": 28,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 4.8
+        },
+        "J3": {
+          "equivalentCycles": 0.0742,
+          "maxTempC": 31,
+          "p95CurrentMa": 273,
+          "p95LoadPercent": 27.2
+        },
+        "J4": {
+          "equivalentCycles": 0.64,
+          "maxTempC": 37,
+          "p95CurrentMa": 728,
+          "p95LoadPercent": 48
+        },
+        "J5": {
+          "equivalentCycles": 0.7842,
+          "maxTempC": 33,
+          "p95CurrentMa": 182,
+          "p95LoadPercent": 27.6
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 25,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_10_2026-06-12T07-20-25-241Z.csv",
+      "cycleNo": 7,
+      "durationS": 49.787,
+      "maxTempC": 48,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 6.3225,
+      "startScanMaxDiffDeg": 4.6,
+      "endScanMaxDiffDeg": 5.5,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9708,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 12.4
+        },
+        "J2": {
+          "equivalentCycles": 0.7,
+          "maxTempC": 30,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 6
+        },
+        "J3": {
+          "equivalentCycles": 0.7525,
+          "maxTempC": 34,
+          "p95CurrentMa": 325,
+          "p95LoadPercent": 28.8
+        },
+        "J4": {
+          "equivalentCycles": 0.3658,
+          "maxTempC": 48,
+          "p95CurrentMa": 741,
+          "p95LoadPercent": 51.2
+        },
+        "J5": {
+          "equivalentCycles": 1.355,
+          "maxTempC": 46,
+          "p95CurrentMa": 234,
+          "p95LoadPercent": 27.2
+        },
+        "J6": {
+          "equivalentCycles": 1.1783,
+          "maxTempC": 26,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 12
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_3_2026-06-13T06-49-54-793Z.csv",
+      "cycleNo": 1,
+      "durationS": 18.169,
+      "maxTempC": 42,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 2.1083,
+      "startScanMaxDiffDeg": 3.3,
+      "endScanMaxDiffDeg": 3.5,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.0242,
+          "maxTempC": 28,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 4.8
+        },
+        "J2": {
+          "equivalentCycles": 0,
+          "maxTempC": 30,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 4
+        },
+        "J3": {
+          "equivalentCycles": 0.085,
+          "maxTempC": 28,
+          "p95CurrentMa": 156,
+          "p95LoadPercent": 18.4
+        },
+        "J4": {
+          "equivalentCycles": 0.6667,
+          "maxTempC": 36,
+          "p95CurrentMa": 546,
+          "p95LoadPercent": 42.4
+        },
+        "J5": {
+          "equivalentCycles": 0.8008,
+          "maxTempC": 42,
+          "p95CurrentMa": 188,
+          "p95LoadPercent": 26
+        },
+        "J6": {
+          "equivalentCycles": 0.5317,
+          "maxTempC": 28,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 12
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_3_2026-06-13T06-49-54-793Z.csv",
+      "cycleNo": 3,
+      "durationS": 18.774,
+      "maxTempC": 38,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 2.265,
+      "startScanMaxDiffDeg": 5.1,
+      "endScanMaxDiffDeg": 4.5,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.0717,
+          "maxTempC": 28,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4.8
+        },
+        "J2": {
+          "equivalentCycles": 0.0292,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        },
+        "J3": {
+          "equivalentCycles": 0.1158,
+          "maxTempC": 29,
+          "p95CurrentMa": 260,
+          "p95LoadPercent": 25.6
+        },
+        "J4": {
+          "equivalentCycles": 0.6225,
+          "maxTempC": 38,
+          "p95CurrentMa": 578,
+          "p95LoadPercent": 42.4
+        },
+        "J5": {
+          "equivalentCycles": 0.7992,
+          "maxTempC": 34,
+          "p95CurrentMa": 202,
+          "p95LoadPercent": 25.6
+        },
+        "J6": {
+          "equivalentCycles": 0.6267,
+          "maxTempC": 28,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 12
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_3_2026-06-13T06-49-54-793Z.csv",
+      "cycleNo": 4,
+      "durationS": 26.407,
+      "maxTempC": 38,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.5533,
+      "startScanMaxDiffDeg": 4.5,
+      "endScanMaxDiffDeg": 4.1,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9633,
+          "maxTempC": 29,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 12.8
+        },
+        "J2": {
+          "equivalentCycles": 0.4183,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 6.8
+        },
+        "J3": {
+          "equivalentCycles": 0.4258,
+          "maxTempC": 30,
+          "p95CurrentMa": 280,
+          "p95LoadPercent": 26.4
+        },
+        "J4": {
+          "equivalentCycles": 0.1375,
+          "maxTempC": 38,
+          "p95CurrentMa": 546,
+          "p95LoadPercent": 41.6
+        },
+        "J5": {
+          "equivalentCycles": 0.6083,
+          "maxTempC": 33,
+          "p95CurrentMa": 214,
+          "p95LoadPercent": 24
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 27,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_3_2026-06-13T06-49-54-793Z.csv",
+      "cycleNo": 5,
+      "durationS": 39.667,
+      "maxTempC": 46,
+      "maxTempJoint": "J2",
+      "totalEquivalentCycles": 5.7983,
+      "startScanMaxDiffDeg": 4.1,
+      "endScanMaxDiffDeg": 4.5,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9717,
+          "maxTempC": 30,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 11.6
+        },
+        "J2": {
+          "equivalentCycles": 0.5983,
+          "maxTempC": 46,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 8.4
+        },
+        "J3": {
+          "equivalentCycles": 0.6667,
+          "maxTempC": 30,
+          "p95CurrentMa": 286,
+          "p95LoadPercent": 28
+        },
+        "J4": {
+          "equivalentCycles": 0.5317,
+          "maxTempC": 40,
+          "p95CurrentMa": 572,
+          "p95LoadPercent": 43.2
+        },
+        "J5": {
+          "equivalentCycles": 1.4092,
+          "maxTempC": 35,
+          "p95CurrentMa": 221,
+          "p95LoadPercent": 26
+        },
+        "J6": {
+          "equivalentCycles": 0.6208,
+          "maxTempC": 27,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 9.2
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_3_2026-06-13T06-49-54-793Z.csv",
+      "cycleNo": 6,
+      "durationS": 10.734,
+      "maxTempC": 40,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 1.0042,
+      "startScanMaxDiffDeg": 4.5,
+      "endScanMaxDiffDeg": 4.2,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.0042,
+          "maxTempC": 29,
+          "p95CurrentMa": 107.9,
+          "p95LoadPercent": 27.72
+        },
+        "J2": {
+          "equivalentCycles": 0,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        },
+        "J3": {
+          "equivalentCycles": 0,
+          "maxTempC": 31,
+          "p95CurrentMa": 247,
+          "p95LoadPercent": 24.8
+        },
+        "J4": {
+          "equivalentCycles": 0,
+          "maxTempC": 40,
+          "p95CurrentMa": 547.8,
+          "p95LoadPercent": 41.6
+        },
+        "J5": {
+          "equivalentCycles": 0,
+          "maxTempC": 33,
+          "p95CurrentMa": 190.45,
+          "p95LoadPercent": 22.4
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 27,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_3_2026-06-13T06-49-54-793Z.csv",
+      "cycleNo": 7,
+      "durationS": 19.07,
+      "maxTempC": 41,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 0.905,
+      "startScanMaxDiffDeg": 4.2,
+      "endScanMaxDiffDeg": 4,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.8967,
+          "maxTempC": 29,
+          "p95CurrentMa": 72,
+          "p95LoadPercent": 20
+        },
+        "J2": {
+          "equivalentCycles": 0,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.8
+        },
+        "J3": {
+          "equivalentCycles": 0,
+          "maxTempC": 31,
+          "p95CurrentMa": 221,
+          "p95LoadPercent": 24
+        },
+        "J4": {
+          "equivalentCycles": 0,
+          "maxTempC": 41,
+          "p95CurrentMa": 442,
+          "p95LoadPercent": 36.8
+        },
+        "J5": {
+          "equivalentCycles": 0.0083,
+          "maxTempC": 34,
+          "p95CurrentMa": 195,
+          "p95LoadPercent": 22.4
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 27,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_3_2026-06-13T06-49-54-793Z.csv",
+      "cycleNo": 8,
+      "durationS": 18.78,
+      "maxTempC": 41,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 2.5933,
+      "startScanMaxDiffDeg": 4,
+      "endScanMaxDiffDeg": 4.8,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.03,
+          "maxTempC": 29,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.6
+        },
+        "J2": {
+          "equivalentCycles": 0.2083,
+          "maxTempC": 30,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 6
+        },
+        "J3": {
+          "equivalentCycles": 0.2925,
+          "maxTempC": 31,
+          "p95CurrentMa": 234,
+          "p95LoadPercent": 24
+        },
+        "J4": {
+          "equivalentCycles": 0.3833,
+          "maxTempC": 41,
+          "p95CurrentMa": 624,
+          "p95LoadPercent": 48.4
+        },
+        "J5": {
+          "equivalentCycles": 0.7825,
+          "maxTempC": 34,
+          "p95CurrentMa": 176,
+          "p95LoadPercent": 26.8
+        },
+        "J6": {
+          "equivalentCycles": 0.8967,
+          "maxTempC": 35,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 11.6
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T07-50-12-363Z.csv",
+      "cycleNo": 1,
+      "durationS": 32.024,
+      "maxTempC": 38,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 6.0017,
+      "startScanMaxDiffDeg": 3.3,
+      "endScanMaxDiffDeg": 5.6,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.005,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 16.8
+        },
+        "J2": {
+          "equivalentCycles": 0.4867,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 4.8
+        },
+        "J3": {
+          "equivalentCycles": 0.4383,
+          "maxTempC": 32,
+          "p95CurrentMa": 162,
+          "p95LoadPercent": 20
+        },
+        "J4": {
+          "equivalentCycles": 0.8667,
+          "maxTempC": 38,
+          "p95CurrentMa": 520,
+          "p95LoadPercent": 39.2
+        },
+        "J5": {
+          "equivalentCycles": 1.4708,
+          "maxTempC": 37,
+          "p95CurrentMa": 208,
+          "p95LoadPercent": 28.8
+        },
+        "J6": {
+          "equivalentCycles": 0.7342,
+          "maxTempC": 38,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 14.8
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T07-50-12-363Z.csv",
+      "cycleNo": 2,
+      "durationS": 33.425,
+      "maxTempC": 38,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 6.0675,
+      "startScanMaxDiffDeg": 5.6,
+      "endScanMaxDiffDeg": 3.8,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.98,
+          "maxTempC": 36,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 15.6
+        },
+        "J2": {
+          "equivalentCycles": 0.4733,
+          "maxTempC": 33,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 6.8
+        },
+        "J3": {
+          "equivalentCycles": 0.4525,
+          "maxTempC": 32,
+          "p95CurrentMa": 195,
+          "p95LoadPercent": 21.6
+        },
+        "J4": {
+          "equivalentCycles": 0.835,
+          "maxTempC": 38,
+          "p95CurrentMa": 455,
+          "p95LoadPercent": 36.8
+        },
+        "J5": {
+          "equivalentCycles": 1.4192,
+          "maxTempC": 37,
+          "p95CurrentMa": 221,
+          "p95LoadPercent": 29.2
+        },
+        "J6": {
+          "equivalentCycles": 0.9075,
+          "maxTempC": 30,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 13.6
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T07-50-12-363Z.csv",
+      "cycleNo": 3,
+      "durationS": 36.037,
+      "maxTempC": 39,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 5.78,
+      "startScanMaxDiffDeg": 3.8,
+      "endScanMaxDiffDeg": 3.9,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9775,
+          "maxTempC": 31,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 15.66
+        },
+        "J2": {
+          "equivalentCycles": 0.6067,
+          "maxTempC": 32,
+          "p95CurrentMa": 6.35,
+          "p95LoadPercent": 4.5
+        },
+        "J3": {
+          "equivalentCycles": 0.6817,
+          "maxTempC": 33,
+          "p95CurrentMa": 208,
+          "p95LoadPercent": 21.6
+        },
+        "J4": {
+          "equivalentCycles": 0.5542,
+          "maxTempC": 39,
+          "p95CurrentMa": 468.3,
+          "p95LoadPercent": 36
+        },
+        "J5": {
+          "equivalentCycles": 1.4067,
+          "maxTempC": 34,
+          "p95CurrentMa": 208.3,
+          "p95LoadPercent": 27.66
+        },
+        "J6": {
+          "equivalentCycles": 0.5533,
+          "maxTempC": 30,
+          "p95CurrentMa": 6.35,
+          "p95LoadPercent": 4.72
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T07-50-12-363Z.csv",
+      "cycleNo": 4,
+      "durationS": 32.322,
+      "maxTempC": 40,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 5.4958,
+      "startScanMaxDiffDeg": 3.9,
+      "endScanMaxDiffDeg": 4,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9883,
+          "maxTempC": 31,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 16.4
+        },
+        "J2": {
+          "equivalentCycles": 0.5425,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 8.8
+        },
+        "J3": {
+          "equivalentCycles": 0.6142,
+          "maxTempC": 33,
+          "p95CurrentMa": 214,
+          "p95LoadPercent": 23.2
+        },
+        "J4": {
+          "equivalentCycles": 0.6367,
+          "maxTempC": 40,
+          "p95CurrentMa": 481,
+          "p95LoadPercent": 37.6
+        },
+        "J5": {
+          "equivalentCycles": 1.4308,
+          "maxTempC": 34,
+          "p95CurrentMa": 214,
+          "p95LoadPercent": 28.4
+        },
+        "J6": {
+          "equivalentCycles": 0.2833,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T07-50-12-363Z.csv",
+      "cycleNo": 5,
+      "durationS": 13.451,
+      "maxTempC": 43,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 2.9025,
+      "startScanMaxDiffDeg": 4,
+      "endScanMaxDiffDeg": 4.6,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.1108,
+          "maxTempC": 31,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 6.8
+        },
+        "J2": {
+          "equivalentCycles": 0.135,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.6
+        },
+        "J3": {
+          "equivalentCycles": 0.2175,
+          "maxTempC": 33,
+          "p95CurrentMa": 208,
+          "p95LoadPercent": 23.2
+        },
+        "J4": {
+          "equivalentCycles": 0.4875,
+          "maxTempC": 40,
+          "p95CurrentMa": 488,
+          "p95LoadPercent": 37.6
+        },
+        "J5": {
+          "equivalentCycles": 0.8125,
+          "maxTempC": 43,
+          "p95CurrentMa": 228,
+          "p95LoadPercent": 29.6
+        },
+        "J6": {
+          "equivalentCycles": 1.1392,
+          "maxTempC": 39,
+          "p95CurrentMa": 39,
+          "p95LoadPercent": 17.6
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T07-50-12-363Z.csv",
+      "cycleNo": 6,
+      "durationS": 26.199,
+      "maxTempC": 41,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.5158,
+      "startScanMaxDiffDeg": 4.6,
+      "endScanMaxDiffDeg": 4.1,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9575,
+          "maxTempC": 31,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 16.4
+        },
+        "J2": {
+          "equivalentCycles": 0.4183,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.8
+        },
+        "J3": {
+          "equivalentCycles": 0.4108,
+          "maxTempC": 34,
+          "p95CurrentMa": 221,
+          "p95LoadPercent": 23.2
+        },
+        "J4": {
+          "equivalentCycles": 0.1183,
+          "maxTempC": 41,
+          "p95CurrentMa": 520,
+          "p95LoadPercent": 39.2
+        },
+        "J5": {
+          "equivalentCycles": 0.6108,
+          "maxTempC": 34,
+          "p95CurrentMa": 228,
+          "p95LoadPercent": 24.8
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T07-50-12-363Z.csv",
+      "cycleNo": 7,
+      "durationS": 13.451,
+      "maxTempC": 41,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.1175,
+      "startScanMaxDiffDeg": 4.1,
+      "endScanMaxDiffDeg": 5.8,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.0408,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.6
+        },
+        "J2": {
+          "equivalentCycles": 0.205,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 4
+        },
+        "J3": {
+          "equivalentCycles": 0.2867,
+          "maxTempC": 34,
+          "p95CurrentMa": 221,
+          "p95LoadPercent": 23.2
+        },
+        "J4": {
+          "equivalentCycles": 0.38,
+          "maxTempC": 41,
+          "p95CurrentMa": 474,
+          "p95LoadPercent": 40.8
+        },
+        "J5": {
+          "equivalentCycles": 0.7675,
+          "maxTempC": 38,
+          "p95CurrentMa": 221,
+          "p95LoadPercent": 32
+        },
+        "J6": {
+          "equivalentCycles": 1.4375,
+          "maxTempC": 30,
+          "p95CurrentMa": 208,
+          "p95LoadPercent": 22.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T07-50-12-363Z.csv",
+      "cycleNo": 8,
+      "durationS": 20.773,
+      "maxTempC": 42,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.4983,
+      "startScanMaxDiffDeg": 5.8,
+      "endScanMaxDiffDeg": 4.6,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9425,
+          "maxTempC": 36,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 16.8
+        },
+        "J2": {
+          "equivalentCycles": 0.4167,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 14.4
+        },
+        "J3": {
+          "equivalentCycles": 0.4108,
+          "maxTempC": 34,
+          "p95CurrentMa": 228,
+          "p95LoadPercent": 24
+        },
+        "J4": {
+          "equivalentCycles": 0.1175,
+          "maxTempC": 42,
+          "p95CurrentMa": 598,
+          "p95LoadPercent": 42.4
+        },
+        "J5": {
+          "equivalentCycles": 0.6108,
+          "maxTempC": 36,
+          "p95CurrentMa": 228,
+          "p95LoadPercent": 27.4
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 33,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T07-50-12-363Z.csv",
+      "cycleNo": 9,
+      "durationS": 36.638,
+      "maxTempC": 49,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 5.6883,
+      "startScanMaxDiffDeg": 4.6,
+      "endScanMaxDiffDeg": 4.9,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.0133,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 16
+        },
+        "J2": {
+          "equivalentCycles": 0.6817,
+          "maxTempC": 48,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 6.4
+        },
+        "J3": {
+          "equivalentCycles": 0.7533,
+          "maxTempC": 35,
+          "p95CurrentMa": 214,
+          "p95LoadPercent": 23.2
+        },
+        "J4": {
+          "equivalentCycles": 0.4308,
+          "maxTempC": 49,
+          "p95CurrentMa": 572,
+          "p95LoadPercent": 42.4
+        },
+        "J5": {
+          "equivalentCycles": 1.3675,
+          "maxTempC": 42,
+          "p95CurrentMa": 208,
+          "p95LoadPercent": 25.2
+        },
+        "J6": {
+          "equivalentCycles": 0.4417,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T07-50-12-363Z.csv",
+      "cycleNo": 10,
+      "durationS": 30.012,
+      "maxTempC": 47,
+      "maxTempJoint": "J6",
+      "totalEquivalentCycles": 5.4508,
+      "startScanMaxDiffDeg": 4.9,
+      "endScanMaxDiffDeg": 3.9,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9675,
+          "maxTempC": 31,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 16.4
+        },
+        "J2": {
+          "equivalentCycles": 0.4458,
+          "maxTempC": 32,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 7.2
+        },
+        "J3": {
+          "equivalentCycles": 0.455,
+          "maxTempC": 35,
+          "p95CurrentMa": 234,
+          "p95LoadPercent": 23.2
+        },
+        "J4": {
+          "equivalentCycles": 0.81,
+          "maxTempC": 44,
+          "p95CurrentMa": 670,
+          "p95LoadPercent": 47.2
+        },
+        "J5": {
+          "equivalentCycles": 1.4275,
+          "maxTempC": 36,
+          "p95CurrentMa": 221,
+          "p95LoadPercent": 28.4
+        },
+        "J6": {
+          "equivalentCycles": 0.345,
+          "maxTempC": 47,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 7.6
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T07-50-12-363Z.csv",
+      "cycleNo": 12,
+      "durationS": 22.587,
+      "maxTempC": 45,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.5317,
+      "startScanMaxDiffDeg": 4.7,
+      "endScanMaxDiffDeg": 4.5,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9683,
+          "maxTempC": 31,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 17.8
+        },
+        "J2": {
+          "equivalentCycles": 0.4183,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        },
+        "J3": {
+          "equivalentCycles": 0.4083,
+          "maxTempC": 36,
+          "p95CurrentMa": 240,
+          "p95LoadPercent": 24
+        },
+        "J4": {
+          "equivalentCycles": 0.1167,
+          "maxTempC": 45,
+          "p95CurrentMa": 754.5,
+          "p95LoadPercent": 51
+        },
+        "J5": {
+          "equivalentCycles": 0.62,
+          "maxTempC": 36,
+          "p95CurrentMa": 195,
+          "p95LoadPercent": 28.9
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T08-34-16-981Z.csv",
+      "cycleNo": 1,
+      "durationS": 52.594,
+      "maxTempC": 39,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 6.7333,
+      "startScanMaxDiffDeg": 3.3,
+      "endScanMaxDiffDeg": 4,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 3.3492,
+          "maxTempC": 31,
+          "p95CurrentMa": 32,
+          "p95LoadPercent": 18
+        },
+        "J2": {
+          "equivalentCycles": 0.4842,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4.8
+        },
+        "J3": {
+          "equivalentCycles": 0.5792,
+          "maxTempC": 30,
+          "p95CurrentMa": 188,
+          "p95LoadPercent": 20.8
+        },
+        "J4": {
+          "equivalentCycles": 0.7117,
+          "maxTempC": 39,
+          "p95CurrentMa": 494,
+          "p95LoadPercent": 37.6
+        },
+        "J5": {
+          "equivalentCycles": 1.4583,
+          "maxTempC": 35,
+          "p95CurrentMa": 188,
+          "p95LoadPercent": 22.4
+        },
+        "J6": {
+          "equivalentCycles": 0.1508,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T08-34-16-981Z.csv",
+      "cycleNo": 2,
+      "durationS": 12.854,
+      "maxTempC": 40,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 2.6117,
+      "startScanMaxDiffDeg": 4,
+      "endScanMaxDiffDeg": 5.9,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.535,
+          "maxTempC": 31,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 12.8
+        },
+        "J2": {
+          "equivalentCycles": 0.1075,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 5.6
+        },
+        "J3": {
+          "equivalentCycles": 0.0208,
+          "maxTempC": 30,
+          "p95CurrentMa": 150,
+          "p95LoadPercent": 19.2
+        },
+        "J4": {
+          "equivalentCycles": 0.75,
+          "maxTempC": 40,
+          "p95CurrentMa": 500,
+          "p95LoadPercent": 40
+        },
+        "J5": {
+          "equivalentCycles": 0.8367,
+          "maxTempC": 35,
+          "p95CurrentMa": 234,
+          "p95LoadPercent": 34
+        },
+        "J6": {
+          "equivalentCycles": 0.3617,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 9.6
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T08-34-16-981Z.csv",
+      "cycleNo": 3,
+      "durationS": 17.172,
+      "maxTempC": 40,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.0192,
+      "startScanMaxDiffDeg": 5.9,
+      "endScanMaxDiffDeg": 4.1,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.4383,
+          "maxTempC": 31,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 16
+        },
+        "J2": {
+          "equivalentCycles": 0.4167,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 12
+        },
+        "J3": {
+          "equivalentCycles": 0.4208,
+          "maxTempC": 30,
+          "p95CurrentMa": 182,
+          "p95LoadPercent": 21.2
+        },
+        "J4": {
+          "equivalentCycles": 0.1358,
+          "maxTempC": 40,
+          "p95CurrentMa": 507,
+          "p95LoadPercent": 38.4
+        },
+        "J5": {
+          "equivalentCycles": 0.6075,
+          "maxTempC": 35,
+          "p95CurrentMa": 182,
+          "p95LoadPercent": 21.6
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T08-34-16-981Z.csv",
+      "cycleNo": 4,
+      "durationS": 12.242,
+      "maxTempC": 40,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 1.8883,
+      "startScanMaxDiffDeg": 4.1,
+      "endScanMaxDiffDeg": 5.5,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.3242,
+          "maxTempC": 31,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10
+        },
+        "J2": {
+          "equivalentCycles": 0.0125,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 6.4
+        },
+        "J3": {
+          "equivalentCycles": 0.0633,
+          "maxTempC": 31,
+          "p95CurrentMa": 208,
+          "p95LoadPercent": 22.4
+        },
+        "J4": {
+          "equivalentCycles": 0.6525,
+          "maxTempC": 40,
+          "p95CurrentMa": 520,
+          "p95LoadPercent": 44.8
+        },
+        "J5": {
+          "equivalentCycles": 0.8358,
+          "maxTempC": 35,
+          "p95CurrentMa": 188,
+          "p95LoadPercent": 27.2
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T08-34-16-981Z.csv",
+      "cycleNo": 5,
+      "durationS": 20.179,
+      "maxTempC": 41,
+      "maxTempJoint": "J1",
+      "totalEquivalentCycles": 3.6767,
+      "startScanMaxDiffDeg": 5.5,
+      "endScanMaxDiffDeg": 5.5,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.0792,
+          "maxTempC": 41,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 16.8
+        },
+        "J2": {
+          "equivalentCycles": 0.4175,
+          "maxTempC": 41,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 13.6
+        },
+        "J3": {
+          "equivalentCycles": 0.4108,
+          "maxTempC": 31,
+          "p95CurrentMa": 221,
+          "p95LoadPercent": 23.2
+        },
+        "J4": {
+          "equivalentCycles": 0.135,
+          "maxTempC": 41,
+          "p95CurrentMa": 526,
+          "p95LoadPercent": 39.6
+        },
+        "J5": {
+          "equivalentCycles": 0.6342,
+          "maxTempC": 35,
+          "p95CurrentMa": 182,
+          "p95LoadPercent": 21.6
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T08-34-16-981Z.csv",
+      "cycleNo": 7,
+      "durationS": 84.429,
+      "maxTempC": 49,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 6.7158,
+      "startScanMaxDiffDeg": 4.6,
+      "endScanMaxDiffDeg": 5.1,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.9917,
+          "maxTempC": 38,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 16
+        },
+        "J2": {
+          "equivalentCycles": 0.6092,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4
+        },
+        "J3": {
+          "equivalentCycles": 0.6783,
+          "maxTempC": 33,
+          "p95CurrentMa": 208,
+          "p95LoadPercent": 23.2
+        },
+        "J4": {
+          "equivalentCycles": 0.5317,
+          "maxTempC": 45,
+          "p95CurrentMa": 670,
+          "p95LoadPercent": 47.2
+        },
+        "J5": {
+          "equivalentCycles": 1.4042,
+          "maxTempC": 49,
+          "p95CurrentMa": 188,
+          "p95LoadPercent": 22.4
+        },
+        "J6": {
+          "equivalentCycles": 0.5008,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T08-34-16-981Z.csv",
+      "cycleNo": 8,
+      "durationS": 34.841,
+      "maxTempC": 47,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 5.3042,
+      "startScanMaxDiffDeg": 5.1,
+      "endScanMaxDiffDeg": 5.2,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.2375,
+          "maxTempC": 37,
+          "p95CurrentMa": 23.9,
+          "p95LoadPercent": 16.26
+        },
+        "J2": {
+          "equivalentCycles": 0.4317,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 6.06
+        },
+        "J3": {
+          "equivalentCycles": 0.5208,
+          "maxTempC": 33,
+          "p95CurrentMa": 221,
+          "p95LoadPercent": 23.46
+        },
+        "J4": {
+          "equivalentCycles": 0.7142,
+          "maxTempC": 47,
+          "p95CurrentMa": 679.9,
+          "p95LoadPercent": 48
+        },
+        "J5": {
+          "equivalentCycles": 1.4,
+          "maxTempC": 37,
+          "p95CurrentMa": 195,
+          "p95LoadPercent": 27.82
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T08-34-16-981Z.csv",
+      "cycleNo": 9,
+      "durationS": 11.548,
+      "maxTempC": 47,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 2.3567,
+      "startScanMaxDiffDeg": 5.2,
+      "endScanMaxDiffDeg": 4.8,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.3333,
+          "maxTempC": 32,
+          "p95CurrentMa": 21.5,
+          "p95LoadPercent": 12.1
+        },
+        "J2": {
+          "equivalentCycles": 0.0458,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.3
+        },
+        "J3": {
+          "equivalentCycles": 0.1258,
+          "maxTempC": 33,
+          "p95CurrentMa": 202,
+          "p95LoadPercent": 23.5
+        },
+        "J4": {
+          "equivalentCycles": 0.5817,
+          "maxTempC": 47,
+          "p95CurrentMa": 659.5,
+          "p95LoadPercent": 52.7
+        },
+        "J5": {
+          "equivalentCycles": 0.8092,
+          "maxTempC": 36,
+          "p95CurrentMa": 235.5,
+          "p95LoadPercent": 30.1
+        },
+        "J6": {
+          "equivalentCycles": 0.4608,
+          "maxTempC": 33,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 13.7
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T08-34-16-981Z.csv",
+      "cycleNo": 10,
+      "durationS": 20.781,
+      "maxTempC": 48,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.0617,
+      "startScanMaxDiffDeg": 4.8,
+      "endScanMaxDiffDeg": 5.1,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.4942,
+          "maxTempC": 32,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 16.8
+        },
+        "J2": {
+          "equivalentCycles": 0.4192,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 9.2
+        },
+        "J3": {
+          "equivalentCycles": 0.425,
+          "maxTempC": 34,
+          "p95CurrentMa": 221,
+          "p95LoadPercent": 28.4
+        },
+        "J4": {
+          "equivalentCycles": 0.11,
+          "maxTempC": 48,
+          "p95CurrentMa": 689,
+          "p95LoadPercent": 48.8
+        },
+        "J5": {
+          "equivalentCycles": 0.6133,
+          "maxTempC": 47,
+          "p95CurrentMa": 201,
+          "p95LoadPercent": 28.8
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T08-34-16-981Z.csv",
+      "cycleNo": 11,
+      "durationS": 30.611,
+      "maxTempC": 49,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 5.0925,
+      "startScanMaxDiffDeg": 5.1,
+      "endScanMaxDiffDeg": 5.2,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.6567,
+          "maxTempC": 32,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 16.8
+        },
+        "J2": {
+          "equivalentCycles": 0.4208,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 4.8
+        },
+        "J3": {
+          "equivalentCycles": 0.4908,
+          "maxTempC": 34,
+          "p95CurrentMa": 221,
+          "p95LoadPercent": 24.4
+        },
+        "J4": {
+          "equivalentCycles": 0.7542,
+          "maxTempC": 49,
+          "p95CurrentMa": 682,
+          "p95LoadPercent": 49.6
+        },
+        "J5": {
+          "equivalentCycles": 1.4283,
+          "maxTempC": 47,
+          "p95CurrentMa": 188,
+          "p95LoadPercent": 27.2
+        },
+        "J6": {
+          "equivalentCycles": 0.3417,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 8
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T08-34-16-981Z.csv",
+      "cycleNo": 12,
+      "durationS": 14.655,
+      "maxTempC": 49,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.1617,
+      "startScanMaxDiffDeg": 5.2,
+      "endScanMaxDiffDeg": 4.8,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.1375,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 8.4
+        },
+        "J2": {
+          "equivalentCycles": 0.07,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 4
+        },
+        "J3": {
+          "equivalentCycles": 0.1517,
+          "maxTempC": 34,
+          "p95CurrentMa": 214,
+          "p95LoadPercent": 23.2
+        },
+        "J4": {
+          "equivalentCycles": 0.5483,
+          "maxTempC": 49,
+          "p95CurrentMa": 670,
+          "p95LoadPercent": 52
+        },
+        "J5": {
+          "equivalentCycles": 0.7967,
+          "maxTempC": 37,
+          "p95CurrentMa": 188,
+          "p95LoadPercent": 28.8
+        },
+        "J6": {
+          "equivalentCycles": 1.4575,
+          "maxTempC": 30,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 19.2
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-06-40-370Z.csv",
+      "cycleNo": 1,
+      "durationS": 12.244,
+      "maxTempC": 34,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 1.86,
+      "startScanMaxDiffDeg": 4,
+      "endScanMaxDiffDeg": 4.6,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.2725,
+          "maxTempC": 31,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 8
+        },
+        "J2": {
+          "equivalentCycles": 0.0117,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 5.6
+        },
+        "J3": {
+          "equivalentCycles": 0.0742,
+          "maxTempC": 30,
+          "p95CurrentMa": 176,
+          "p95LoadPercent": 20
+        },
+        "J4": {
+          "equivalentCycles": 0.6517,
+          "maxTempC": 34,
+          "p95CurrentMa": 696,
+          "p95LoadPercent": 43.2
+        },
+        "J5": {
+          "equivalentCycles": 0.85,
+          "maxTempC": 32,
+          "p95CurrentMa": 176,
+          "p95LoadPercent": 27.2
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-06-40-370Z.csv",
+      "cycleNo": 5,
+      "durationS": 30.611,
+      "maxTempC": 48,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 5.6175,
+      "startScanMaxDiffDeg": 4.8,
+      "endScanMaxDiffDeg": 4.1,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.4417,
+          "maxTempC": 31,
+          "p95CurrentMa": 24.5,
+          "p95LoadPercent": 16.8
+        },
+        "J2": {
+          "equivalentCycles": 0.6783,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 12.4
+        },
+        "J3": {
+          "equivalentCycles": 0.7617,
+          "maxTempC": 34,
+          "p95CurrentMa": 176,
+          "p95LoadPercent": 20.4
+        },
+        "J4": {
+          "equivalentCycles": 0.4008,
+          "maxTempC": 37,
+          "p95CurrentMa": 670,
+          "p95LoadPercent": 48
+        },
+        "J5": {
+          "equivalentCycles": 1.335,
+          "maxTempC": 48,
+          "p95CurrentMa": 202,
+          "p95LoadPercent": 24.8
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-06-40-370Z.csv",
+      "cycleNo": 7,
+      "durationS": 20.178,
+      "maxTempC": 44,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.5883,
+      "startScanMaxDiffDeg": 5.1,
+      "endScanMaxDiffDeg": 5.1,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.0233,
+          "maxTempC": 32,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 17.6
+        },
+        "J2": {
+          "equivalentCycles": 0.42,
+          "maxTempC": 33,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 15.6
+        },
+        "J3": {
+          "equivalentCycles": 0.4117,
+          "maxTempC": 31,
+          "p95CurrentMa": 195,
+          "p95LoadPercent": 22.4
+        },
+        "J4": {
+          "equivalentCycles": 0.1167,
+          "maxTempC": 44,
+          "p95CurrentMa": 702,
+          "p95LoadPercent": 48
+        },
+        "J5": {
+          "equivalentCycles": 0.6167,
+          "maxTempC": 33,
+          "p95CurrentMa": 202,
+          "p95LoadPercent": 26.4
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-06-40-370Z.csv",
+      "cycleNo": 8,
+      "durationS": 12.148,
+      "maxTempC": 40,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 2.2683,
+      "startScanMaxDiffDeg": 5.1,
+      "endScanMaxDiffDeg": 6,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.6125,
+          "maxTempC": 33,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 15.2
+        },
+        "J2": {
+          "equivalentCycles": 0.0658,
+          "maxTempC": 33,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        },
+        "J3": {
+          "equivalentCycles": 0.1458,
+          "maxTempC": 32,
+          "p95CurrentMa": 208,
+          "p95LoadPercent": 22.8
+        },
+        "J4": {
+          "equivalentCycles": 0.5533,
+          "maxTempC": 40,
+          "p95CurrentMa": 754,
+          "p95LoadPercent": 48.8
+        },
+        "J5": {
+          "equivalentCycles": 0.8292,
+          "maxTempC": 33,
+          "p95CurrentMa": 221,
+          "p95LoadPercent": 31.2
+        },
+        "J6": {
+          "equivalentCycles": 0.0617,
+          "maxTempC": 31,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 5.2
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-06-40-370Z.csv",
+      "cycleNo": 9,
+      "durationS": 16.86,
+      "maxTempC": 40,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.0775,
+      "startScanMaxDiffDeg": 6,
+      "endScanMaxDiffDeg": 5.1,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.5383,
+          "maxTempC": 31,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 16.8
+        },
+        "J2": {
+          "equivalentCycles": 0.4192,
+          "maxTempC": 33,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 13.2
+        },
+        "J3": {
+          "equivalentCycles": 0.405,
+          "maxTempC": 32,
+          "p95CurrentMa": 234,
+          "p95LoadPercent": 23.2
+        },
+        "J4": {
+          "equivalentCycles": 0.1017,
+          "maxTempC": 40,
+          "p95CurrentMa": 708,
+          "p95LoadPercent": 49.2
+        },
+        "J5": {
+          "equivalentCycles": 0.6133,
+          "maxTempC": 34,
+          "p95CurrentMa": 195,
+          "p95LoadPercent": 30.4
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4.8
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-06-40-370Z.csv",
+      "cycleNo": 10,
+      "durationS": 24.595,
+      "maxTempC": 47,
+      "maxTempJoint": "J6",
+      "totalEquivalentCycles": 3.4983,
+      "startScanMaxDiffDeg": 5.1,
+      "endScanMaxDiffDeg": 5.1,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.6908,
+          "maxTempC": 31,
+          "p95CurrentMa": 30.5,
+          "p95LoadPercent": 16
+        },
+        "J2": {
+          "equivalentCycles": 0.175,
+          "maxTempC": 33,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 4.8
+        },
+        "J3": {
+          "equivalentCycles": 0.2575,
+          "maxTempC": 32,
+          "p95CurrentMa": 208,
+          "p95LoadPercent": 23.2
+        },
+        "J4": {
+          "equivalentCycles": 0.4217,
+          "maxTempC": 41,
+          "p95CurrentMa": 689,
+          "p95LoadPercent": 48
+        },
+        "J5": {
+          "equivalentCycles": 0.7983,
+          "maxTempC": 43,
+          "p95CurrentMa": 188,
+          "p95LoadPercent": 22.4
+        },
+        "J6": {
+          "equivalentCycles": 0.155,
+          "maxTempC": 47,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.6
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-06-40-370Z.csv",
+      "cycleNo": 11,
+      "durationS": 17.767,
+      "maxTempC": 42,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.1567,
+      "startScanMaxDiffDeg": 5.1,
+      "endScanMaxDiffDeg": 5.6,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.5708,
+          "maxTempC": 33,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 17.6
+        },
+        "J2": {
+          "equivalentCycles": 0.4175,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 14.8
+        },
+        "J3": {
+          "equivalentCycles": 0.4092,
+          "maxTempC": 33,
+          "p95CurrentMa": 202,
+          "p95LoadPercent": 23.6
+        },
+        "J4": {
+          "equivalentCycles": 0.1158,
+          "maxTempC": 42,
+          "p95CurrentMa": 845,
+          "p95LoadPercent": 52.8
+        },
+        "J5": {
+          "equivalentCycles": 0.6433,
+          "maxTempC": 34,
+          "p95CurrentMa": 195,
+          "p95LoadPercent": 28.4
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-06-40-370Z.csv",
+      "cycleNo": 12,
+      "durationS": 11.045,
+      "maxTempC": 44,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 1.7075,
+      "startScanMaxDiffDeg": 5.6,
+      "endScanMaxDiffDeg": 5.4,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.2342,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 12
+        },
+        "J2": {
+          "equivalentCycles": 0.0317,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.4
+        },
+        "J3": {
+          "equivalentCycles": 0.1125,
+          "maxTempC": 33,
+          "p95CurrentMa": 218,
+          "p95LoadPercent": 26.2
+        },
+        "J4": {
+          "equivalentCycles": 0.5792,
+          "maxTempC": 43,
+          "p95CurrentMa": 806,
+          "p95LoadPercent": 55
+        },
+        "J5": {
+          "equivalentCycles": 0.75,
+          "maxTempC": 44,
+          "p95CurrentMa": 185.5,
+          "p95LoadPercent": 28.8
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-06-40-370Z.csv",
+      "cycleNo": 13,
+      "durationS": 19.474,
+      "maxTempC": 44,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.6233,
+      "startScanMaxDiffDeg": 5.4,
+      "endScanMaxDiffDeg": 5.6,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.005,
+          "maxTempC": 32,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 17.6
+        },
+        "J2": {
+          "equivalentCycles": 0.4492,
+          "maxTempC": 33,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 14
+        },
+        "J3": {
+          "equivalentCycles": 0.4417,
+          "maxTempC": 33,
+          "p95CurrentMa": 202,
+          "p95LoadPercent": 22.4
+        },
+        "J4": {
+          "equivalentCycles": 0.1117,
+          "maxTempC": 44,
+          "p95CurrentMa": 832,
+          "p95LoadPercent": 52.8
+        },
+        "J5": {
+          "equivalentCycles": 0.6158,
+          "maxTempC": 42,
+          "p95CurrentMa": 202,
+          "p95LoadPercent": 28
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-35-18-532Z.csv",
+      "cycleNo": 1,
+      "durationS": 24.592,
+      "maxTempC": 41,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 3.3142,
+      "startScanMaxDiffDeg": 3.7,
+      "endScanMaxDiffDeg": 4.6,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.3842,
+          "maxTempC": 30,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 16.8
+        },
+        "J2": {
+          "equivalentCycles": 0.0217,
+          "maxTempC": 32,
+          "p95CurrentMa": 0,
+          "p95LoadPercent": 2.4
+        },
+        "J3": {
+          "equivalentCycles": 0.12,
+          "maxTempC": 29,
+          "p95CurrentMa": 169,
+          "p95LoadPercent": 20
+        },
+        "J4": {
+          "equivalentCycles": 0.6092,
+          "maxTempC": 34,
+          "p95CurrentMa": 611,
+          "p95LoadPercent": 44
+        },
+        "J5": {
+          "equivalentCycles": 0.8075,
+          "maxTempC": 41,
+          "p95CurrentMa": 195,
+          "p95LoadPercent": 22.4
+        },
+        "J6": {
+          "equivalentCycles": 0.3717,
+          "maxTempC": 33,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 5.6
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-35-18-532Z.csv",
+      "cycleNo": 3,
+      "durationS": 29.904,
+      "maxTempC": 40,
+      "maxTempJoint": "J2",
+      "totalEquivalentCycles": 5.4792,
+      "startScanMaxDiffDeg": 4.6,
+      "endScanMaxDiffDeg": 4.6,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.36,
+          "maxTempC": 31,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 16.4
+        },
+        "J2": {
+          "equivalentCycles": 0.4733,
+          "maxTempC": 40,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 7.2
+        },
+        "J3": {
+          "equivalentCycles": 0.5575,
+          "maxTempC": 31,
+          "p95CurrentMa": 195,
+          "p95LoadPercent": 30
+        },
+        "J4": {
+          "equivalentCycles": 0.6917,
+          "maxTempC": 37,
+          "p95CurrentMa": 644,
+          "p95LoadPercent": 44
+        },
+        "J5": {
+          "equivalentCycles": 1.3967,
+          "maxTempC": 32,
+          "p95CurrentMa": 182,
+          "p95LoadPercent": 26.4
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 1,
+      "durationS": 34.199,
+      "maxTempC": 40,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 6.1567,
+      "startScanMaxDiffDeg": 2.9,
+      "endScanMaxDiffDeg": 2,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9983,
+          "maxTempC": 33,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 10.4
+        },
+        "J2": {
+          "equivalentCycles": 0.525,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 4.4
+        },
+        "J3": {
+          "equivalentCycles": 0.6267,
+          "maxTempC": 31,
+          "p95CurrentMa": 202,
+          "p95LoadPercent": 21.2
+        },
+        "J4": {
+          "equivalentCycles": 0.725,
+          "maxTempC": 35,
+          "p95CurrentMa": 474,
+          "p95LoadPercent": 38.4
+        },
+        "J5": {
+          "equivalentCycles": 1.2667,
+          "maxTempC": 40,
+          "p95CurrentMa": 176,
+          "p95LoadPercent": 22.8
+        },
+        "J6": {
+          "equivalentCycles": 1.015,
+          "maxTempC": 34,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 14
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 2,
+      "durationS": 14.578,
+      "maxTempC": 39,
+      "maxTempJoint": "J6",
+      "totalEquivalentCycles": 3.0833,
+      "startScanMaxDiffDeg": 2,
+      "endScanMaxDiffDeg": 3.9,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.0733,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 5.2
+        },
+        "J2": {
+          "equivalentCycles": 0.0308,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 7.2
+        },
+        "J3": {
+          "equivalentCycles": 0.0375,
+          "maxTempC": 31,
+          "p95CurrentMa": 195,
+          "p95LoadPercent": 21.6
+        },
+        "J4": {
+          "equivalentCycles": 0.7042,
+          "maxTempC": 35,
+          "p95CurrentMa": 494,
+          "p95LoadPercent": 37.2
+        },
+        "J5": {
+          "equivalentCycles": 0.7817,
+          "maxTempC": 37,
+          "p95CurrentMa": 117,
+          "p95LoadPercent": 19.2
+        },
+        "J6": {
+          "equivalentCycles": 1.4558,
+          "maxTempC": 39,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 16.8
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 4,
+      "durationS": 11.564,
+      "maxTempC": 46,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 1.8383,
+      "startScanMaxDiffDeg": 2.3,
+      "endScanMaxDiffDeg": 3.9,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.1067,
+          "maxTempC": 32,
+          "p95CurrentMa": 7.75,
+          "p95LoadPercent": 6.6
+        },
+        "J2": {
+          "equivalentCycles": 0.0333,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 5.6
+        },
+        "J3": {
+          "equivalentCycles": 0.04,
+          "maxTempC": 32,
+          "p95CurrentMa": 193,
+          "p95LoadPercent": 21.6
+        },
+        "J4": {
+          "equivalentCycles": 0.7167,
+          "maxTempC": 46,
+          "p95CurrentMa": 432,
+          "p95LoadPercent": 42
+        },
+        "J5": {
+          "equivalentCycles": 0.7742,
+          "maxTempC": 38,
+          "p95CurrentMa": 159.25,
+          "p95LoadPercent": 25.1
+        },
+        "J6": {
+          "equivalentCycles": 0.1675,
+          "maxTempC": 34,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 6.2
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 5,
+      "durationS": 25.643,
+      "maxTempC": 44,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.5042,
+      "startScanMaxDiffDeg": 3.9,
+      "endScanMaxDiffDeg": 2.4,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9875,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10.4
+        },
+        "J2": {
+          "equivalentCycles": 0.4633,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 8.4
+        },
+        "J3": {
+          "equivalentCycles": 0.4925,
+          "maxTempC": 33,
+          "p95CurrentMa": 234,
+          "p95LoadPercent": 23.2
+        },
+        "J4": {
+          "equivalentCycles": 0.1275,
+          "maxTempC": 44,
+          "p95CurrentMa": 520,
+          "p95LoadPercent": 38.4
+        },
+        "J5": {
+          "equivalentCycles": 0.4333,
+          "maxTempC": 32,
+          "p95CurrentMa": 143,
+          "p95LoadPercent": 19.2
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 6,
+      "durationS": 31.773,
+      "maxTempC": 38,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 5.4833,
+      "startScanMaxDiffDeg": 2.4,
+      "endScanMaxDiffDeg": 2.8,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.02,
+          "maxTempC": 37,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10.4
+        },
+        "J2": {
+          "equivalentCycles": 0.5142,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 6.4
+        },
+        "J3": {
+          "equivalentCycles": 0.4942,
+          "maxTempC": 33,
+          "p95CurrentMa": 228,
+          "p95LoadPercent": 24
+        },
+        "J4": {
+          "equivalentCycles": 0.865,
+          "maxTempC": 38,
+          "p95CurrentMa": 526,
+          "p95LoadPercent": 39.2
+        },
+        "J5": {
+          "equivalentCycles": 1.2858,
+          "maxTempC": 33,
+          "p95CurrentMa": 169,
+          "p95LoadPercent": 23.2
+        },
+        "J6": {
+          "equivalentCycles": 0.3042,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 5.6
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 7,
+      "durationS": 44.428,
+      "maxTempC": 38,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 5.6617,
+      "startScanMaxDiffDeg": 2.8,
+      "endScanMaxDiffDeg": 5.5,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.0242,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10.4
+        },
+        "J2": {
+          "equivalentCycles": 0.5117,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4
+        },
+        "J3": {
+          "equivalentCycles": 0.5958,
+          "maxTempC": 34,
+          "p95CurrentMa": 234,
+          "p95LoadPercent": 24.8
+        },
+        "J4": {
+          "equivalentCycles": 0.7408,
+          "maxTempC": 38,
+          "p95CurrentMa": 507,
+          "p95LoadPercent": 39.2
+        },
+        "J5": {
+          "equivalentCycles": 1.2683,
+          "maxTempC": 34,
+          "p95CurrentMa": 156,
+          "p95LoadPercent": 23.6
+        },
+        "J6": {
+          "equivalentCycles": 0.5208,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 7.2
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 9,
+      "durationS": 36.016,
+      "maxTempC": 40,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 6.2317,
+      "startScanMaxDiffDeg": 2.6,
+      "endScanMaxDiffDeg": 2.6,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9975,
+          "maxTempC": 32,
+          "p95CurrentMa": 13.7,
+          "p95LoadPercent": 10.04
+        },
+        "J2": {
+          "equivalentCycles": 0.485,
+          "maxTempC": 33,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.96
+        },
+        "J3": {
+          "equivalentCycles": 0.5692,
+          "maxTempC": 35,
+          "p95CurrentMa": 240.7,
+          "p95LoadPercent": 25.6
+        },
+        "J4": {
+          "equivalentCycles": 0.7608,
+          "maxTempC": 40,
+          "p95CurrentMa": 500,
+          "p95LoadPercent": 38.84
+        },
+        "J5": {
+          "equivalentCycles": 1.2508,
+          "maxTempC": 33,
+          "p95CurrentMa": 136.7,
+          "p95LoadPercent": 24
+        },
+        "J6": {
+          "equivalentCycles": 1.1683,
+          "maxTempC": 37,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 15.2
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 10,
+      "durationS": 103.854,
+      "maxTempC": 40,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 5.4525,
+      "startScanMaxDiffDeg": 2.6,
+      "endScanMaxDiffDeg": 2.6,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.0167,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 9.6
+        },
+        "J2": {
+          "equivalentCycles": 0.6275,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        },
+        "J3": {
+          "equivalentCycles": 0.7292,
+          "maxTempC": 37,
+          "p95CurrentMa": 254,
+          "p95LoadPercent": 25.6
+        },
+        "J4": {
+          "equivalentCycles": 0.595,
+          "maxTempC": 40,
+          "p95CurrentMa": 507,
+          "p95LoadPercent": 38.4
+        },
+        "J5": {
+          "equivalentCycles": 1.2425,
+          "maxTempC": 34,
+          "p95CurrentMa": 136,
+          "p95LoadPercent": 20.8
+        },
+        "J6": {
+          "equivalentCycles": 0.2417,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 12,
+      "durationS": 32.459,
+      "maxTempC": 41,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 6.2567,
+      "startScanMaxDiffDeg": 2.6,
+      "endScanMaxDiffDeg": 2.8,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9967,
+          "maxTempC": 37,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10.4
+        },
+        "J2": {
+          "equivalentCycles": 0.48,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 14.4
+        },
+        "J3": {
+          "equivalentCycles": 0.5533,
+          "maxTempC": 40,
+          "p95CurrentMa": 280,
+          "p95LoadPercent": 27.2
+        },
+        "J4": {
+          "equivalentCycles": 0.7717,
+          "maxTempC": 41,
+          "p95CurrentMa": 604,
+          "p95LoadPercent": 44.8
+        },
+        "J5": {
+          "equivalentCycles": 1.2292,
+          "maxTempC": 34,
+          "p95CurrentMa": 124,
+          "p95LoadPercent": 25.2
+        },
+        "J6": {
+          "equivalentCycles": 1.2258,
+          "maxTempC": 31,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 16.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 13,
+      "durationS": 13.968,
+      "maxTempC": 40,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 2.8208,
+      "startScanMaxDiffDeg": 2.8,
+      "endScanMaxDiffDeg": 4,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.0667,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 5.2
+        },
+        "J2": {
+          "equivalentCycles": 0.0608,
+          "maxTempC": 32,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 8
+        },
+        "J3": {
+          "equivalentCycles": 0.0217,
+          "maxTempC": 38,
+          "p95CurrentMa": 254,
+          "p95LoadPercent": 26.4
+        },
+        "J4": {
+          "equivalentCycles": 0.7308,
+          "maxTempC": 40,
+          "p95CurrentMa": 540,
+          "p95LoadPercent": 45.2
+        },
+        "J5": {
+          "equivalentCycles": 0.8425,
+          "maxTempC": 34,
+          "p95CurrentMa": 214,
+          "p95LoadPercent": 28.4
+        },
+        "J6": {
+          "equivalentCycles": 1.0983,
+          "maxTempC": 31,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 16.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 14,
+      "durationS": 52.658,
+      "maxTempC": 41,
+      "maxTempJoint": "J3",
+      "totalEquivalentCycles": 3.5158,
+      "startScanMaxDiffDeg": 4,
+      "endScanMaxDiffDeg": 1.6,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.0217,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 10.4
+        },
+        "J2": {
+          "equivalentCycles": 0.4683,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        },
+        "J3": {
+          "equivalentCycles": 0.4758,
+          "maxTempC": 41,
+          "p95CurrentMa": 240,
+          "p95LoadPercent": 25.6
+        },
+        "J4": {
+          "equivalentCycles": 0.1267,
+          "maxTempC": 41,
+          "p95CurrentMa": 481,
+          "p95LoadPercent": 37.6
+        },
+        "J5": {
+          "equivalentCycles": 0.4233,
+          "maxTempC": 38,
+          "p95CurrentMa": 150,
+          "p95LoadPercent": 22.4
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 15,
+      "durationS": 38.389,
+      "maxTempC": 42,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 5.5175,
+      "startScanMaxDiffDeg": 1.6,
+      "endScanMaxDiffDeg": 2.5,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9967,
+          "maxTempC": 33,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10.4
+        },
+        "J2": {
+          "equivalentCycles": 0.5283,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 5.6
+        },
+        "J3": {
+          "equivalentCycles": 0.5083,
+          "maxTempC": 39,
+          "p95CurrentMa": 234,
+          "p95LoadPercent": 24.8
+        },
+        "J4": {
+          "equivalentCycles": 0.9017,
+          "maxTempC": 42,
+          "p95CurrentMa": 552,
+          "p95LoadPercent": 40
+        },
+        "J5": {
+          "equivalentCycles": 1.3058,
+          "maxTempC": 35,
+          "p95CurrentMa": 176,
+          "p95LoadPercent": 24.4
+        },
+        "J6": {
+          "equivalentCycles": 0.2767,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 16,
+      "durationS": 12.868,
+      "maxTempC": 41,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 2.7083,
+      "startScanMaxDiffDeg": 2.5,
+      "endScanMaxDiffDeg": 4,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.2192,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 8.4
+        },
+        "J2": {
+          "equivalentCycles": 0.0733,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        },
+        "J3": {
+          "equivalentCycles": 0.1517,
+          "maxTempC": 39,
+          "p95CurrentMa": 221,
+          "p95LoadPercent": 24.8
+        },
+        "J4": {
+          "equivalentCycles": 0.5825,
+          "maxTempC": 41,
+          "p95CurrentMa": 540,
+          "p95LoadPercent": 40
+        },
+        "J5": {
+          "equivalentCycles": 0.8308,
+          "maxTempC": 34,
+          "p95CurrentMa": 195,
+          "p95LoadPercent": 27.2
+        },
+        "J6": {
+          "equivalentCycles": 0.8508,
+          "maxTempC": 31,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 17.2
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 17,
+      "durationS": 20.807,
+      "maxTempC": 48,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 3.0825,
+      "startScanMaxDiffDeg": 4,
+      "endScanMaxDiffDeg": 4.6,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.5133,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10.8
+        },
+        "J2": {
+          "equivalentCycles": 0.4175,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 15.2
+        },
+        "J3": {
+          "equivalentCycles": 0.4017,
+          "maxTempC": 39,
+          "p95CurrentMa": 280,
+          "p95LoadPercent": 27.2
+        },
+        "J4": {
+          "equivalentCycles": 0.1258,
+          "maxTempC": 42,
+          "p95CurrentMa": 598,
+          "p95LoadPercent": 43.2
+        },
+        "J5": {
+          "equivalentCycles": 0.6242,
+          "maxTempC": 48,
+          "p95CurrentMa": 182,
+          "p95LoadPercent": 22.4
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 18,
+      "durationS": 10.952,
+      "maxTempC": 44,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 2.2433,
+      "startScanMaxDiffDeg": 4.6,
+      "endScanMaxDiffDeg": 5.1,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.4017,
+          "maxTempC": 32,
+          "p95CurrentMa": 16.85,
+          "p95LoadPercent": 11.2
+        },
+        "J2": {
+          "equivalentCycles": 0.1608,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 5.46
+        },
+        "J3": {
+          "equivalentCycles": 0.2342,
+          "maxTempC": 39,
+          "p95CurrentMa": 347.8,
+          "p95LoadPercent": 35.42
+        },
+        "J4": {
+          "equivalentCycles": 0.4417,
+          "maxTempC": 42,
+          "p95CurrentMa": 621.95,
+          "p95LoadPercent": 48.12
+        },
+        "J5": {
+          "equivalentCycles": 0.8075,
+          "maxTempC": 44,
+          "p95CurrentMa": 197.6,
+          "p95LoadPercent": 34
+        },
+        "J6": {
+          "equivalentCycles": 0.1975,
+          "maxTempC": 31,
+          "p95CurrentMa": 9.85,
+          "p95LoadPercent": 8.82
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 19,
+      "durationS": 24.424,
+      "maxTempC": 43,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.1117,
+      "startScanMaxDiffDeg": 5.1,
+      "endScanMaxDiffDeg": 4.7,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.5375,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10.8
+        },
+        "J2": {
+          "equivalentCycles": 0.4192,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 5.6
+        },
+        "J3": {
+          "equivalentCycles": 0.4142,
+          "maxTempC": 40,
+          "p95CurrentMa": 240,
+          "p95LoadPercent": 25.6
+        },
+        "J4": {
+          "equivalentCycles": 0.1242,
+          "maxTempC": 43,
+          "p95CurrentMa": 598,
+          "p95LoadPercent": 43.2
+        },
+        "J5": {
+          "equivalentCycles": 0.6167,
+          "maxTempC": 40,
+          "p95CurrentMa": 176,
+          "p95LoadPercent": 20.8
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 22,
+      "durationS": 10.954,
+      "maxTempC": 44,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 2.2425,
+      "startScanMaxDiffDeg": 2.9,
+      "endScanMaxDiffDeg": 4.4,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.04,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 5.82
+        },
+        "J2": {
+          "equivalentCycles": 0.0292,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.02
+        },
+        "J3": {
+          "equivalentCycles": 0.11,
+          "maxTempC": 41,
+          "p95CurrentMa": 254,
+          "p95LoadPercent": 27.2
+        },
+        "J4": {
+          "equivalentCycles": 0.6308,
+          "maxTempC": 44,
+          "p95CurrentMa": 576.45,
+          "p95LoadPercent": 47.5
+        },
+        "J5": {
+          "equivalentCycles": 0.8117,
+          "maxTempC": 38,
+          "p95CurrentMa": 185.3,
+          "p95LoadPercent": 31.48
+        },
+        "J6": {
+          "equivalentCycles": 0.6208,
+          "maxTempC": 30,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 17.2
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 23,
+      "durationS": 84.755,
+      "maxTempC": 45,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.5933,
+      "startScanMaxDiffDeg": 4.4,
+      "endScanMaxDiffDeg": 5.4,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.0275,
+          "maxTempC": 37,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 9.6
+        },
+        "J2": {
+          "equivalentCycles": 0.5158,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        },
+        "J3": {
+          "equivalentCycles": 0.4592,
+          "maxTempC": 42,
+          "p95CurrentMa": 266,
+          "p95LoadPercent": 27.2
+        },
+        "J4": {
+          "equivalentCycles": 0.1525,
+          "maxTempC": 45,
+          "p95CurrentMa": 540,
+          "p95LoadPercent": 40.8
+        },
+        "J5": {
+          "equivalentCycles": 0.4383,
+          "maxTempC": 36,
+          "p95CurrentMa": 124,
+          "p95LoadPercent": 21.6
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T14-12-36-018Z.csv",
+      "cycleNo": 1,
+      "durationS": 10.958,
+      "maxTempC": 34,
+      "maxTempJoint": "J3",
+      "totalEquivalentCycles": 2.2392,
+      "startScanMaxDiffDeg": 3.3,
+      "endScanMaxDiffDeg": 3.9,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.0042,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 4
+        },
+        "J2": {
+          "equivalentCycles": 0.0825,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        },
+        "J3": {
+          "equivalentCycles": 0.18,
+          "maxTempC": 34,
+          "p95CurrentMa": 231.45,
+          "p95LoadPercent": 27.54
+        },
+        "J4": {
+          "equivalentCycles": 0.5567,
+          "maxTempC": 34,
+          "p95CurrentMa": 527.9,
+          "p95LoadPercent": 44.38
+        },
+        "J5": {
+          "equivalentCycles": 0.8258,
+          "maxTempC": 32,
+          "p95CurrentMa": 186.45,
+          "p95LoadPercent": 25.5
+        },
+        "J6": {
+          "equivalentCycles": 0.59,
+          "maxTempC": 30,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 15.5
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T14-12-36-018Z.csv",
+      "cycleNo": 3,
+      "durationS": 34.885,
+      "maxTempC": 46,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 6.6442,
+      "startScanMaxDiffDeg": 5.2,
+      "endScanMaxDiffDeg": 3.5,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.955,
+          "maxTempC": 34,
+          "p95CurrentMa": 17.55,
+          "p95LoadPercent": 10.4
+        },
+        "J2": {
+          "equivalentCycles": 0.5867,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 9.84
+        },
+        "J3": {
+          "equivalentCycles": 0.6917,
+          "maxTempC": 35,
+          "p95CurrentMa": 310.7,
+          "p95LoadPercent": 33.14
+        },
+        "J4": {
+          "equivalentCycles": 0.6525,
+          "maxTempC": 46,
+          "p95CurrentMa": 543.9,
+          "p95LoadPercent": 38.4
+        },
+        "J5": {
+          "equivalentCycles": 1.2725,
+          "maxTempC": 45,
+          "p95CurrentMa": 136,
+          "p95LoadPercent": 18.4
+        },
+        "J6": {
+          "equivalentCycles": 1.4858,
+          "maxTempC": 43,
+          "p95CurrentMa": 17.55,
+          "p95LoadPercent": 15.72
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T14-12-36-018Z.csv",
+      "cycleNo": 4,
+      "durationS": 11.552,
+      "maxTempC": 35,
+      "maxTempJoint": "J3",
+      "totalEquivalentCycles": 1.7133,
+      "startScanMaxDiffDeg": 3.5,
+      "endScanMaxDiffDeg": 3.9,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.0933,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 8.1
+        },
+        "J2": {
+          "equivalentCycles": 0.0275,
+          "maxTempC": 32,
+          "p95CurrentMa": 21.5,
+          "p95LoadPercent": 6.4
+        },
+        "J3": {
+          "equivalentCycles": 0.0425,
+          "maxTempC": 35,
+          "p95CurrentMa": 222.75,
+          "p95LoadPercent": 23.2
+        },
+        "J4": {
+          "equivalentCycles": 0.7092,
+          "maxTempC": 35,
+          "p95CurrentMa": 485.75,
+          "p95LoadPercent": 43.7
+        },
+        "J5": {
+          "equivalentCycles": 0.8408,
+          "maxTempC": 32,
+          "p95CurrentMa": 188,
+          "p95LoadPercent": 28
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T14-12-36-018Z.csv",
+      "cycleNo": 7,
+      "durationS": 34.781,
+      "maxTempC": 40,
+      "maxTempJoint": "J1",
+      "totalEquivalentCycles": 5.9142,
+      "startScanMaxDiffDeg": 2.5,
+      "endScanMaxDiffDeg": 2.5,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9983,
+          "maxTempC": 40,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10.4
+        },
+        "J2": {
+          "equivalentCycles": 0.4733,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        },
+        "J3": {
+          "equivalentCycles": 0.545,
+          "maxTempC": 37,
+          "p95CurrentMa": 228,
+          "p95LoadPercent": 24.56
+        },
+        "J4": {
+          "equivalentCycles": 0.7842,
+          "maxTempC": 39,
+          "p95CurrentMa": 592,
+          "p95LoadPercent": 43.04
+        },
+        "J5": {
+          "equivalentCycles": 1.2967,
+          "maxTempC": 33,
+          "p95CurrentMa": 184.4,
+          "p95LoadPercent": 24.56
+        },
+        "J6": {
+          "equivalentCycles": 0.8167,
+          "maxTempC": 34,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 12.68
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T14-12-36-018Z.csv",
+      "cycleNo": 8,
+      "durationS": 11.053,
+      "maxTempC": 39,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 2.2283,
+      "startScanMaxDiffDeg": 2.5,
+      "endScanMaxDiffDeg": 4.6,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.0317,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 4.8
+        },
+        "J2": {
+          "equivalentCycles": 0.0317,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 7.2
+        },
+        "J3": {
+          "equivalentCycles": 0.0358,
+          "maxTempC": 37,
+          "p95CurrentMa": 224.5,
+          "p95LoadPercent": 24.2
+        },
+        "J4": {
+          "equivalentCycles": 0.71,
+          "maxTempC": 39,
+          "p95CurrentMa": 533,
+          "p95LoadPercent": 47
+        },
+        "J5": {
+          "equivalentCycles": 0.7683,
+          "maxTempC": 35,
+          "p95CurrentMa": 185,
+          "p95LoadPercent": 29.2
+        },
+        "J6": {
+          "equivalentCycles": 0.6508,
+          "maxTempC": 30,
+          "p95CurrentMa": 23,
+          "p95LoadPercent": 16.6
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T14-12-36-018Z.csv",
+      "cycleNo": 11,
+      "durationS": 11.56,
+      "maxTempC": 48,
+      "maxTempJoint": "J6",
+      "totalEquivalentCycles": 2.4017,
+      "startScanMaxDiffDeg": 1.7,
+      "endScanMaxDiffDeg": 4.4,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.1283,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 7.2
+        },
+        "J2": {
+          "equivalentCycles": 0.0883,
+          "maxTempC": 31,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 4.7
+        },
+        "J3": {
+          "equivalentCycles": 0.1733,
+          "maxTempC": 39,
+          "p95CurrentMa": 269.75,
+          "p95LoadPercent": 27.8
+        },
+        "J4": {
+          "equivalentCycles": 0.5617,
+          "maxTempC": 45,
+          "p95CurrentMa": 613,
+          "p95LoadPercent": 49.5
+        },
+        "J5": {
+          "equivalentCycles": 0.8292,
+          "maxTempC": 39,
+          "p95CurrentMa": 196.5,
+          "p95LoadPercent": 27
+        },
+        "J6": {
+          "equivalentCycles": 0.6208,
+          "maxTempC": 48,
+          "p95CurrentMa": 21.5,
+          "p95LoadPercent": 14.8
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T14-12-36-018Z.csv",
+      "cycleNo": 12,
+      "durationS": 21.423,
+      "maxTempC": 46,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.0875,
+      "startScanMaxDiffDeg": 4.4,
+      "endScanMaxDiffDeg": 5.2,
+      "status": "normal_baseline",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.5133,
+          "maxTempC": 32,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 11.6
+        },
+        "J2": {
+          "equivalentCycles": 0.4192,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 10.8
+        },
+        "J3": {
+          "equivalentCycles": 0.4242,
+          "maxTempC": 39,
+          "p95CurrentMa": 526,
+          "p95LoadPercent": 44
+        },
+        "J4": {
+          "equivalentCycles": 0.1108,
+          "maxTempC": 46,
+          "p95CurrentMa": 748,
+          "p95LoadPercent": 48
+        },
+        "J5": {
+          "equivalentCycles": 0.62,
+          "maxTempC": 41,
+          "p95CurrentMa": 169,
+          "p95LoadPercent": 20.8
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    }
+  ],
+  "cautionReferenceCycles": [
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_10_2026-06-12T07-20-25-241Z.csv",
+      "cycleNo": 9,
+      "durationS": 28.002,
+      "maxTempC": 52,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 0.05,
+      "startScanMaxDiffDeg": 5.1,
+      "endScanMaxDiffDeg": 4.6,
+      "status": "caution_reference",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0,
+          "maxTempC": 28,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4
+        },
+        "J2": {
+          "equivalentCycles": 0.0117,
+          "maxTempC": 29,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        },
+        "J3": {
+          "equivalentCycles": 0.0125,
+          "maxTempC": 39,
+          "p95CurrentMa": 318,
+          "p95LoadPercent": 30.4
+        },
+        "J4": {
+          "equivalentCycles": 0.0258,
+          "maxTempC": 52,
+          "p95CurrentMa": 507,
+          "p95LoadPercent": 42.4
+        },
+        "J5": {
+          "equivalentCycles": 0,
+          "maxTempC": 34,
+          "p95CurrentMa": 221.35,
+          "p95LoadPercent": 24.8
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 25,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T07-50-12-363Z.csv",
+      "cycleNo": 11,
+      "durationS": 11.544,
+      "maxTempC": 52,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 1.8025,
+      "startScanMaxDiffDeg": 3.9,
+      "endScanMaxDiffDeg": 4.7,
+      "status": "caution_reference",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.3283,
+          "maxTempC": 31,
+          "p95CurrentMa": 21.5,
+          "p95LoadPercent": 11.2
+        },
+        "J2": {
+          "equivalentCycles": 0.0042,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 4
+        },
+        "J3": {
+          "equivalentCycles": 0.08,
+          "maxTempC": 35,
+          "p95CurrentMa": 209.5,
+          "p95LoadPercent": 23.2
+        },
+        "J4": {
+          "equivalentCycles": 0.6233,
+          "maxTempC": 44,
+          "p95CurrentMa": 679.25,
+          "p95LoadPercent": 50.1
+        },
+        "J5": {
+          "equivalentCycles": 0.7667,
+          "maxTempC": 52,
+          "p95CurrentMa": 201.5,
+          "p95LoadPercent": 29.1
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T07-50-12-363Z.csv",
+      "cycleNo": 13,
+      "durationS": 108.989,
+      "maxTempC": 50,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 5.5867,
+      "startScanMaxDiffDeg": 4.5,
+      "endScanMaxDiffDeg": 5.6,
+      "status": "caution_reference",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.4067,
+          "maxTempC": 46,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 13.36
+        },
+        "J2": {
+          "equivalentCycles": 0.5242,
+          "maxTempC": 33,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        },
+        "J3": {
+          "equivalentCycles": 0.6208,
+          "maxTempC": 38,
+          "p95CurrentMa": 299,
+          "p95LoadPercent": 30.4
+        },
+        "J4": {
+          "equivalentCycles": 0.6408,
+          "maxTempC": 50,
+          "p95CurrentMa": 741,
+          "p95LoadPercent": 52
+        },
+        "J5": {
+          "equivalentCycles": 1.3942,
+          "maxTempC": 50,
+          "p95CurrentMa": 195,
+          "p95LoadPercent": 24
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T08-34-16-981Z.csv",
+      "cycleNo": 6,
+      "durationS": 27.203,
+      "maxTempC": 52,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 5.3017,
+      "startScanMaxDiffDeg": 5.5,
+      "endScanMaxDiffDeg": 4.6,
+      "status": "caution_reference",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.7608,
+          "maxTempC": 31,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 16
+        },
+        "J2": {
+          "equivalentCycles": 0.5408,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4
+        },
+        "J3": {
+          "equivalentCycles": 0.6175,
+          "maxTempC": 31,
+          "p95CurrentMa": 202,
+          "p95LoadPercent": 23.2
+        },
+        "J4": {
+          "equivalentCycles": 0.6242,
+          "maxTempC": 52,
+          "p95CurrentMa": 592,
+          "p95LoadPercent": 42.4
+        },
+        "J5": {
+          "equivalentCycles": 1.405,
+          "maxTempC": 43,
+          "p95CurrentMa": 202,
+          "p95LoadPercent": 29.2
+        },
+        "J6": {
+          "equivalentCycles": 0.3533,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.6
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T08-34-16-981Z.csv",
+      "cycleNo": 13,
+      "durationS": 89.121,
+      "maxTempC": 52,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 1.4975,
+      "startScanMaxDiffDeg": 4.8,
+      "endScanMaxDiffDeg": 4.4,
+      "status": "caution_reference",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.3983,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        },
+        "J2": {
+          "equivalentCycles": 0.035,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        },
+        "J3": {
+          "equivalentCycles": 0.04,
+          "maxTempC": 35,
+          "p95CurrentMa": 195,
+          "p95LoadPercent": 23.2
+        },
+        "J4": {
+          "equivalentCycles": 0.0242,
+          "maxTempC": 52,
+          "p95CurrentMa": 566,
+          "p95LoadPercent": 44
+        },
+        "J5": {
+          "equivalentCycles": 0,
+          "maxTempC": 38,
+          "p95CurrentMa": 195,
+          "p95LoadPercent": 23.2
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 37,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-06-40-370Z.csv",
+      "cycleNo": 2,
+      "durationS": 18.976,
+      "maxTempC": 52,
+      "maxTempJoint": "J6",
+      "totalEquivalentCycles": 3.6167,
+      "startScanMaxDiffDeg": 4.6,
+      "endScanMaxDiffDeg": 4.6,
+      "status": "caution_reference",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.0333,
+          "maxTempC": 31,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 17.6
+        },
+        "J2": {
+          "equivalentCycles": 0.4183,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 15.2
+        },
+        "J3": {
+          "equivalentCycles": 0.4133,
+          "maxTempC": 31,
+          "p95CurrentMa": 176,
+          "p95LoadPercent": 20
+        },
+        "J4": {
+          "equivalentCycles": 0.1233,
+          "maxTempC": 50,
+          "p95CurrentMa": 644.15,
+          "p95LoadPercent": 43.2
+        },
+        "J5": {
+          "equivalentCycles": 0.6283,
+          "maxTempC": 32,
+          "p95CurrentMa": 188,
+          "p95LoadPercent": 26
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 52,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-06-40-370Z.csv",
+      "cycleNo": 4,
+      "durationS": 18.966,
+      "maxTempC": 53,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.6142,
+      "startScanMaxDiffDeg": 5.4,
+      "endScanMaxDiffDeg": 4.8,
+      "status": "caution_reference",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.0442,
+          "maxTempC": 32,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 17.2
+        },
+        "J2": {
+          "equivalentCycles": 0.4192,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10
+        },
+        "J3": {
+          "equivalentCycles": 0.4108,
+          "maxTempC": 31,
+          "p95CurrentMa": 208,
+          "p95LoadPercent": 21.6
+        },
+        "J4": {
+          "equivalentCycles": 0.1225,
+          "maxTempC": 53,
+          "p95CurrentMa": 663,
+          "p95LoadPercent": 44.8
+        },
+        "J5": {
+          "equivalentCycles": 0.6175,
+          "maxTempC": 32,
+          "p95CurrentMa": 202,
+          "p95LoadPercent": 24.8
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 8,
+      "durationS": 33.604,
+      "maxTempC": 51,
+      "maxTempJoint": "J1",
+      "totalEquivalentCycles": 5.5208,
+      "startScanMaxDiffDeg": 5.5,
+      "endScanMaxDiffDeg": 2.6,
+      "status": "caution_reference",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9525,
+          "maxTempC": 51,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10.4
+        },
+        "J2": {
+          "equivalentCycles": 0.6233,
+          "maxTempC": 33,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 8.4
+        },
+        "J3": {
+          "equivalentCycles": 0.71,
+          "maxTempC": 34,
+          "p95CurrentMa": 436,
+          "p95LoadPercent": 34
+        },
+        "J4": {
+          "equivalentCycles": 0.6092,
+          "maxTempC": 39,
+          "p95CurrentMa": 546,
+          "p95LoadPercent": 40.8
+        },
+        "J5": {
+          "equivalentCycles": 1.2375,
+          "maxTempC": 43,
+          "p95CurrentMa": 153.6,
+          "p95LoadPercent": 22.6
+        },
+        "J6": {
+          "equivalentCycles": 0.3883,
+          "maxTempC": 31,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 8.8
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 20,
+      "durationS": 54.57,
+      "maxTempC": 51,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 5.46,
+      "startScanMaxDiffDeg": 4.7,
+      "endScanMaxDiffDeg": 4.1,
+      "status": "caution_reference",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.0342,
+          "maxTempC": 35,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10.4
+        },
+        "J2": {
+          "equivalentCycles": 0.6792,
+          "maxTempC": 33,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 6
+        },
+        "J3": {
+          "equivalentCycles": 0.745,
+          "maxTempC": 40,
+          "p95CurrentMa": 254,
+          "p95LoadPercent": 26
+        },
+        "J4": {
+          "equivalentCycles": 0.5117,
+          "maxTempC": 46,
+          "p95CurrentMa": 566,
+          "p95LoadPercent": 43.2
+        },
+        "J5": {
+          "equivalentCycles": 1.2217,
+          "maxTempC": 51,
+          "p95CurrentMa": 156,
+          "p95LoadPercent": 20.8
+        },
+        "J6": {
+          "equivalentCycles": 0.2683,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T14-12-36-018Z.csv",
+      "cycleNo": 10,
+      "durationS": 82.807,
+      "maxTempC": 51,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 6.3975,
+      "startScanMaxDiffDeg": 3.8,
+      "endScanMaxDiffDeg": 1.7,
+      "status": "caution_reference",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9642,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 10.4
+        },
+        "J2": {
+          "equivalentCycles": 0.5692,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4
+        },
+        "J3": {
+          "equivalentCycles": 0.6458,
+          "maxTempC": 40,
+          "p95CurrentMa": 295.2,
+          "p95LoadPercent": 29.6
+        },
+        "J4": {
+          "equivalentCycles": 0.6625,
+          "maxTempC": 46,
+          "p95CurrentMa": 650,
+          "p95LoadPercent": 45.44
+        },
+        "J5": {
+          "equivalentCycles": 1.2708,
+          "maxTempC": 51,
+          "p95CurrentMa": 117,
+          "p95LoadPercent": 18.24
+        },
+        "J6": {
+          "equivalentCycles": 1.285,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 11.68
+        }
+      }
+    }
+  ],
+  "excludedHotCycles": [
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_10_2026-06-12T07-20-25-241Z.csv",
+      "cycleNo": 6,
+      "durationS": 160.475,
+      "maxTempC": 60,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 2.1667,
+      "startScanMaxDiffDeg": 5,
+      "endScanMaxDiffDeg": 4.6,
+      "status": "exclude_hot",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.0208,
+          "maxTempC": 32,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 11.2
+        },
+        "J2": {
+          "equivalentCycles": 0,
+          "maxTempC": 29,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 0
+        },
+        "J3": {
+          "equivalentCycles": 0.005,
+          "maxTempC": 34,
+          "p95CurrentMa": 234,
+          "p95LoadPercent": 25.6
+        },
+        "J4": {
+          "equivalentCycles": 0.025,
+          "maxTempC": 60,
+          "p95CurrentMa": 656,
+          "p95LoadPercent": 46.4
+        },
+        "J5": {
+          "equivalentCycles": 0.1158,
+          "maxTempC": 55,
+          "p95CurrentMa": 195,
+          "p95LoadPercent": 22.4
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 25,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_10_2026-06-12T07-20-25-241Z.csv",
+      "cycleNo": 8,
+      "durationS": 79.495,
+      "maxTempC": 65,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 5.4117,
+      "startScanMaxDiffDeg": 5.5,
+      "endScanMaxDiffDeg": 5.1,
+      "status": "exclude_hot",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.965,
+          "maxTempC": 28,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 11.2
+        },
+        "J2": {
+          "equivalentCycles": 0.5975,
+          "maxTempC": 29,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 4.8
+        },
+        "J3": {
+          "equivalentCycles": 0.6508,
+          "maxTempC": 36,
+          "p95CurrentMa": 292,
+          "p95LoadPercent": 28.8
+        },
+        "J4": {
+          "equivalentCycles": 0.5292,
+          "maxTempC": 65,
+          "p95CurrentMa": 767,
+          "p95LoadPercent": 52
+        },
+        "J5": {
+          "equivalentCycles": 1.4275,
+          "maxTempC": 44,
+          "p95CurrentMa": 234,
+          "p95LoadPercent": 25.6
+        },
+        "J6": {
+          "equivalentCycles": 0.2417,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_3_2026-06-13T06-49-54-793Z.csv",
+      "cycleNo": 2,
+      "durationS": 28.616,
+      "maxTempC": 58,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 3.6133,
+      "startScanMaxDiffDeg": 3.5,
+      "endScanMaxDiffDeg": 5.1,
+      "status": "exclude_hot",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.0325,
+          "maxTempC": 29,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 12
+        },
+        "J2": {
+          "equivalentCycles": 0.4183,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 7.2
+        },
+        "J3": {
+          "equivalentCycles": 0.4083,
+          "maxTempC": 29,
+          "p95CurrentMa": 286,
+          "p95LoadPercent": 26.8
+        },
+        "J4": {
+          "equivalentCycles": 0.1242,
+          "maxTempC": 46,
+          "p95CurrentMa": 455,
+          "p95LoadPercent": 36.8
+        },
+        "J5": {
+          "equivalentCycles": 0.63,
+          "maxTempC": 58,
+          "p95CurrentMa": 202,
+          "p95LoadPercent": 22.4
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 27,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_LOOP_3_2026-06-13T06-49-54-793Z.csv",
+      "cycleNo": 9,
+      "durationS": 25.899,
+      "maxTempC": 61,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 3.5558,
+      "startScanMaxDiffDeg": 4.8,
+      "endScanMaxDiffDeg": 5.7,
+      "status": "exclude_hot",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9683,
+          "maxTempC": 35,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 12
+        },
+        "J2": {
+          "equivalentCycles": 0.4183,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 7.2
+        },
+        "J3": {
+          "equivalentCycles": 0.4067,
+          "maxTempC": 32,
+          "p95CurrentMa": 292,
+          "p95LoadPercent": 28.8
+        },
+        "J4": {
+          "equivalentCycles": 0.1375,
+          "maxTempC": 43,
+          "p95CurrentMa": 598,
+          "p95LoadPercent": 44
+        },
+        "J5": {
+          "equivalentCycles": 0.625,
+          "maxTempC": 61,
+          "p95CurrentMa": 221,
+          "p95LoadPercent": 25.6
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 27,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-06-40-370Z.csv",
+      "cycleNo": 3,
+      "durationS": 10.443,
+      "maxTempC": 62,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 1.7483,
+      "startScanMaxDiffDeg": 4.6,
+      "endScanMaxDiffDeg": 5.4,
+      "status": "exclude_hot",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.1625,
+          "maxTempC": 31,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 10.56
+        },
+        "J2": {
+          "equivalentCycles": 0.1233,
+          "maxTempC": 32,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 4.8
+        },
+        "J3": {
+          "equivalentCycles": 0.2075,
+          "maxTempC": 30,
+          "p95CurrentMa": 250.4,
+          "p95LoadPercent": 30.08
+        },
+        "J4": {
+          "equivalentCycles": 0.4742,
+          "maxTempC": 35,
+          "p95CurrentMa": 663.4,
+          "p95LoadPercent": 46.72
+        },
+        "J5": {
+          "equivalentCycles": 0.7808,
+          "maxTempC": 62,
+          "p95CurrentMa": 182,
+          "p95LoadPercent": 31.04
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 52,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-06-40-370Z.csv",
+      "cycleNo": 6,
+      "durationS": 12.249,
+      "maxTempC": 71,
+      "maxTempJoint": "J6",
+      "totalEquivalentCycles": 2.1392,
+      "startScanMaxDiffDeg": 4.1,
+      "endScanMaxDiffDeg": 5.1,
+      "status": "exclude_hot",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 0.5675,
+          "maxTempC": 31,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 13.2
+        },
+        "J2": {
+          "equivalentCycles": 0.0442,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        },
+        "J3": {
+          "equivalentCycles": 0.1283,
+          "maxTempC": 31,
+          "p95CurrentMa": 214,
+          "p95LoadPercent": 22.4
+        },
+        "J4": {
+          "equivalentCycles": 0.5708,
+          "maxTempC": 44,
+          "p95CurrentMa": 780,
+          "p95LoadPercent": 48.8
+        },
+        "J5": {
+          "equivalentCycles": 0.8283,
+          "maxTempC": 33,
+          "p95CurrentMa": 202,
+          "p95LoadPercent": 30.4
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 71,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T09-35-18-532Z.csv",
+      "cycleNo": 2,
+      "durationS": 21.982,
+      "maxTempC": 60,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 3.0575,
+      "startScanMaxDiffDeg": 4.6,
+      "endScanMaxDiffDeg": 4.6,
+      "status": "exclude_hot",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.4875,
+          "maxTempC": 30,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 16.8
+        },
+        "J2": {
+          "equivalentCycles": 0.4217,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 10.4
+        },
+        "J3": {
+          "equivalentCycles": 0.4267,
+          "maxTempC": 29,
+          "p95CurrentMa": 416,
+          "p95LoadPercent": 35.2
+        },
+        "J4": {
+          "equivalentCycles": 0.1108,
+          "maxTempC": 35,
+          "p95CurrentMa": 618,
+          "p95LoadPercent": 42.8
+        },
+        "J5": {
+          "equivalentCycles": 0.6108,
+          "maxTempC": 60,
+          "p95CurrentMa": 182.3,
+          "p95LoadPercent": 26.8
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 54,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 3,
+      "durationS": 28.048,
+      "maxTempC": 57,
+      "maxTempJoint": "J6",
+      "totalEquivalentCycles": 3.5017,
+      "startScanMaxDiffDeg": 3.9,
+      "endScanMaxDiffDeg": 2.3,
+      "status": "exclude_hot",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9858,
+          "maxTempC": 33,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10.4
+        },
+        "J2": {
+          "equivalentCycles": 0.4642,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 7.2
+        },
+        "J3": {
+          "equivalentCycles": 0.49,
+          "maxTempC": 32,
+          "p95CurrentMa": 208,
+          "p95LoadPercent": 22.4
+        },
+        "J4": {
+          "equivalentCycles": 0.1317,
+          "maxTempC": 36,
+          "p95CurrentMa": 474,
+          "p95LoadPercent": 37.6
+        },
+        "J5": {
+          "equivalentCycles": 0.43,
+          "maxTempC": 36,
+          "p95CurrentMa": 110,
+          "p95LoadPercent": 16.8
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 57,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 11,
+      "durationS": 32.965,
+      "maxTempC": 61,
+      "maxTempJoint": "J6",
+      "totalEquivalentCycles": 6.3667,
+      "startScanMaxDiffDeg": 2.6,
+      "endScanMaxDiffDeg": 2.6,
+      "status": "exclude_hot",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9758,
+          "maxTempC": 33,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10.4
+        },
+        "J2": {
+          "equivalentCycles": 0.585,
+          "maxTempC": 35,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 8.8
+        },
+        "J3": {
+          "equivalentCycles": 0.5217,
+          "maxTempC": 37,
+          "p95CurrentMa": 254,
+          "p95LoadPercent": 25.6
+        },
+        "J4": {
+          "equivalentCycles": 0.9067,
+          "maxTempC": 40,
+          "p95CurrentMa": 507,
+          "p95LoadPercent": 39.2
+        },
+        "J5": {
+          "equivalentCycles": 1.2808,
+          "maxTempC": 47,
+          "p95CurrentMa": 228,
+          "p95LoadPercent": 30.8
+        },
+        "J6": {
+          "equivalentCycles": 1.0967,
+          "maxTempC": 61,
+          "p95CurrentMa": 26,
+          "p95LoadPercent": 14.8
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T13-46-21-612Z.csv",
+      "cycleNo": 21,
+      "durationS": 32.458,
+      "maxTempC": 63,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 5.4008,
+      "startScanMaxDiffDeg": 4.1,
+      "endScanMaxDiffDeg": 2.9,
+      "status": "exclude_hot",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9642,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10.4
+        },
+        "J2": {
+          "equivalentCycles": 0.6225,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 12
+        },
+        "J3": {
+          "equivalentCycles": 0.7192,
+          "maxTempC": 41,
+          "p95CurrentMa": 481,
+          "p95LoadPercent": 46
+        },
+        "J4": {
+          "equivalentCycles": 0.5958,
+          "maxTempC": 63,
+          "p95CurrentMa": 598,
+          "p95LoadPercent": 44
+        },
+        "J5": {
+          "equivalentCycles": 1.2525,
+          "maxTempC": 45,
+          "p95CurrentMa": 156,
+          "p95LoadPercent": 34.4
+        },
+        "J6": {
+          "equivalentCycles": 0.2467,
+          "maxTempC": 31,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T14-12-36-018Z.csv",
+      "cycleNo": 2,
+      "durationS": 24.429,
+      "maxTempC": 56,
+      "maxTempJoint": "J1",
+      "totalEquivalentCycles": 3.5475,
+      "startScanMaxDiffDeg": 3.9,
+      "endScanMaxDiffDeg": 5.2,
+      "status": "exclude_hot",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 2.0325,
+          "maxTempC": 56,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10.8
+        },
+        "J2": {
+          "equivalentCycles": 0.4708,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.8
+        },
+        "J3": {
+          "equivalentCycles": 0.4683,
+          "maxTempC": 34,
+          "p95CurrentMa": 221,
+          "p95LoadPercent": 22.4
+        },
+        "J4": {
+          "equivalentCycles": 0.1417,
+          "maxTempC": 34,
+          "p95CurrentMa": 474,
+          "p95LoadPercent": 38.4
+        },
+        "J5": {
+          "equivalentCycles": 0.4342,
+          "maxTempC": 33,
+          "p95CurrentMa": 162,
+          "p95LoadPercent": 20
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 30,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T14-12-36-018Z.csv",
+      "cycleNo": 5,
+      "durationS": 53.271,
+      "maxTempC": 64,
+      "maxTempJoint": "J6",
+      "totalEquivalentCycles": 3.55,
+      "startScanMaxDiffDeg": 3.9,
+      "endScanMaxDiffDeg": 4,
+      "status": "exclude_hot",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.985,
+          "maxTempC": 36,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10.8
+        },
+        "J2": {
+          "equivalentCycles": 0.4175,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        },
+        "J3": {
+          "equivalentCycles": 0.4058,
+          "maxTempC": 36,
+          "p95CurrentMa": 221,
+          "p95LoadPercent": 24
+        },
+        "J4": {
+          "equivalentCycles": 0.1233,
+          "maxTempC": 37,
+          "p95CurrentMa": 507,
+          "p95LoadPercent": 37.6
+        },
+        "J5": {
+          "equivalentCycles": 0.6183,
+          "maxTempC": 32,
+          "p95CurrentMa": 156,
+          "p95LoadPercent": 19.2
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 64,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T14-12-36-018Z.csv",
+      "cycleNo": 6,
+      "durationS": 56.381,
+      "maxTempC": 60,
+      "maxTempJoint": "J5",
+      "totalEquivalentCycles": 5.9942,
+      "startScanMaxDiffDeg": 4,
+      "endScanMaxDiffDeg": 2.5,
+      "status": "exclude_hot",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.9858,
+          "maxTempC": 32,
+          "p95CurrentMa": 20,
+          "p95LoadPercent": 10.4
+        },
+        "J2": {
+          "equivalentCycles": 0.5242,
+          "maxTempC": 33,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 3.2
+        },
+        "J3": {
+          "equivalentCycles": 0.6042,
+          "maxTempC": 36,
+          "p95CurrentMa": 234,
+          "p95LoadPercent": 24.8
+        },
+        "J4": {
+          "equivalentCycles": 0.7142,
+          "maxTempC": 47,
+          "p95CurrentMa": 546,
+          "p95LoadPercent": 42.4
+        },
+        "J5": {
+          "equivalentCycles": 1.2558,
+          "maxTempC": 60,
+          "p95CurrentMa": 182,
+          "p95LoadPercent": 22.4
+        },
+        "J6": {
+          "equivalentCycles": 0.91,
+          "maxTempC": 48,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 8.4
+        }
+      }
+    },
+    {
+      "file": "AUTO_RUN_SCAN_TO_SCAN_LIVE_2026-06-13T14-12-36-018Z.csv",
+      "cycleNo": 9,
+      "durationS": 140.825,
+      "maxTempC": 57,
+      "maxTempJoint": "J4",
+      "totalEquivalentCycles": 3.0983,
+      "startScanMaxDiffDeg": 4.6,
+      "endScanMaxDiffDeg": 3.8,
+      "status": "exclude_hot",
+      "joints": {
+        "J1": {
+          "equivalentCycles": 1.49,
+          "maxTempC": 38,
+          "p95CurrentMa": 13,
+          "p95LoadPercent": 9.2
+        },
+        "J2": {
+          "equivalentCycles": 0.42,
+          "maxTempC": 32,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        },
+        "J3": {
+          "equivalentCycles": 0.4067,
+          "maxTempC": 38,
+          "p95CurrentMa": 169,
+          "p95LoadPercent": 20.8
+        },
+        "J4": {
+          "equivalentCycles": 0.1383,
+          "maxTempC": 57,
+          "p95CurrentMa": 578,
+          "p95LoadPercent": 42.4
+        },
+        "J5": {
+          "equivalentCycles": 0.6433,
+          "maxTempC": 35,
+          "p95CurrentMa": 150,
+          "p95LoadPercent": 19.2
+        },
+        "J6": {
+          "equivalentCycles": 0,
+          "maxTempC": 33,
+          "p95CurrentMa": 6,
+          "p95LoadPercent": 2.4
+        }
+      }
+    }
+  ],
+  "baseline_version": "2026-06-14_auto_normal_v1",
+  "baselineVersion": "2026-06-14_auto_normal_v1",
+  "source_name": "AUTO_RUN_NORMAL_BASELINE_latest",
+  "job_definition": "SCAN -> DETECT -> MOVE -> PICK -> CLASSIFY -> SCAN",
+  "confidence": {
+    "label": "정상 기준",
+    "normalBaselineCycles": 71,
+    "rule": "3회 이하=참고, 10회 이상=예비 기준, 30회 이상=정상 기준, 100회 이상=신뢰 기준"
+  },
+  "excluded_rules": [
+    "temp_over_or_equal_55c",
+    "interrupted_auto_run",
+    "not_returned_scan_pose",
+    "communication_stale_or_lost",
+    "large_final_target_error",
+    "manual_intervention"
+  ],
+  "usage_policy": {
+    "officialUsagePrimary": true,
+    "fatigueAdjustedUsageReference": true,
+    "safetyWarningPriority": true,
+    "normalBaselineRole": "Robot-specific normal behavior reference for motor health scoring."
+  },
+  "official_limits_ref": "official_sts3215_limits.json"
+}

@@ -1,0 +1,86 @@
+{
+  "schema": "sambo_servo_life_usage_v1",
+  "usageUnit": "official_life_cycle_120deg",
+  "degreesPerEquivalentCycle": 120.0,
+  "designEquivalentCycles": 100000.0,
+  "totalEquivalentCycles": {
+    "J1": 13.367499999999998,
+    "J2": 9.629166666666661,
+    "J3": 10.265,
+    "J4": 12.326666666666668,
+    "J5": 15.718333333333328,
+    "J6": 5.435
+  },
+  "fatigueAdjustedEquivalentCycles": {
+    "J1": 13.367499999999998,
+    "J2": 9.867166666666662,
+    "J3": 10.453083333333332,
+    "J4": 12.491583333333331,
+    "J5": 15.745916666666659,
+    "J6": 5.435
+  },
+  "healthState": {
+    "J1": {
+      "severity": 0,
+      "label": "정상",
+      "stressFactor": 1.0,
+      "score": 100.0,
+      "confidence": "정상 기준",
+      "reasons": [
+        "정상 기준 범위"
+      ]
+    },
+    "J2": {
+      "severity": 0,
+      "label": "정상",
+      "stressFactor": 1.0,
+      "score": 100.0,
+      "confidence": "정상 기준",
+      "reasons": [
+        "정상 기준 범위"
+      ]
+    },
+    "J3": {
+      "severity": 0,
+      "label": "정상",
+      "stressFactor": 1.0,
+      "score": 100.0,
+      "confidence": "정상 기준",
+      "reasons": [
+        "정상 기준 범위"
+      ]
+    },
+    "J4": {
+      "severity": 0,
+      "label": "정상",
+      "stressFactor": 1.0,
+      "score": 100.0,
+      "confidence": "정상 기준",
+      "reasons": [
+        "정상 기준 범위"
+      ]
+    },
+    "J5": {
+      "severity": 0,
+      "label": "정상",
+      "stressFactor": 1.0,
+      "score": 100.0,
+      "confidence": "정상 기준",
+      "reasons": [
+        "정상 기준 범위"
+      ]
+    },
+    "J6": {
+      "severity": 0,
+      "label": "정상",
+      "stressFactor": 1.0,
+      "score": 100.0,
+      "confidence": "정상 기준",
+      "reasons": [
+        "정상 기준 범위"
+      ]
+    }
+  },
+  "updatedAt": "2026-06-14T10:14:01Z",
+  "storedOn": "raspberry_pi"
+}
