@@ -155,6 +155,25 @@ button{cursor:pointer}
 .intro-robot-tag span{display:block;margin-top:7px;color:#5cd7fb;font:800 10px/1 var(--mono);letter-spacing:.8px}
 .intro-footer{border-top:1px solid rgba(135,215,255,.18);color:#7795aa;font:800 10px/1 var(--mono);letter-spacing:.65px}
 .intro-footer strong{color:#9fcce0}
+
+/* ===== Intro screen — visual polish ===== */
+.intro-title strong{background:linear-gradient(92deg,#7fe3ff,#46dcff 38%,#9b8bff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 30px rgba(70,220,255,.30))}
+.intro-kicker{position:relative;padding-left:17px}
+.intro-kicker::before{content:"";position:absolute;left:0;top:50%;width:9px;height:9px;margin-top:-5px;border-radius:50%;background:#56d8ff;box-shadow:0 0 14px #56d8ff;animation:introPulse 1.8s ease-in-out infinite}
+.intro-live-dot{animation:introPulse 1.8s ease-in-out infinite}
+@keyframes introPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.65)}}
+.intro-chip{transition:.18s}
+.intro-chip:hover{border-color:rgba(91,204,255,.65);color:#eafaff;box-shadow:0 0 18px rgba(70,220,255,.18);transform:translateY(-1px)}
+.intro-links path{filter:drop-shadow(0 0 5px rgba(86,216,255,.55));animation:introFlow 1.05s linear infinite}
+@keyframes introFlow{to{stroke-dashoffset:-28}}
+.flow-card{transition:transform .2s,border-color .2s,box-shadow .2s;border-left:3px solid #38cfff}
+.flow-card:hover{transform:translateY(-2px);border-color:rgba(92,210,255,.85);box-shadow:0 16px 30px rgba(0,0,0,.32),0 0 22px rgba(70,220,255,.16)}
+.intro-diagram::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 48%,transparent 58%,rgba(4,14,30,.55))}
+.robot-joint{filter:drop-shadow(0 0 6px rgba(110,221,255,.55));animation:jointGlow 2.6s ease-in-out infinite}
+@keyframes jointGlow{0%,100%{stroke:#c5f3ff}50%{stroke:#7fe3ff}}
+.intro-open-btn{position:relative;overflow:hidden}
+.intro-open-btn::after{content:"";position:absolute;top:0;left:-130%;width:55%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-18deg);animation:introSheen 3.6s ease-in-out infinite}
+@keyframes introSheen{0%,70%{left:-130%}100%{left:170%}}
 @media(max-width:1500px){.intro-shell{padding:0 38px}.intro-main{grid-template-columns:minmax(540px,.92fr) minmax(570px,1.08fr);gap:28px}.intro-title{font-size:48px}.intro-desc{font-size:17px}.intro-diagram{height:560px}.intro-robot-card{width:295px;height:348px}.flow-card{width:160px;padding:11px}.flow-card b{font-size:11px}.flow-card span{font-size:10px}.flow-pi,.flow-nano{left:20px}.flow-can,.flow-servo{right:20px}}
 @media(max-width:1180px){.intro-main{grid-template-columns:1fr}.intro-diagram{display:none}.intro-copy{max-width:820px}.intro-title{font-size:52px}}
 
@@ -364,10 +383,10 @@ button{cursor:pointer}
 /* ===== Manual mode ===== */
 .manual-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;height:100%}
 .manual-controls{padding:6px 10px 8px;display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
-#manualRows{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+#manualRows{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column}
 #manualRows::-webkit-scrollbar{width:7px}
 #manualRows::-webkit-scrollbar-thumb{background:rgba(32,213,232,.3);border-radius:4px}
-.manual-row{display:grid;grid-template-columns:102px minmax(88px,1fr) 70px;gap:5px;align-items:center;padding:3px 0;border-bottom:1px solid rgba(28,56,85,.45);font-size:10px}
+.manual-row{display:grid;grid-template-columns:102px minmax(88px,1fr) 70px;gap:5px;align-items:center;align-content:center;padding:3px 0;border-bottom:1px solid rgba(28,56,85,.45);font-size:10px;flex:1 1 0;min-height:48px}
 .manual-row input[type=range]{width:100%;accent-color:var(--cyan)}
 .manual-angle-input{width:100%;box-sizing:border-box;padding:6px 7px;border:1px solid rgba(32,213,232,.32);border-radius:5px;color:var(--text);background:#07121e;font-size:11px;text-align:right}
 .manual-angle-input:focus{outline:1px solid var(--cyan);border-color:var(--cyan)}
@@ -581,7 +600,7 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
       </div>
     </div>
   </div>
-  <div class="splash-footer"><span>MPU TEACHING · AI POSITION CORRECTION · CAN CONTROL</span><span class="mono" id="splashClock">--:--:--</span></div>
+  <div class="splash-footer"><span>AI VISION · POSITION CORRECTION · CAN CONTROL</span><span class="mono" id="splashClock">--:--:--</span></div>
 </section>
 
 <!-- ===== Fixed header ===== -->
@@ -592,8 +611,8 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
   <div class="header-status">
     <div class="run-controls">
       <button class="run-btn start" id="startBtn" onclick="startAutoRun()"><b>▶ 시작</b><small>AUTO RUN</small></button>
-      <button class="run-btn halt" id="haltBtn" onclick="haltRobot()"><b>⏸ 중지</b><small>HALT</small></button>
-      <button class="run-btn stop active" id="stopBtn" onclick="stopAutoRun()"><b>■ 정지</b><small>STOP</small></button>
+      <button class="run-btn halt" id="haltBtn" onclick="haltRobot()"><b>⏸ 정지</b><small>STOP</small></button>
+      <button class="run-btn stop active" id="stopBtn" onclick="stopAutoRun()"><b>■ 종료</b><small>END</small></button>
     </div>
     <div class="status-chip header-hidden mode-chip" id="modeChip">TEACHING</div>
     <div class="status-chip"><i class="dot warn" id="serverDot"></i><span><b id="serverText">서버 대기</b><small id="serverSub">Raspberry Pi 연결</small></span></div>
@@ -758,7 +777,7 @@ function rebuildSplash(){
           <div class="intro-logo-box">${logoSrc?`<img class="intro-logo" src="${logoSrc}" alt="SAMBO MOTORS">`:"<b>SAMBO MOTORS</b>"}</div>
           <div class="intro-brand-copy">
             <b>로봇팔 자동 분류 시스템</b>
-            <span>VISION TEACHING · CAN CONTROL · SENSOR FEEDBACK</span>
+            <span>AI VISION · CAN CONTROL · SERVO FEEDBACK</span>
           </div>
         </div>
         <div class="intro-header-state"><i class="intro-live-dot"></i> PRESENTATION MODE <span>·</span> <span id="splashClock">--:--:--</span></div>
@@ -767,19 +786,19 @@ function rebuildSplash(){
         <section class="intro-copy">
           <div class="intro-kicker">SAMBO MOTORS · SMART MANUFACTURING DEMO</div>
           <h1 class="intro-title">AI 기반 로봇팔 구현을 통한<br><strong>액추에이터 제어</strong></h1>
-          <p class="intro-desc">사람 팔 동작을 MPU 센서로 티칭하고, 그리퍼 카메라와 AI로 작업물 위치를 보정해 볼트와 너트를 자동 분류합니다.</p>
+          <p class="intro-desc">그리퍼 카메라와 AI(YOLO)로 작업물을 인식하고, ToF·비전으로 위치를 보정해 6축 로봇팔이 볼트와 너트를 자동 분류합니다.</p>
           <div class="intro-chips">
             <span class="intro-chip">Raspberry Pi 5 + Hailo 8L</span>
+            <span class="intro-chip">STM32 NUCLEO-F103RB</span>
             <span class="intro-chip">CANable Pro · 125 kbps</span>
-            <span class="intro-chip">Arduino Nano + MCP2515</span>
-            <span class="intro-chip">STS3215 BUS SERVO × 6</span>
-            <span class="intro-chip">STM32 NUCLEO-F103RB · ToF</span>
+            <span class="intro-chip">STS3215 ×6 + MG90S 그리퍼</span>
+            <span class="intro-chip">ToF 센서 · Nano 노드</span>
           </div>
           <div class="intro-open-card">
             <div class="intro-open-copy">
               <span class="intro-open-label">OPERATOR MONITORING</span>
               <b>실시간 통합 대시보드</b>
-              <p>티칭 경로, AI 감지, CAN 상태, 모터 피드백과 안전 상태를 한 화면에서 확인합니다.</p>
+              <p>분류 단계, AI 감지, CAN 상태, 모터 피드백을 한 화면에서 실시간 확인합니다.</p>
             </div>
             <button class="intro-open-btn" onclick="dismissSplash()">운영 화면 열기 <span>→</span></button>
           </div>
@@ -795,8 +814,8 @@ function rebuildSplash(){
           </svg>
           <article class="flow-card flow-pi"><b>Raspberry Pi 5 + Hailo</b><span>그리퍼 카메라 입력<br>YOLO 감지 · 위치 보정</span><em>AI 판단</em></article>
           <article class="flow-card flow-can"><b>CANable Pro</b><span>Raspberry Pi ↔ 제어 통신<br>명령·상태 전달</span><em>연결 상태 확인</em></article>
-          <article class="flow-card flow-nano"><b>Arduino Nano</b><span>MCP2515 CAN 노드<br>ToF 거리 보고 · 0x300</span><em>센서 노드</em></article>
-          <article class="flow-card flow-servo"><b>STM32 · STS3215 × 6</b><span>시리얼 버스 구동<br>각도 · 온도 · 부하 피드백</span><em>6-AXIS MOTION</em></article>
+          <article class="flow-card flow-nano"><b>Arduino Nano</b><span>MCP2515 CAN 노드<br>ToF 거리 보고 · 0x300</span><em>ToF 센서 노드</em></article>
+          <article class="flow-card flow-servo"><b>STM32 · 6축 서보</b><span>STS3215 ×6 시리얼 버스 구동<br>각도·온도·부하 피드백</span><em>REAL-TIME CONTROL</em></article>
           <div class="intro-robot-card">
             <svg class="intro-robot" viewBox="0 0 360 420" aria-label="6축 로봇팔 일러스트">
               <ellipse cx="181" cy="375" rx="119" ry="20" fill="rgba(8,14,24,.5)"/>
@@ -818,13 +837,13 @@ function rebuildSplash(){
               <text x="191" y="146" fill="#092f4a" font-size="9" font-weight="900">J3</text>
               <text x="245" y="95" fill="#092f4a" font-size="8" font-weight="900">J4</text>
             </svg>
-            <div class="intro-robot-tag"><b>6축 로봇팔 · 실시간 피드백</b><span>TEACHING → DETECTION → PICK & PLACE</span></div>
+            <div class="intro-robot-tag"><b>6축 로봇팔 · 실시간 피드백</b><span>SCAN → DETECT → PICK → PLACE</span></div>
           </div>
         </section>
       </main>
       <footer class="intro-footer">
         <span><strong>SAMBO MOTORS</strong> ROBOT ARM PROJECT</span>
-        <span>MPU TEACHING · GRIPPER CAMERA · AI CORRECTION · CAN COMMUNICATION · HARDWARE E-STOP</span>
+        <span>AI VISION · GRIPPER CAMERA · ToF FEEDBACK · CAN 125kbps · 6-AXIS SERVO</span>
       </footer>
     </div>`;
 }
@@ -1042,14 +1061,14 @@ function stopAutoRun(){
   if(!state.auto)state.auto={running:false};
   state.auto.running=false;
   const sent=sendDashboardCommand("AUTO_STOP");
-  addLog(sent?"자동 운전 정지 명령 송신 (RPi)":"자동 운전 정지 — 현재 자세 유지","warn");
+  addLog(sent?"자동 운전 종료 명령 송신 (RPi)":"자동 운전 종료 — 현재 자세 유지","warn");
   renderHeader();renderPath();draw3D();
 }
 function haltRobot(){
-  // 중지(즉시정지): 확인창 없음(지연 방지). 진행 중 이동을 현재 위치에서 그대로 멈춤.
+  // 정지(즉시정지): 확인창 없음(지연 방지). 진행 중 이동을 현재 위치에서 그대로 멈춤.
   if(state.auto)state.auto.running=false;
   const sent=sendDashboardCommand("HALT");
-  addLog(sent?"중지 — 로봇팔 현재 위치에서 즉시 정지 (RPi)":"중지 — DEMO: 동작 정지","warn");
+  addLog(sent?"정지 — 로봇팔 현재 위치에서 즉시 정지 (RPi)":"정지 — 미연결: 명령 미전송","warn");
   renderHeader();renderPath();draw3D();
 }
 function setMode(mode,fromSocket=false){
@@ -1191,9 +1210,9 @@ function renderManualRows(){
     // M3(id "J3")는 M2 거울쌍의 짝. M2 슬라이더 하나가 둘을 동시 구동하므로 행은 숨긴다.
     if(j.id==="J3")return "";
     const coupled=j.id==="J2";
-    return `<div class="manual-row ${coupled?"coupled":""}"><b>${JOINT_DISPLAY[i].axis} (M${i+1}) <span class="joint-name">${JOINT_DISPLAY[i].fn}</span></b>
+    return `<div class="manual-row ${coupled?"coupled":""}"><b>${JOINT_DISPLAY[i].axis} (M${i+1}${coupled?"·M"+(i+2):""}) <span class="joint-name">${JOINT_DISPLAY[i].fn}</span></b>
     <input class="action-control" data-manual-range="${i}" type="range" min="${manualJointMin(j)}" max="${manualJointMax(j)}" step=".1" value="${j.target}" oninput="manualJoint(${i},this.value)">
-    <input class="manual-angle-input mono action-control" data-manual-angle="${i}" type="number" min="${manualJointMin(j)}" max="${manualJointMax(j)}" step=".1" value="${fmt(j.target)}" oninput="manualJoint(${i},this.value)" onwheel="manualWheel(event,${i})" onkeydown="manualAngleKey(event,${i})" aria-label="${JOINT_DISPLAY[i].axis} (M${i+1}) 목표각 입력">
+    <input class="manual-angle-input mono action-control" data-manual-angle="${i}" type="number" min="${manualJointMin(j)}" max="${manualJointMax(j)}" step=".1" value="${fmt(j.target)}" oninput="manualJoint(${i},this.value)" onwheel="manualWheel(event,${i})" onkeydown="manualAngleKey(event,${i})" aria-label="${JOINT_DISPLAY[i].axis} (M${i+1}${coupled?"·M"+(i+2):""}) 목표각 입력">
     <div class="manual-row-actions"><button class="small-btn action-control" onclick="manualJog(${i},-1)">-1°</button><button class="small-btn action-control" onclick="manualJog(${i},1)">+1°</button><button class="small-btn action-control" onclick="sendManualJoint(${i})">적용</button></div></div>`;
   }).join("");
   const g=state.gripper;
@@ -1765,8 +1784,8 @@ function updateTiltDeg(){const e=$("tiltDeg");if(e)e.textContent="⤓"+Math.roun
 function pan3DView(dx,dy){
   const theta=view.yaw,scale=(0.0105/Math.max(view.zoom,.2));
   const rightX=Math.cos(theta+Math.PI/2),rightZ=Math.sin(theta+Math.PI/2),forwardX=Math.cos(theta),forwardZ=Math.sin(theta);
-  view.panX=clamp((view.panX||0)-dx*scale*rightX+dy*scale*forwardX,-2.8,2.8);
-  view.panZ=clamp((view.panZ||0)-dx*scale*rightZ+dy*scale*forwardZ,-2.3,2.8);
+  view.panX=clamp((view.panX||0)+dx*scale*rightX-dy*scale*forwardX,-2.8,2.8);
+  view.panZ=clamp((view.panZ||0)+dx*scale*rightZ-dy*scale*forwardZ,-2.3,2.8);
 }
 function bind3DDrag(){const c=$("robot3dCanvas");if(!c)return;c.oncontextmenu=e=>e.preventDefault();c.onpointerdown=e=>{const mode=e.button===2||e.shiftKey?"pan":"rotate";drag={x:e.clientX,y:e.clientY,mode};c.style.cursor=mode==="pan"?"grabbing":"move";c.setPointerCapture?.(e.pointerId);e.preventDefault()};c.onpointermove=e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(drag.mode==="rotate"){view.yaw+=dx*.008;view.pitch=clamp(view.pitch+dy*.007,.05,1.45);updateRotDeg();updateTiltDeg()}else pan3DView(dx,dy);drag.x=e.clientX;drag.y=e.clientY;draw3D()};c.onpointerup=e=>{drag=null;c.style.cursor="grab";c.releasePointerCapture?.(e.pointerId)};c.onpointerleave=()=>{drag=null;c.style.cursor="grab"};c.onwheel=e=>{view.zoom=clamp(view.zoom-e.deltaY*.0017,ZOOM_MIN,ZOOM_MAX);updateZoomPct();draw3D();e.preventDefault()};c.style.cursor="grab"}
 
@@ -2062,7 +2081,7 @@ function frame(now){
 setInterval(()=>{const now=currentTime();setText("clock",now);const sc=$("splashClock");if(sc)sc.textContent=now;const timer=$("recordTimer");if(timer){const s=Math.floor((Date.now()-bootTime)/1000);timer.textContent=`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`}},1000);
 const bootTime=Date.now();
 const initialWsUrl=getWsUrl();if($("wsUrlLabel"))$("wsUrlLabel").textContent=initialWsUrl;
-addLog("시뮬레이션 데이터 표시 — 서버 연결 대기","warn");addLog(`WebSocket ${initialWsUrl} 연결 대기`,"info");addLog("6축 STS3215 상태 패널 준비 완료","ok");
+addLog("서버 연결 대기 — 실데이터 수신 시 화면 갱신","warn");addLog(`WebSocket ${initialWsUrl} 연결 대기`,"info");addLog("6축 STS3215 상태 패널 준비 완료","ok");
 try{let u=localStorage.getItem("gripperCamUrl");if(!u){u="http://"+location.hostname+":8091/?action=stream"}if(!state.camera)state.camera={gripper_url:""};state.camera.gripper_url=u;applyGripperStream()}catch(e){};setMode("AUTO_RUN");connectWS();requestAnimationFrame(frame);
 </script>
 <script src="./sambo_object_overlay.js"></script>
