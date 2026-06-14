@@ -155,6 +155,25 @@ button{cursor:pointer}
 .intro-robot-tag span{display:block;margin-top:7px;color:#5cd7fb;font:800 10px/1 var(--mono);letter-spacing:.8px}
 .intro-footer{border-top:1px solid rgba(135,215,255,.18);color:#7795aa;font:800 10px/1 var(--mono);letter-spacing:.65px}
 .intro-footer strong{color:#9fcce0}
+
+/* ===== Intro screen — visual polish ===== */
+.intro-title strong{background:linear-gradient(92deg,#7fe3ff,#46dcff 38%,#9b8bff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 30px rgba(70,220,255,.30))}
+.intro-kicker{position:relative;padding-left:17px}
+.intro-kicker::before{content:"";position:absolute;left:0;top:50%;width:9px;height:9px;margin-top:-5px;border-radius:50%;background:#56d8ff;box-shadow:0 0 14px #56d8ff;animation:introPulse 1.8s ease-in-out infinite}
+.intro-live-dot{animation:introPulse 1.8s ease-in-out infinite}
+@keyframes introPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.65)}}
+.intro-chip{transition:.18s}
+.intro-chip:hover{border-color:rgba(91,204,255,.65);color:#eafaff;box-shadow:0 0 18px rgba(70,220,255,.18);transform:translateY(-1px)}
+.intro-links path{filter:drop-shadow(0 0 5px rgba(86,216,255,.55));animation:introFlow 1.05s linear infinite}
+@keyframes introFlow{to{stroke-dashoffset:-28}}
+.flow-card{transition:transform .2s,border-color .2s,box-shadow .2s;border-left:3px solid #38cfff}
+.flow-card:hover{transform:translateY(-2px);border-color:rgba(92,210,255,.85);box-shadow:0 16px 30px rgba(0,0,0,.32),0 0 22px rgba(70,220,255,.16)}
+.intro-diagram::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 48%,transparent 58%,rgba(4,14,30,.55))}
+.robot-joint{filter:drop-shadow(0 0 6px rgba(110,221,255,.55));animation:jointGlow 2.6s ease-in-out infinite}
+@keyframes jointGlow{0%,100%{stroke:#c5f3ff}50%{stroke:#7fe3ff}}
+.intro-open-btn{position:relative;overflow:hidden}
+.intro-open-btn::after{content:"";position:absolute;top:0;left:-130%;width:55%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-18deg);animation:introSheen 3.6s ease-in-out infinite}
+@keyframes introSheen{0%,70%{left:-130%}100%{left:170%}}
 @media(max-width:1500px){.intro-shell{padding:0 38px}.intro-main{grid-template-columns:minmax(540px,.92fr) minmax(570px,1.08fr);gap:28px}.intro-title{font-size:48px}.intro-desc{font-size:17px}.intro-diagram{height:560px}.intro-robot-card{width:295px;height:348px}.flow-card{width:160px;padding:11px}.flow-card b{font-size:11px}.flow-card span{font-size:10px}.flow-pi,.flow-nano{left:20px}.flow-can,.flow-servo{right:20px}}
 @media(max-width:1180px){.intro-main{grid-template-columns:1fr}.intro-diagram{display:none}.intro-copy{max-width:820px}.intro-title{font-size:52px}}
 
@@ -364,10 +383,10 @@ button{cursor:pointer}
 /* ===== Manual mode ===== */
 .manual-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;height:100%}
 .manual-controls{padding:6px 10px 8px;display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
-#manualRows{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+#manualRows{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column}
 #manualRows::-webkit-scrollbar{width:7px}
 #manualRows::-webkit-scrollbar-thumb{background:rgba(32,213,232,.3);border-radius:4px}
-.manual-row{display:grid;grid-template-columns:102px minmax(88px,1fr) 70px;gap:5px;align-items:center;padding:3px 0;border-bottom:1px solid rgba(28,56,85,.45);font-size:10px}
+.manual-row{display:grid;grid-template-columns:102px minmax(88px,1fr) 70px;gap:5px;align-items:center;align-content:center;padding:3px 0;border-bottom:1px solid rgba(28,56,85,.45);font-size:10px;flex:1 1 0;min-height:48px}
 .manual-row input[type=range]{width:100%;accent-color:var(--cyan)}
 .manual-angle-input{width:100%;box-sizing:border-box;padding:6px 7px;border:1px solid rgba(32,213,232,.32);border-radius:5px;color:var(--text);background:#07121e;font-size:11px;text-align:right}
 .manual-angle-input:focus{outline:1px solid var(--cyan);border-color:var(--cyan)}
@@ -618,7 +637,7 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
       </div>
     </div>
   </div>
-  <div class="splash-footer"><span>MPU TEACHING · AI POSITION CORRECTION · CAN CONTROL</span><span class="mono" id="splashClock">--:--:--</span></div>
+  <div class="splash-footer"><span>AI VISION · POSITION CORRECTION · CAN CONTROL</span><span class="mono" id="splashClock">--:--:--</span></div>
 </section>
 
 <!-- ===== Fixed header ===== -->
@@ -629,15 +648,14 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
   <div class="header-status">
     <div class="run-controls">
       <button class="run-btn start" id="startBtn" onclick="startAutoRun()"><b>▶ 시작</b><small>AUTO RUN</small></button>
-      <button class="run-btn halt" id="haltBtn" onclick="haltRobot()"><b>⏸ 중지</b><small>HALT</small></button>
-      <button class="run-btn stop active" id="stopBtn" onclick="stopAutoRun()"><b>■ 정지</b><small>STOP</small></button>
+      <button class="run-btn halt" id="haltBtn" onclick="haltRobot()"><b>⏸ 정지</b><small>STOP</small></button>
+      <button class="run-btn stop active" id="stopBtn" onclick="stopAutoRun()"><b>■ 종료</b><small>END</small></button>
     </div>
     <div class="status-chip header-hidden mode-chip" id="modeChip">TEACHING</div>
     <div class="status-chip"><i class="dot warn" id="serverDot"></i><span><b id="serverText">서버 대기</b><small id="serverSub">Raspberry Pi 연결</small></span></div>
     <div class="status-chip has-tip" id="canChip"><i class="dot warn" id="canDot"></i><span><b id="canText">CAN 대기</b><small>제어기 연결 대기</small></span><div class="chip-tip mono" id="canTip"></div></div>
     <div class="status-chip header-hidden"><i class="dot warn" id="cameraDot"></i><span><b id="cameraText">카메라 대기</b><small>Human · Gripper Cam</small></span></div>
     <div class="status-chip header-hidden"><i class="dot run" id="aiDot"></i><span><b id="aiText">YOLO 실행 중</b><small>AI 판단</small></span></div>
-    <div class="status-chip header-hidden demo-banner" id="dataBanner"><i class="dot warn"></i><span>DEMO MODE<small>시뮬레이션 데이터</small></span></div>
   </div>
   <div class="header-time mono"><small>현재 시간</small><span id="clock">--:--:--</span></div>
 </header>
@@ -649,7 +667,6 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
     <button class="tab action-control" data-mode="MANUAL" onclick="setMode('MANUAL')">수동 시험</button>
   </div>
   <div class="toolbar-spacer"></div>
-  <button class="tool-btn" onclick="openModal('cameraModal')">카메라 보기 / 설정</button>
   <button class="tool-btn" onclick="openModal('systemModal')">시스템 연결도</button>
   <button class="tool-btn" onclick="openModal('canModal')">통신 상세</button>
 </nav>
@@ -714,67 +731,6 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 
 <button class="ai-fab" id="aiFab" onclick="toggleAiChat()" title="AI 작업 도우미" aria-label="AI 작업 도우미"><span class="ai-fab-bot"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6V4"/><circle cx="12" cy="3.2" r="0.95"/><rect x="4.4" y="6" width="15.2" height="12" rx="4.3"/><path d="M3.5 10.4v3M20.5 10.4v3"/><circle cx="9.3" cy="11.2" r="1.45" fill="currentColor" stroke="none"/><circle cx="14.7" cy="11.2" r="1.45" fill="currentColor" stroke="none"/><path d="M9.5 14.6Q12 16.3 14.5 14.6"/></svg></span></button>
 
-<!-- ===== Camera modal ===== -->
-<div class="modal-backdrop" id="cameraModal">
-  <section class="modal">
-    <div class="modal-head">카메라 보기 / 설정 <button onclick="closeModal('cameraModal')">×</button></div>
-    <div class="modal-body">
-      <p class="muted" style="font-size:12px;margin-top:0">티칭용 사람 팔 카메라와 그리퍼 근처 카메라를 선택합니다. 권한 허용 후 실제 영상 위에 추정선과 YOLO 결과가 표시됩니다.</p>
-      <div class="camera-grid">
-        <div class="form-box"><label>사람 팔 / MPU 티칭 보조 카메라</label><select id="humanCameraSelect"><option value="">카메라 검색 전</option></select></div>
-        <div class="form-box"><label>그리퍼 근처 / AI 인식 카메라</label><select id="gripperCameraSelect"><option value="">카메라 검색 전</option></select></div>
-      </div>
-      <div class="modal-actions">
-        <button class="small-btn" onclick="scanCameras()">카메라 다시 검색</button>
-        <button class="small-btn" onclick="connectSelectedCameras()">선택 카메라 연결</button>
-        <button class="small-btn" onclick="stopCameras()">카메라 연결 해제</button>
-        <button class="small-btn" onclick="closeModal('cameraModal')">닫기</button>
-      </div>
-    </div>
-  </section>
-</div>
-
-<!-- ===== System architecture modal ===== -->
-<div class="modal-backdrop" id="systemModal">
-  <section class="modal">
-    <div class="modal-head">실제 시스템 연결도 / Hardware Flow <button onclick="closeModal('systemModal')">×</button></div>
-    <div class="modal-body">
-      <div class="architecture">
-        <div class="arch-box"><b>상위 제어 / AI</b>Raspberry Pi 5 + Hailo 8L<br>카메라 입력 · YOLO 판단<br>위치 보정 · 경로 관리</div>
-        <div class="arch-arrow">→</div>
-        <div class="arch-box"><b>제어 통신 · CAN</b>CANable Pro · 125 kbps<br>명령 0x100 · 상태 0x201/0x202<br>ToF 0x300 (Nano#1)</div>
-        <div class="arch-arrow">→</div>
-        <div class="arch-box"><b>실시간 제어</b>STM32 (NUCLEO-F103RB)<br>STS3215 시리얼 버스 구동<br>STS3215 × 6 · MG90S 그리퍼</div>
-      </div>
-      <div class="can-details">
-        <div>명령 전달<b>Pi → STM32</b></div><div>상태 확인<b>STM32 → Pi</b></div><div>센서 노드<b>Nano#1 · ToF</b></div><div>서보 전원<b class="mono">7.4~7.5 V</b></div>
-      </div>
-      <p class="yellow" style="font-size:11px;margin:12px 0 0">STM32가 STS3215 시리얼 버스를 직접 구동하고, Nano#1(MCP2515)이 ToF 거리를 CAN 0x300으로 보고합니다. 전 노드가 125 kbps CAN 버스를 공유합니다.</p>
-    </div>
-  </section>
-</div>
-
-<!-- ===== CAN details modal ===== -->
-<div class="modal-backdrop" id="canModal">
-  <section class="modal">
-    <div class="modal-head">통신·데이터 상세 / Connection Diagnostics <button onclick="closeModal('canModal')">×</button></div>
-    <div class="modal-body">
-      <div class="can-details" style="margin-top:0">
-        <div>서버 주소<b class="mono" id="wsUrlLabel">ws://localhost:8765</b></div><div>통신 상태<b id="diagConn">미연결 · DEMO</b></div><div>최근 수신<b id="diagLatency">수신 없음</b></div><div>오류 상태<b id="diagError">통신 오류 0건</b></div>
-      </div>
-      <details open><summary>상세 로그 / Debug Log</summary><pre id="debugLog">[DEMO] WebSocket 연결을 기다리는 중입니다.
-[INFO] 실제 데이터 수신 시 DEMO MODE가 자동 해제됩니다.
-[INFO] 명령, 상태, 센서 데이터는 작업자 화면에서 읽기 쉬운 상태로 표시됩니다.</pre></details>
-      <details><summary>WebSocket JSON 입력 예시</summary><pre>{
-  "mode": "AUTO_RUN",
-  "system": {"can_status":"OK","camera_status":"OK","ai_status":"RUNNING"},
-  "robot": {"joints":[{"id":"J1","current":92.3,"target":95.0,"temp":41.2,"load":35}]},
-  "vision": {"target":"BOLT","confidence":0.94,"correction":{"dx_mm":2.1,"dy_mm":-1.8}}
-}</pre></details>
-    </div>
-  </section>
-</div>
-
 <!-- ===== Servo life interpretation modal ===== -->
 <div class="modal-backdrop" id="lifeLegendModal">
   <section class="modal">
@@ -808,6 +764,47 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
     <div class="modal-head">모터별 수명 상세 / Servo Detail <button onclick="closeModal('lifeJointModal')">×</button></div>
     <div class="modal-body" id="lifeJointDetailBody">
       <div class="life-detail-box">모터 상세 정보를 불러오는 중입니다.</div>
+    </div>
+  </section>
+</div>
+
+<!-- ===== System architecture modal ===== -->
+<div class="modal-backdrop" id="systemModal">
+  <section class="modal">
+    <div class="modal-head">실제 시스템 연결도 / Hardware Flow <button onclick="closeModal('systemModal')">×</button></div>
+    <div class="modal-body">
+      <div class="architecture">
+        <div class="arch-box"><b>상위 제어 / AI</b>Raspberry Pi 5 + Hailo 8L<br>카메라 입력 · YOLO 판단<br>위치 보정 · 경로 관리</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box"><b>제어 통신 · CAN</b>CANable Pro · 125 kbps<br>명령 0x100 · 상태 0x201/0x202<br>ToF 0x300 (Nano#1)</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box"><b>실시간 제어</b>STM32 (NUCLEO-F103RB)<br>STS3215 시리얼 버스 구동<br>STS3215 × 6 · MG90S 그리퍼</div>
+      </div>
+      <div class="can-details">
+        <div>명령 전달<b>Pi → STM32</b></div><div>상태 확인<b>STM32 → Pi</b></div><div>센서 노드<b>Nano#1 · ToF</b></div><div>서보 전원<b class="mono">7.4~7.5 V</b></div>
+      </div>
+      <p class="yellow" style="font-size:11px;margin:12px 0 0">STM32가 STS3215 시리얼 버스를 직접 구동하고, Nano#1(MCP2515)이 ToF 거리를 CAN 0x300으로 보고합니다. 전 노드가 125 kbps CAN 버스를 공유합니다.</p>
+    </div>
+  </section>
+</div>
+
+<!-- ===== CAN details modal ===== -->
+<div class="modal-backdrop" id="canModal">
+  <section class="modal">
+    <div class="modal-head">통신·데이터 상세 / Connection Diagnostics <button onclick="closeModal('canModal')">×</button></div>
+    <div class="modal-body">
+      <div class="can-details" style="margin-top:0">
+        <div>서버 주소<b class="mono" id="wsUrlLabel">ws://localhost:8765</b></div><div>통신 상태<b id="diagConn">미연결 · 대기</b></div><div>최근 수신<b id="diagLatency">수신 없음</b></div><div>오류 상태<b id="diagError">통신 오류 0건</b></div>
+      </div>
+      <details open><summary>상세 로그 / Debug Log</summary><pre id="debugLog">[INFO] WebSocket 연결을 기다리는 중입니다.
+[INFO] 로봇 연결 시 실시간 데이터로 표시됩니다.
+[INFO] 명령, 상태, 센서 데이터는 작업자 화면에서 읽기 쉬운 상태로 표시됩니다.</pre></details>
+      <details><summary>WebSocket JSON 입력 예시</summary><pre>{
+  "mode": "AUTO_RUN",
+  "system": {"can_status":"OK","camera_status":"OK","ai_status":"RUNNING"},
+  "robot": {"joints":[{"id":"J1","current":92.3,"target":95.0,"temp":41.2,"load":35}]},
+  "vision": {"target":"BOLT","confidence":0.94,"correction":{"dx_mm":2.1,"dy_mm":-1.8}}
+}</pre></details>
     </div>
   </section>
 </div>
@@ -854,7 +851,7 @@ function rebuildSplash(){
           <div class="intro-logo-box">${logoSrc?`<img class="intro-logo" src="${logoSrc}" alt="SAMBO MOTORS">`:"<b>SAMBO MOTORS</b>"}</div>
           <div class="intro-brand-copy">
             <b>로봇팔 자동 분류 시스템</b>
-            <span>VISION TEACHING · CAN CONTROL · SENSOR FEEDBACK</span>
+            <span>AI VISION · CAN CONTROL · SERVO FEEDBACK</span>
           </div>
         </div>
         <div class="intro-header-state"><i class="intro-live-dot"></i> PRESENTATION MODE <span>·</span> <span id="splashClock">--:--:--</span></div>
@@ -863,19 +860,19 @@ function rebuildSplash(){
         <section class="intro-copy">
           <div class="intro-kicker">SAMBO MOTORS · SMART MANUFACTURING DEMO</div>
           <h1 class="intro-title">AI 기반 로봇팔 구현을 통한<br><strong>액추에이터 제어</strong></h1>
-          <p class="intro-desc">사람 팔 동작을 MPU 센서로 티칭하고, 그리퍼 카메라와 AI로 작업물 위치를 보정해 볼트와 너트를 자동 분류합니다.</p>
+          <p class="intro-desc">그리퍼 카메라와 AI(YOLO)로 작업물을 인식하고, ToF·비전으로 위치를 보정해 6축 로봇팔이 볼트와 너트를 자동 분류합니다.</p>
           <div class="intro-chips">
             <span class="intro-chip">Raspberry Pi 5 + Hailo 8L</span>
+            <span class="intro-chip">STM32 NUCLEO-F103RB</span>
             <span class="intro-chip">CANable Pro · 125 kbps</span>
-            <span class="intro-chip">Arduino Nano + MCP2515</span>
-            <span class="intro-chip">STS3215 BUS SERVO × 6</span>
-            <span class="intro-chip">STM32 NUCLEO-F103RB · ToF</span>
+            <span class="intro-chip">STS3215 ×6 + MG90S 그리퍼</span>
+            <span class="intro-chip">ToF 센서 · Nano 노드</span>
           </div>
           <div class="intro-open-card">
             <div class="intro-open-copy">
               <span class="intro-open-label">OPERATOR MONITORING</span>
               <b>실시간 통합 대시보드</b>
-              <p>티칭 경로, AI 감지, CAN 상태, 모터 피드백과 안전 상태를 한 화면에서 확인합니다.</p>
+              <p>분류 단계, AI 감지, CAN 상태, 모터 피드백을 한 화면에서 실시간 확인합니다.</p>
             </div>
             <button class="intro-open-btn" onclick="dismissSplash()">운영 화면 열기 <span>→</span></button>
           </div>
@@ -891,8 +888,8 @@ function rebuildSplash(){
           </svg>
           <article class="flow-card flow-pi"><b>Raspberry Pi 5 + Hailo</b><span>그리퍼 카메라 입력<br>YOLO 감지 · 위치 보정</span><em>AI 판단</em></article>
           <article class="flow-card flow-can"><b>CANable Pro</b><span>Raspberry Pi ↔ 제어 통신<br>명령·상태 전달</span><em>연결 상태 확인</em></article>
-          <article class="flow-card flow-nano"><b>Arduino Nano</b><span>MCP2515 CAN 노드<br>ToF 거리 보고 · 0x300</span><em>센서 노드</em></article>
-          <article class="flow-card flow-servo"><b>STM32 · STS3215 × 6</b><span>시리얼 버스 구동<br>각도 · 온도 · 부하 피드백</span><em>6-AXIS MOTION</em></article>
+          <article class="flow-card flow-nano"><b>Arduino Nano</b><span>MCP2515 CAN 노드<br>ToF 거리 보고 · 0x300</span><em>ToF 센서 노드</em></article>
+          <article class="flow-card flow-servo"><b>STM32 · 6축 서보</b><span>STS3215 ×6 시리얼 버스 구동<br>각도·온도·부하 피드백</span><em>REAL-TIME CONTROL</em></article>
           <div class="intro-robot-card">
             <svg class="intro-robot" viewBox="0 0 360 420" aria-label="6축 로봇팔 일러스트">
               <ellipse cx="181" cy="375" rx="119" ry="20" fill="rgba(8,14,24,.5)"/>
@@ -914,13 +911,13 @@ function rebuildSplash(){
               <text x="191" y="146" fill="#092f4a" font-size="9" font-weight="900">J3</text>
               <text x="245" y="95" fill="#092f4a" font-size="8" font-weight="900">J4</text>
             </svg>
-            <div class="intro-robot-tag"><b>6축 로봇팔 · 실시간 피드백</b><span>TEACHING → DETECTION → PICK & PLACE</span></div>
+            <div class="intro-robot-tag"><b>6축 로봇팔 · 실시간 피드백</b><span>SCAN → DETECT → PICK → PLACE</span></div>
           </div>
         </section>
       </main>
       <footer class="intro-footer">
         <span><strong>SAMBO MOTORS</strong> ROBOT ARM PROJECT</span>
-        <span>MPU TEACHING · GRIPPER CAMERA · AI CORRECTION · CAN COMMUNICATION · HARDWARE E-STOP</span>
+        <span>AI VISION · GRIPPER CAMERA · ToF FEEDBACK · CAN 125kbps · 6-AXIS SERVO</span>
       </footer>
     </div>`;
 }
@@ -1037,9 +1034,6 @@ function beginVisualMotionFromCommand(command,payload={}){
 }
 function getVisualJointAngleMap(source=jointAngleMap("current"),now=performance.now()){
   const src=cloneAngles(source);
-  if(state.demo){
-    visualJointAngles=cloneAngles(src);visualJointAt=now;return src;
-  }
   if(!visualJointAngles){
     visualJointAngles=cloneAngles(src);visualJointAt=now;return cloneAngles(visualJointAngles);
   }
@@ -1103,7 +1097,6 @@ function addLog(message,type="info"){
   if(state.events.length>300)state.events.length=300;
 }
 function debug(message){$("debugLog").textContent=`[${currentTime()}] ${message}\n`+$("debugLog").textContent.slice(0,2400)}
-
 
 /* ===== Servo life baseline ===== */
 const LIFE_NOISE_DEG=0.5,LIFE_DEG_PER_EQ_CYCLE=120,LIFE_LEGACY_DEG_PER_EQ_CYCLE=120;
@@ -1578,29 +1571,15 @@ function stopAutoRun(){
   if(!state.auto)state.auto={running:false};
   state.auto.running=false;
   const sent=sendDashboardCommand("AUTO_STOP");
-  addLog(sent?"자동 운전 정지 명령 송신 (RPi)":"자동 운전 정지 — 현재 자세 유지","warn");
+  addLog(sent?"자동 운전 종료 명령 송신 (RPi)":"자동 운전 종료 — 현재 자세 유지","warn");
   renderHeader();renderPath();draw3D();
 }
 function haltRobot(){
-  // 중지(즉시정지): 확인창 없음(지연 방지). 진행 중 이동을 현재 위치에서 그대로 멈춤.
+  // 정지(즉시정지): 확인창 없음(지연 방지). 진행 중 이동을 현재 위치에서 그대로 멈춤.
   if(state.auto)state.auto.running=false;
   const sent=sendDashboardCommand("HALT");
-  addLog(sent?"중지 — 로봇팔 현재 위치에서 즉시 정지 (RPi)":"중지 — DEMO: 동작 정지","warn");
+  addLog(sent?"정지 — 로봇팔 현재 위치에서 즉시 정지 (RPi)":"정지 — 미연결: 명령 미전송","warn");
   renderHeader();renderPath();draw3D();
-}
-function applyAutoDemoPose(now){
-  const poses=[
-    [180,180,180,180,180,180],[176,166,194,173,190,178],[178,151,209,164,204,180],
-    [184,138,222,158,216,183],[190,146,214,168,226,186],[202,160,200,176,212,188],
-    [218,171,189,184,198,191],[228,178,182,188,186,194],[180,180,180,180,180,180]
-  ];
-  const steps=state.path.steps||[],cycle=14000,t=(now%cycle)/cycle,scaled=t*(poses.length-1),i=Math.floor(scaled),f=scaled-i;
-  const a=poses[i],b=poses[Math.min(i+1,poses.length-1)],angles=a.map((v,n)=>v+(b[n]-v)*f);
-  state.robot.joints.forEach((j,n)=>{j.current=angles[n];j.target=angles[n];j.temp=clamp(j.temp+(Math.random()-.5)*.06,35,52);j.load=clamp(j.load+(Math.random()-.5)*.8+6*Math.sin(t*Math.PI*2+n),18,72);j.status="OK"});
-  const stepIndex=Math.min(steps.length-1,Math.floor(t*steps.length));
-  state.path.current_step=steps[stepIndex]||"HOME";state.path.progress_percent=Math.round(t*100);
-  state.gripper.state=(state.path.current_step==="GRASP"||state.path.current_step==="LIFT"||state.path.current_step==="CARRY")?"CLOSED":"OPEN";
-  state.gripper.sg90_angle=state.gripper.state==="OPEN"?GRIPPER_VISUAL.openServo:GRIPPER_VISUAL.closedServo;
 }
 function setMode(mode,fromSocket=false){
   mode=mode==="AUTO RUN"?"AUTO_RUN":mode;
@@ -1660,9 +1639,8 @@ function renderHeader(){
   setHeaderStatus("can",!s.server_connected?"CAN 대기":s.can_status==="OK"?"CAN 정상":s.can_status==="WARN"?"CAN 지연":"CAN 끊김",!s.server_connected?"warn":statusClass(s.can_status));
   setHeaderStatus("camera",s.camera_status==="OK"?"카메라 연결":s.camera_status==="ERROR"?"카메라 오류":"카메라 대기",statusClass(s.camera_status));
   setHeaderStatus("ai",s.ai_status==="RUNNING"?"YOLO 실행 중":s.ai_status==="ERROR"?"검출 실패":"AI 대기",s.ai_status==="RUNNING"?"run":s.ai_status==="ERROR"?"err":"warn");
-  $("dataBanner").style.display=state.demo?"flex":"none";
   // 통신 진단(canModal) 카드 + CAN 칩 툴팁 라이브 갱신
-  setText("diagConn",s.server_connected?"연결됨 · LIVE":"미연결 · DEMO");
+  setText("diagConn",s.server_connected?"연결됨 · LIVE":"미연결 · 대기");
   setText("diagLatency",state.lastFrame?`${Math.max(0,Date.now()-state.lastFrame)}ms 전`:"수신 없음");
   setText("diagError",`통신 오류 ${s.ws_errors||0}건`);
   const _dt=state.digital_twin||{},_ct=$("canTip");
@@ -1742,9 +1720,9 @@ function renderManualRows(){
     // M3(id "J3")는 M2 거울쌍의 짝. M2 슬라이더 하나가 둘을 동시 구동하므로 행은 숨긴다.
     if(j.id==="J3")return "";
     const coupled=j.id==="J2";
-    return `<div class="manual-row ${coupled?"coupled":""}"><b>${JOINT_DISPLAY[i].axis} (M${i+1}) <span class="joint-name">${JOINT_DISPLAY[i].fn}</span></b>
+    return `<div class="manual-row ${coupled?"coupled":""}"><b>${JOINT_DISPLAY[i].axis} (M${i+1}${coupled?"·M"+(i+2):""}) <span class="joint-name">${JOINT_DISPLAY[i].fn}</span></b>
     <input class="action-control" data-manual-range="${i}" type="range" min="${manualJointMin(j)}" max="${manualJointMax(j)}" step=".1" value="${j.target}" oninput="manualJoint(${i},this.value)">
-    <input class="manual-angle-input mono action-control" data-manual-angle="${i}" type="number" min="${manualJointMin(j)}" max="${manualJointMax(j)}" step=".1" value="${fmt(j.target)}" oninput="manualJoint(${i},this.value)" onwheel="manualWheel(event,${i})" onkeydown="manualAngleKey(event,${i})" aria-label="${JOINT_DISPLAY[i].axis} (M${i+1}) 목표각 입력">
+    <input class="manual-angle-input mono action-control" data-manual-angle="${i}" type="number" min="${manualJointMin(j)}" max="${manualJointMax(j)}" step=".1" value="${fmt(j.target)}" oninput="manualJoint(${i},this.value)" onwheel="manualWheel(event,${i})" onkeydown="manualAngleKey(event,${i})" aria-label="${JOINT_DISPLAY[i].axis} (M${i+1}${coupled?"·M"+(i+2):""}) 목표각 입력">
     <div class="manual-row-actions"><button class="small-btn action-control" onclick="manualJog(${i},-1)">-1°</button><button class="small-btn action-control" onclick="manualJog(${i},1)">+1°</button><button class="small-btn action-control" onclick="sendManualJoint(${i})">적용</button></div></div>`;
   }).join("");
   const g=state.gripper;
@@ -1756,7 +1734,7 @@ function renderManualRows(){
 }
 function renderPrimary(){
   if(state.mode==="MANUAL"||!$("primaryTitle"))return;
-  $("primaryTitle").innerHTML=`그리퍼 카메라 / Gripper Cam <span class="head-right"><span class="source-tag ${state.demo?"demo":"live"}" id="primarySource">${state.demo?"미리보기 영상 · MJPEG":"실시간 영상 · MJPEG"}</span></span>`;
+  $("primaryTitle").innerHTML=`그리퍼 카메라 / Gripper Cam <span class="head-right"><span class="source-tag ${state.demo?"demo":"live"}" id="primarySource">${state.demo?"연결 대기 · MJPEG":"실시간 영상 · MJPEG"}</span></span>`;
   applyGripperStream();
 }
 
@@ -1779,10 +1757,9 @@ function renderRightPanel(){
   $("jointRows").innerHTML=state.robot.joints.map((j,i)=>{const d=Math.abs(j.target-j.current),st=d>10?"확인 필요":d>5?"주의":"정상",sc=d>10?"err":d>5?"warn":"ok";
     return `<div class="joint-row mono"><b>${JOINT_DISPLAY[i].axis} (M${i+1}) <span class="joint-name">${JOINT_DISPLAY[i].fn}</span></b><span class="joint-value">${deg(j.current)}</span><span class="joint-value">${deg(j.target)}</span><span class="joint-diff ${sc}">${deg(d)}</span><span class="pill ${sc}">${st}</span></div>`}).join("")
     +(()=>{const gr=state.gripper,o=gr.state==="OPEN";return `<div class="joint-row gripper-row mono"><b>GR <span class="joint-name">Gripper</span></b><span class="joint-value">${deg(gr.sg90_angle)}</span><span class="joint-value">${deg(gr.sg90_angle)}</span><span class="joint-diff ok">0.0°</span><span class="pill ${o?"ok":""}">${o?"열림":"닫힘"}</span></div>`})();
-  const healthMap=computeHealthMap();
-  $("motorRows").innerHTML=state.robot.joints.map((j,i)=>{const h=healthMap[j.id]||jointHealthStatus(j),csc=state.demo?(h.severity>=3?"err":h.severity>=1?"warn":"ok"):h.pillClass,ctext=state.demo?(h.severity>=3?"위험":h.severity>=1?"주의":"정상"):h.label,reason=(h.reasons||[]).slice(0,2).join(" / "),danger=h.severity>=3,warn=h.severity>=1;
+  $("motorRows").innerHTML=state.robot.joints.map((j,i)=>{const danger=j.temp>=65||j.load>=90,warn=j.temp>55||j.load>=80,sc=danger?"err":warn?"warn":"ok",csc=(j.comm==="OK"?"ok":j.comm==="PARTIAL"?"warn":j.comm==="STALE"?"err":""),ctext=(j.comm==="OK"?"정상":j.comm==="PARTIAL"?"주의":j.comm==="STALE"?"끊김":"대기");
     return `<div class="motor-row mono"><b>${JOINT_DISPLAY[i].axis} (M${i+1})</b><div><div class="meter"><i class="temp" style="width:${clamp(j.temp/75*100,0,100)}%"></i></div><span class="meter-label">${fmt(j.temp,0)}°C</span></div>
-      <div><div class="meter"><i style="width:${clamp(j.load,0,100)}%;background:${danger?"var(--red)":warn?"var(--yellow)":"var(--cyan)"}"></i></div><span class="meter-label">${fmt(j.load,0)}%</span></div><span class="pill ${csc}" title="${reason} · 신뢰도 ${h.confidence}">${ctext}</span></div>`}).join("");
+      <div><div class="meter"><i style="width:${clamp(j.load,0,100)}%;background:${danger?"var(--red)":warn?"var(--yellow)":"var(--cyan)"}"></i></div><span class="meter-label">${fmt(j.load,0)}%</span></div><span class="pill ${csc}">${ctext}</span></div>`}).join("");
   const g=state.gripper,approach=getApproachGuide(),so=state.sorting||{};
   const tb=$("tofBody");
   if(tb)tb.innerHTML=`<div class="tof-big mono">${fmt(g.tof_mm)}<span class="unit">mm</span></div>
@@ -1799,7 +1776,6 @@ function renderRightPanel(){
       <div><span>사이클</span><b>${so.cycle_s?so.cycle_s+" s":"-"}</b></div>
     </div>
     <div class="sort-last"><span>최근 처리</span><b>${so.last?`${objectLabel(so.last.type)} -> ${so.last.bin} ${so.last.ok?"OK":"NG"}`:"대기"}</b></div>`;
-  renderLifePredictionCard();
   renderManualTwinCard();
 }
 
@@ -1815,13 +1791,7 @@ function getTeachingQuality(){
   return{score,stability,sensorReady,label:score>=90?"매우 안정":score>=80?"사용 가능":"재티칭 권장"};
 }
 function getAlerts(){
-  const alerts=[],healthMap=computeHealthMap();
-  state.robot.joints.forEach(j=>{
-    const h=healthMap[j.id];if(!h)return;
-    const text=`${j.id} ${j.name}: ${h.label} · ${(h.reasons||[])[0]||"정상 기준 범위"} · ${fmt(j.temp,0)}°C / 부하 ${fmt(j.load,0)}%`;
-    if(h.severity>=3)alerts.push({cls:"err",text});
-    else if(h.severity>=2)alerts.push({cls:"warn",text});
-  });
+  const alerts=[];state.robot.joints.forEach(j=>{if(j.temp>=65||j.load>=90)alerts.push({cls:"err",text:`${j.id} ${j.name}: 즉시 확인 · ${fmt(j.temp,0)}°C / 부하 ${fmt(j.load,0)}%`});else if(j.temp>55||j.load>=80)alerts.push({cls:"warn",text:`${j.id} ${j.name}: 주의 · ${fmt(j.temp,0)}°C / 부하 ${fmt(j.load,0)}%`})});
   const collision=state.collision||getCollisionReport("current");
   if(collision.blocked)alerts.push({cls:"err",text:`디지털 트윈 충돌 제한 · ${collision.messages[0]}`});
   if(state.system.server_connected&&state.system.can_status!=="OK")alerts.push({cls:"err",text:"CAN 통신 상태를 확인하세요."});
@@ -1841,8 +1811,8 @@ function getPrecheckItems(){
 }
 function renderOperationalInsights(){
   const alerts=getAlerts(),quality=getTeachingQuality(),approach=getApproachGuide(),checks=getPrecheckItems(),passed=checks.filter(x=>x[1]).length,ch=state.can_health,cal=state.calibration;
-  $("alertSource").textContent=state.demo?"DEMO":"LIVE";$("alertSource").className=`source-tag ${state.demo?"demo":"live"}`;
-  $("visionSource").textContent=state.demo?"DEMO":"LIVE";$("visionSource").className=`source-tag ${state.demo?"demo":"live"}`;
+  $("alertSource").textContent=state.demo?"대기":"수신";$("alertSource").className=`source-tag ${state.demo?"demo":"live"}`;
+  $("visionSource").textContent=state.demo?"대기":"수신";$("visionSource").className=`source-tag ${state.demo?"demo":"live"}`;
   $("alertsCard").innerHTML=alerts.length?alerts.map(a=>`<div class="alert-item ${a.cls||"warn"}">${a.text}</div>`).join(""):`<div class="alert-item">현재 즉시 조치가 필요한 경고가 없습니다.</div>`;
   $("precheckSummary").innerHTML=`<div class="compact-line"><span>자동 운전 준비</span><b class="${passed===checks.length?"green":"yellow"}">${passed}/${checks.length} 항목 확인</b></div><div class="approach-track"><i style="width:${passed/checks.length*100}%"></i></div>`;
   $("teachingQualityPanel").style.display=state.mode==="TEACHING"?"block":"none";
@@ -1902,15 +1872,12 @@ function drawGripper(){
     for(let i=0;i<20;i++){ctx.strokeStyle="rgba(255,255,255,.05)";ctx.beginPath();ctx.moveTo((i*83)%W,(i*47)%H);ctx.lineTo(((i*83)%W)+55,((i*47)%H)+8);ctx.stroke()}
     drawNut(ctx,W*.28,H*.43,35);drawBolt(ctx,W*.55,H*.48,30);drawWasher(ctx,W*.7,H*.3,28);drawNut(ctx,W*.72,H*.69,25);
   }
-  if(state.demo){
-    const bx=W*.49,by=H*.37,bw=W*.2,bh=H*.25;drawBBox(ctx,bx,by,bw,bh,`${objectLabel(v.target)} ${(v.confidence*100).toFixed(0)}%`,"#4ade80");
-    drawBBox(ctx,W*.2,H*.34,W*.16,H*.22,"너트 91%","#20d5e8");drawBBox(ctx,W*.65,H*.2,W*.14,H*.18,"와셔 88%","#f7c948");
-  }else if(v.bbox){
+  if(v.bbox){
     const sx=W/640,sy=H/480;drawBBox(ctx,v.bbox.x*sx,v.bbox.y*sy,v.bbox.w*sx,v.bbox.h*sy,`${objectLabel(v.target)} ${(v.confidence*100).toFixed(0)}%`,"#4ade80");
   }
   const grad=ctx.createRadialGradient(W/2,H/2,H*.1,W/2,H/2,H*.8);grad.addColorStop(0,"rgba(0,0,0,0)");grad.addColorStop(1,"rgba(0,0,0,.48)");ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
   ctx.fillStyle="rgba(5,12,20,.82)";ctx.fillRect(0,H-29,W,29);ctx.font="11px Consolas";ctx.fillStyle="#20d5e8";ctx.fillText(`TOF ${fmt(g.tof_mm)} mm`,12,H-11);ctx.fillStyle="#f7c948";ctx.fillText(`위치 보정 X ${signed(v.correction.dx_mm)} / Y ${signed(v.correction.dy_mm)} mm`,W*.32,H-11);
-  ctx.fillStyle=state.demo?"#f7c948":"#4ade80";ctx.fillText(state.demo?"DEMO SAMPLE":"LIVE SERVER BBOX",W-132,H-11);
+  if(v.bbox){ctx.fillStyle="#4ade80";ctx.fillText("LIVE BBOX",W-132,H-11);}
 }
 function drawBBox(ctx,x,y,w,h,label,color){ctx.strokeStyle=color;ctx.lineWidth=2;ctx.strokeRect(x,y,w,h);ctx.font="bold 11px Segoe UI";const tw=ctx.measureText(label).width+10;ctx.fillStyle=color;ctx.fillRect(x,y-20,tw,20);ctx.fillStyle="#041016";ctx.fillText(label,x+5,y-6)}
 function drawNut(ctx,x,y,r){ctx.save();ctx.translate(x,y);ctx.fillStyle="#a3b0bc";ctx.strokeStyle="#d1dae0";poly(ctx,6,r);ctx.fill();ctx.stroke();ctx.fillStyle="#303a44";poly(ctx,6,r*.43);ctx.fill();ctx.restore()}
@@ -2327,8 +2294,8 @@ function updateTiltDeg(){const e=$("tiltDeg");if(e)e.textContent="⤓"+Math.roun
 function pan3DView(dx,dy){
   const theta=view.yaw,scale=(0.0105/Math.max(view.zoom,.2));
   const rightX=Math.cos(theta+Math.PI/2),rightZ=Math.sin(theta+Math.PI/2),forwardX=Math.cos(theta),forwardZ=Math.sin(theta);
-  view.panX=clamp((view.panX||0)-dx*scale*rightX+dy*scale*forwardX,-2.8,2.8);
-  view.panZ=clamp((view.panZ||0)-dx*scale*rightZ+dy*scale*forwardZ,-2.3,2.8);
+  view.panX=clamp((view.panX||0)+dx*scale*rightX-dy*scale*forwardX,-2.8,2.8);
+  view.panZ=clamp((view.panZ||0)+dx*scale*rightZ-dy*scale*forwardZ,-2.3,2.8);
 }
 function bind3DDrag(){const c=$("robot3dCanvas");if(!c)return;c.oncontextmenu=e=>e.preventDefault();c.onpointerdown=e=>{const mode=e.button===2||e.shiftKey?"pan":"rotate";drag={x:e.clientX,y:e.clientY,mode};c.style.cursor=mode==="pan"?"grabbing":"move";c.setPointerCapture?.(e.pointerId);e.preventDefault()};c.onpointermove=e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(drag.mode==="rotate"){view.yaw+=dx*.008;view.pitch=clamp(view.pitch+dy*.007,.05,1.45);updateRotDeg();updateTiltDeg()}else pan3DView(dx,dy);drag.x=e.clientX;drag.y=e.clientY;draw3D()};c.onpointerup=e=>{drag=null;c.style.cursor="grab";c.releasePointerCapture?.(e.pointerId)};c.onpointerleave=()=>{drag=null;c.style.cursor="grab"};c.onwheel=e=>{view.zoom=clamp(view.zoom-e.deltaY*.0017,ZOOM_MIN,ZOOM_MAX);updateZoomPct();draw3D();e.preventDefault()};c.style.cursor="grab"}
 
@@ -2348,20 +2315,8 @@ function drawTopDown(){
 }
 
 /* ===== Camera controls ===== */
-function openModal(id){$(id).classList.add("open");if(id==="cameraModal")scanCameras()}
+function openModal(id){$(id).classList.add("open")}
 function closeModal(id){$(id).classList.remove("open")}
-async function scanCameras(){
-  try{if(!navigator.mediaDevices?.enumerateDevices)throw Error("브라우저 카메라 API를 사용할 수 없습니다.");let devices=await navigator.mediaDevices.enumerateDevices(),cams=devices.filter(d=>d.kind==="videoinput");
-    for(const id of ["humanCameraSelect","gripperCameraSelect"]){$(id).innerHTML=`<option value="">선택 안 함</option>`+cams.map((c,i)=>`<option value="${c.deviceId}">${c.label||`카메라 ${i+1}`}</option>`).join("")}
-    if(cams[0])$("humanCameraSelect").value=cams[0].deviceId;if(cams[1])$("gripperCameraSelect").value=cams[1].deviceId;debug(`카메라 ${cams.length}개 검색`);
-  }catch(e){addLog(`카메라 검색 실패: ${e.message}`,"warn")}
-}
-async function connectSelectedCameras(){
-  stopCameras(false);let ok=0;
-  for(const [kind,selectId] of [["human","humanCameraSelect"],["gripper","gripperCameraSelect"]]){const id=$(selectId).value;if(!id)continue;try{const stream=await navigator.mediaDevices.getUserMedia({video:{deviceId:{ideal:id}},audio:false});cameraStreams[kind]=stream;ok++}catch(e){addLog(`${kind==="human"?"사람 팔":"그리퍼"} 카메라 연결 실패: ${e.message}`,"warn")}}
-  state.system.camera_status=ok?"OK":"WAIT";restoreVideos();addLog(ok?`카메라 ${ok}개 연결 완료`:"선택된 카메라가 없습니다.",ok?"ok":"warn");renderAll();closeModal("cameraModal");
-}
-function stopCameras(log=true){Object.values(cameraStreams).forEach(s=>s&&s.getTracks().forEach(t=>t.stop()));cameraStreams.human=null;cameraStreams.gripper=null;state.system.camera_status="WAIT";if(log)addLog("카메라 연결 해제","warn");renderAll()}
 
 /* ===== Teaching, manual, and CSV actions ===== */
 function saveWaypoint(type){const row={seq:state.wpList.length+1,type,time:currentTime(),...Object.fromEntries(state.robot.joints.map(j=>[j.id,fmt(j.target)])),gripper:state.gripper.state};state.wpList.push(row);addLog(`${type==="WP"?"WP":type} 저장 완료`,"ok");renderPath()}
@@ -2520,7 +2475,7 @@ function exportLogCSV(){
   blobDownload("sambo_robot_event_log.csv","\ufeff"+rows.map(r=>r.map(v=>`"${String(v??"").replaceAll('"','""')}"`).join(",")).join("\n"),"text/csv;charset=utf-8");addLog("이벤트 로그 CSV 저장 완료","ok");
 }
 function generateRunReport(){
-  const report={generated_at:new Date().toISOString(),data_source:state.demo?"DEMO MODE":"LIVE WebSocket",mode:state.mode,system:state.system,can_health:state.can_health,robot:state.robot,gripper:state.gripper,vision:state.vision,path:state.path,precheck:getPrecheckItems().map(([name,ok,detail])=>({name,ok,detail})),recent_events:state.events.slice(0,30)};
+  const report={generated_at:new Date().toISOString(),data_source:state.demo?"DISCONNECTED":"LIVE WebSocket",mode:state.mode,system:state.system,can_health:state.can_health,robot:state.robot,gripper:state.gripper,vision:state.vision,path:state.path,precheck:getPrecheckItems().map(([name,ok,detail])=>({name,ok,detail})),recent_events:state.events.slice(0,30)};
   blobDownload("sambo_robot_run_report.json",JSON.stringify(report,null,2),"application/json;charset=utf-8");addLog("운전 상태 리포트 저장 완료","ok");
 }
 document.addEventListener("keydown",e=>{
@@ -2537,10 +2492,10 @@ function addChatMessage(text,who="bot",note=""){
   const row=document.createElement("div");row.className=`ai-msg ${who}`;row.textContent=text;if(note){const small=document.createElement("small");small.textContent=note;row.appendChild(small)}$("aiChatMessages").appendChild(row);$("aiChatMessages").scrollTop=$("aiChatMessages").scrollHeight;
 }
 function getAiDashboardState(){
-  return{data_source:state.demo?"DEMO MODE":"LIVE WebSocket",mode:state.mode,system:state.system,joints:state.robot.joints,gripper:state.gripper,vision:state.vision,path:state.path,alerts:getAlerts(),can_health:state.can_health,teaching_quality:getTeachingQuality(),approach:getApproachGuide()};
+  return{data_source:state.demo?"DISCONNECTED":"LIVE WebSocket",mode:state.mode,system:state.system,joints:state.robot.joints,gripper:state.gripper,vision:state.vision,path:state.path,alerts:getAlerts(),can_health:state.can_health,teaching_quality:getTeachingQuality(),approach:getApproachGuide()};
 }
 function localEasyAssistant(question){
-  const q=question.toLowerCase(),j3=state.robot.joints[3],a=getApproachGuide(),alerts=getAlerts(),source=state.demo?"현재 화면은 DEMO MODE 샘플 데이터입니다. 실제 장비 측정값은 아닙니다.":"현재 화면은 WebSocket으로 수신한 LIVE 데이터입니다.";
+  const q=question.toLowerCase(),j3=state.robot.joints[3],a=getApproachGuide(),alerts=getAlerts(),source=state.demo?"현재 로봇과 연결되어 있지 않습니다. 표시값은 실제 측정값이 아닐 수 있습니다.":"현재 화면은 WebSocket으로 수신한 LIVE 데이터입니다.";
   if(q.includes("발표"))return `${source}\n\n[한 줄 설명]\n이 시스템은 MPU 티칭, 그리퍼 카메라 AI 인식, CAN 통신, 6축 서보 피드백을 한 화면에서 연결해 보여주는 로봇팔 자동 분류 시스템입니다.\n\n[현장 흐름]\n사람 동작 티칭 → 물체 감지 → 위치 보정 → 접근 → 집기 → 분류통 배치`;
   if(q.includes("can"))return `${source}\n\n[현재 상태]\nCAN 상태: ${state.system.can_status==="OK"?"정상":"확인 필요"}\n최근 수신: ${state.can_health.last_rx_ms} ms\n오류: ${state.can_health.errors}건\n\n[설명]\nCAN은 Raspberry Pi 쪽 판단 결과와 하위 제어기의 모터·센서 상태를 주고받는 통신 통로입니다.`;
   if(q.includes("j3")||q.includes("모터"))return `${source}\n\n[J3 (M4) Elbow]\n현재각 ${deg(j3.current)} / 목표각 ${deg(j3.target)}\n온도 ${fmt(j3.temp,0)}°C / 부하 ${fmt(j3.load,0)}%\n\n[판단]\n${j3.load>=80?"부하가 80% 이상입니다. 팔꿈치 축 간섭이나 작업물 저항을 먼저 확인하세요.":"현재 즉시 조치가 필요한 부하는 아닙니다."}`;
@@ -2568,7 +2523,7 @@ function connectWS(){
   state.ws=ws;
   ws.onopen=()=>{state.demo=false;state.system.server_connected=true;addLog("서버 연결 — 실제 데이터 수신 대기","ok");debug("WebSocket connected");sendLifeUsageGet();if(state.life?.pendingSave)setTimeout(()=>saveStoredLifeTotals(true),250);renderAll()};
   ws.onmessage=e=>{try{const d=JSON.parse(e.data);applyIncoming(d);state.demo=false;state.system.server_connected=true;state.lastFrame=Date.now();requestUiRender()}catch(err){state.system.ws_errors=(state.system.ws_errors||0)+1;debug("JSON parse error: "+err.message)}};
-  ws.onclose=()=>{state.demo=true;state.system.server_connected=false;debug(`${wsUrl} disconnected. DEMO MODE enabled.`);renderAll();setTimeout(connectWS,2400)};
+  ws.onclose=()=>{state.demo=true;state.system.server_connected=false;debug(`${wsUrl} disconnected.`);renderAll();setTimeout(connectWS,2400)};
   ws.onerror=()=>{try{ws.close()}catch{}};
 }
 function applyIncoming(d){
@@ -2594,7 +2549,6 @@ function applyIncoming(d){
   if(d.human_pose)Object.assign(state.human_pose,d.human_pose);if(d.gripper)Object.assign(state.gripper,typeof d.gripper==="string"?{state:d.gripper.toUpperCase()}:d.gripper);
   if(d.vision){Object.assign(state.vision,d.vision);if(d.vision.correction)Object.assign(state.vision.correction,d.vision.correction)}
   if(d.path)Object.assign(state.path,d.path);if(d.precheck)Object.assign(state.precheck,d.precheck);if(d.can_health)Object.assign(state.can_health,d.can_health);if(d.calibration)Object.assign(state.calibration,d.calibration);if(Array.isArray(d.alerts))state.alerts=d.alerts;
-  updateLifePredictionFromJoints();
   if(d.event?.message)addLog(d.event.message,(d.event.level||"INFO").toLowerCase());
 }
 
@@ -2612,17 +2566,6 @@ function applyCanFrame(frame){
   }
 }
 
-/* ===== Demo data: visibly labeled, never presented as hardware data ===== */
-function demoTick(now){
-  if(!state.demo||state.system.estop||state.mode==="MANUAL")return;simT+=.018;
-  if(state.auto?.running&&state.mode==="AUTO_RUN")applyAutoDemoPose(now);
-  else if(state.mode!=="AUTO_RUN")state.robot.joints.forEach((j,i)=>{const home=TWIN_HOME_ANGLES[i];j.current=home;j.target=home;j.temp=clamp(j.temp+(Math.random()-.5)*.08,35,52);j.load=clamp(j.load+(Math.random()-.5)*.5,18,62);j.status="OK"});
-  const h=state.human_pose;h.shoulder_motion=42+Math.sin(simT*.8)*7;h.elbow_bend=78+Math.sin(simT*.92)*11;h.wrist_direction=15+Math.cos(simT)*8;h.hand_delta_x=12+Math.sin(simT)*5;h.hand_delta_y=-8+Math.cos(simT*.7)*4;h.mpu.forEach((m,i)=>{m.yaw+=Math.sin(simT+i)*.04;m.pitch+=Math.cos(simT*.7+i)*.05});
-  state.gripper.tof_mm=48.2+Math.sin(simT*.8)*2.2;state.vision.confidence=.91+Math.sin(simT)*.03;state.vision.correction.dx_mm=2.1+Math.sin(simT*.6)*.8;state.vision.correction.dy_mm=-1.8+Math.cos(simT*.5)*.6;
-  state.can_health.received+=Math.floor(Math.random()*3);state.can_health.last_rx_ms=Math.round(16+Math.abs(Math.sin(simT))*12);state.can_health.delay_ms=Math.round(12+Math.abs(Math.cos(simT*.7))*10);
-  if(now-lastAutoLog>9000){lastAutoLog=now;const pool=state.mode==="TEACHING"?[["MPU 자세 추정 안정 — 로봇 목표각 변환 중","info"],["WP 저장 준비 완료","ok"]]:[["볼트 감지, 신뢰도 94%","ok"],["위치 보정 X +2.1 mm / Y -1.8 mm","warn"],["ToF 거리 48.2 mm — 접근 가능","info"]];const [m,t]=pool[Math.floor(simT)%pool.length];addLog(m,t)}
-}
-
 /* ===== Main render loop ===== */
 const UI_RENDER_MIN_MS=120;
 const PANEL_RENDER_MIN_MS=300;
@@ -2638,7 +2581,8 @@ function requestUiRender(force=false){
   else setTimeout(()=>requestAnimationFrame(run),wait);
 }
 function renderAll(){
-  renderHeader();renderPrimary();renderPath();renderRightPanel();
+  updateLifeUsage();
+  renderHeader();renderPrimary();renderPath();renderRightPanel();renderReservedPanel();
   if(state.mode==="MANUAL"){
     // 행 DOM은 진입 시 1회만 생성. 라이브 스냅샷마다 innerHTML을 다시 쓰면
     // 버튼이 깜빡이고, mousedown↔mouseup 사이 element가 교체돼 click이 씹힌다.
@@ -2649,7 +2593,7 @@ function renderAll(){
   applyFocusView();
 }
 function frame(now){
-  demoTick(now);draw3D();
+  draw3D();
   if(now-lastAuxRenderAt>=AUX_RENDER_MIN_MS){lastAuxRenderAt=now;drawHumanPose();drawGripper();drawTopDown()}
   if(now-lastPanelRenderAt>=PANEL_RENDER_MIN_MS){lastPanelRenderAt=now;renderRightPanel()}
   requestAnimationFrame(frame);
@@ -2657,12 +2601,7 @@ function frame(now){
 setInterval(()=>{const now=currentTime();setText("clock",now);const sc=$("splashClock");if(sc)sc.textContent=now;const timer=$("recordTimer");if(timer){const s=Math.floor((Date.now()-bootTime)/1000);timer.textContent=`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`}},1000);
 const bootTime=Date.now();
 const initialWsUrl=getWsUrl();if($("wsUrlLabel"))$("wsUrlLabel").textContent=initialWsUrl;
-addLog("시뮬레이션 데이터 표시 — 서버 연결 대기","warn");addLog(`WebSocket ${initialWsUrl} 연결 대기`,"info");addLog("6축 STS3215 상태 패널 준비 완료","ok");
-loadStoredLifeTotals();
-loadOfficialLimits();
-loadLifeBaseline();
-window.addEventListener("visibilitychange",()=>{if(document.hidden)saveStoredLifeTotals(true)});
-window.addEventListener("pagehide",()=>saveStoredLifeTotals(true));
+addLog("서버 연결 대기 — 실데이터 수신 시 화면 갱신","warn");addLog(`WebSocket ${initialWsUrl} 연결 대기`,"info");addLog("6축 STS3215 상태 패널 준비 완료","ok");
 try{let u=localStorage.getItem("gripperCamUrl");if(!u){u="http://"+location.hostname+":8091/?action=stream"}if(!state.camera)state.camera={gripper_url:""};state.camera.gripper_url=u;applyGripperStream()}catch(e){};setMode("AUTO_RUN");connectWS();requestAnimationFrame(frame);
 </script>
 <script src="./sambo_object_overlay.js"></script>
