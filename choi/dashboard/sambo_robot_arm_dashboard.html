@@ -360,8 +360,6 @@ button{cursor:pointer}
 .alert-item.warn{border-color:var(--yellow);color:#f5df93}.alert-item.err{border-color:var(--red);color:#ffb7b7}
 .approach-track{height:8px;margin-top:6px;overflow:hidden;border-radius:7px;background:#07121e}.approach-track i{display:block;height:100%;border-radius:7px;background:linear-gradient(90deg,var(--cyan),var(--green));transition:.25s}
 .approach-zones{display:flex;justify-content:space-between;margin-top:4px;color:var(--dim);font-size:8px}
-.home-btn{color:var(--green);border-color:rgba(74,222,128,.46);background:rgba(74,222,128,.06)}
-.precheck-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.precheck-item{padding:8px;border:1px solid var(--line);border-radius:6px;background:#091522;color:var(--muted);font-size:11px}.precheck-item b{display:block;margin-bottom:3px;color:var(--text)}
 
 /* ===== Manual mode ===== */
 .manual-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;height:100%}
@@ -476,7 +474,7 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 .step-chart{grid-column:1;grid-row:1;align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:9px;padding:11px 18px}
 .workspace{grid-column:1;grid-row:2;align-self:stretch;grid-template-rows:none;min-height:0;height:auto;display:flex;flex-direction:column}
 .workspace>.main-stage{flex:1 1 auto;min-height:0;height:auto}
-.bottom-strip{grid-column:1;grid-row:3;align-self:stretch;min-height:0;display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.25fr) minmax(0,1.15fr);gap:7px}
+.bottom-strip{grid-column:1;grid-row:3;align-self:stretch;min-height:0;display:grid;grid-template-columns:minmax(180px,.55fr) minmax(590px,1.85fr) minmax(170px,.75fr);gap:7px}
 .right-panel{position:static;right:auto;top:auto;width:auto;height:auto;align-self:stretch;grid-column:2;grid-row:1/4;overflow:hidden;padding-bottom:0;display:flex;flex-direction:column;gap:7px;z-index:auto}
 .right-panel>.joint-panel,.right-panel>.motor-panel{flex:0 0 auto;min-height:0;display:flex;flex-direction:column}
 .right-panel>.sorting-panel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
@@ -523,12 +521,49 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 .sort-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sort-summary div{border:1px solid rgba(28,56,85,.55);border-radius:7px;background:rgba(5,12,20,.34);padding:12px;text-align:center;color:var(--dim);font-size:10px}.sort-summary b{display:block;margin-top:6px;color:var(--text);font-size:16px}.sort-last{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--dim);font-size:10px}.sort-last b{color:var(--text)}
 .bottom-strip>.panel{min-height:0;display:flex;flex-direction:column}
 .bottom-strip .logs{flex:1;height:auto;max-height:none;min-height:0}
-.tof-body{flex:1;min-height:0;padding:10px 13px;display:flex;flex-direction:column;justify-content:center;gap:9px}
-.tof-big{font-size:34px;font-weight:900;color:var(--cyan);line-height:1;text-align:center;letter-spacing:-1px}
-.tof-big .unit{font-size:14px;color:var(--muted);margin-left:5px;font-weight:700}
+.tof-body{flex:1;min-height:0;padding:9px 12px;display:flex;flex-direction:column;justify-content:center;gap:8px}
+.tof-big{font-size:30px;font-weight:900;color:var(--cyan);line-height:1;text-align:center;letter-spacing:-1px}
+.tof-big .unit{font-size:12px;color:var(--muted);margin-left:4px;font-weight:700}
 .tof-judge{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--dim)}
 .tof-judge b{font-size:13px}
 .placeholder-body{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:14px;color:var(--dim);font-size:11px;text-align:center}
+.life-panel .placeholder-body{display:block;text-align:left;overflow:hidden;padding:7px 10px}
+.life-joint-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.life-row{display:grid;grid-template-columns:104px minmax(98px,1fr) 52px;gap:6px;align-items:center;min-height:38px;padding:5px 6px;border:1px solid rgba(28,56,85,.46);border-radius:7px;background:rgba(9,21,34,.62);overflow:hidden}
+.life-axis b{display:block;color:var(--cyan);font-size:13px;line-height:1;font-weight:900}.life-axis small{display:block;margin-top:3px;color:#8ea6ba;font-size:9px;font-weight:800;line-height:1.05;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.life-axis-sub{display:flex!important;align-items:center;gap:4px;margin-top:3px;min-width:0}.life-axis-sub span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.life-readout{display:block;min-width:0}.life-readout i{display:block;font-style:normal;color:var(--green);font-size:11px;font-weight:900;white-space:nowrap;overflow:visible;text-overflow:clip}.life-readout small{display:block;margin-top:3px;color:#9fb5c6;font-size:9px;font-weight:800;white-space:nowrap;overflow:visible;text-overflow:clip}
+.life-row em{font-style:normal;text-align:center;font-weight:900;font-size:10px;padding:5px 0;border-radius:14px;border:1px solid rgba(74,222,128,.45);background:rgba(74,222,128,.06);white-space:nowrap;width:52px;min-width:0;justify-self:end}
+.life-row em.green{color:var(--green)}.life-row em.yellow{color:var(--yellow);border-color:rgba(247,201,72,.5);background:rgba(247,201,72,.06)}.life-row em.red{color:var(--red);border-color:rgba(255,91,91,.55);background:rgba(255,91,91,.08)}
+.life-detail-btn{height:17px;min-width:28px;box-sizing:border-box;padding:0 5px;border:1px solid rgba(32,213,232,.42);border-radius:9px;background:rgba(32,213,232,.07);color:#a8edf3;font-size:8px;font-weight:900;line-height:1;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;transition:none}
+.life-detail-btn:hover{background:rgba(32,213,232,.16);color:#d5fbff}
+.life-detail-card{display:grid;gap:10px}
+.life-detail-title{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid rgba(32,213,232,.32);border-radius:8px;background:rgba(32,213,232,.06)}
+.life-detail-title b{color:var(--cyan);font-size:18px}.life-detail-title small{display:block;margin-top:3px;color:#9fb5c6;font-size:11px}
+.life-detail-title em{font-style:normal;min-width:58px;text-align:center;border-radius:16px;padding:6px 10px;font-size:12px;font-weight:900;border:1px solid rgba(74,222,128,.45);color:var(--green);background:rgba(74,222,128,.06)}
+.life-detail-title em.yellow{color:var(--yellow);border-color:rgba(247,201,72,.55);background:rgba(247,201,72,.07)}.life-detail-title em.red{color:var(--red);border-color:rgba(255,91,91,.55);background:rgba(255,91,91,.08)}
+.life-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.life-detail-box{padding:10px 11px;border:1px solid rgba(28,56,85,.64);border-radius:7px;background:#091522;color:#bcd0df;font-size:12px;line-height:1.55}
+.life-detail-box b{display:block;margin-bottom:4px;color:var(--text);font-size:13px}
+.life-detail-box strong{color:var(--green);font-size:16px}.life-detail-box.wide{grid-column:1/-1}
+.life-help-btn{padding:3px 7px;border:1px solid rgba(32,213,232,.36);border-radius:6px;background:rgba(32,213,232,.08);color:#a8edf3;font-size:9px;font-weight:900}
+.life-help-btn:hover{color:#04161b;background:var(--cyan);border-color:var(--cyan)}
+.life-guide{display:grid;gap:10px}
+.life-guide-note{padding:10px 12px;border:1px solid rgba(32,213,232,.26);border-radius:7px;background:rgba(32,213,232,.06);color:#bcd0df;font-size:12px;line-height:1.55}
+.life-guide-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.life-guide-box,.life-legend-item{border:1px solid rgba(28,56,85,.64);border-radius:7px;background:#091522;padding:10px 11px;color:var(--muted);font-size:11px;line-height:1.5}
+.life-guide-box b,.life-legend-item b{display:block;margin-bottom:4px;color:var(--text);font-size:13px}
+.life-guide-box strong{color:var(--cyan)}
+.life-legend-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+.life-legend-item{min-height:118px}
+.life-legend-item b{font-size:14px}
+.life-legend-item small{display:block;color:#8ea6ba;font-size:10px;line-height:1.45}
+.life-legend-item.green{border-color:rgba(74,222,128,.45);background:rgba(74,222,128,.055)}
+.life-legend-item.cyan{border-color:rgba(32,213,232,.42);background:rgba(32,213,232,.055)}
+.life-legend-item.yellow{border-color:rgba(247,201,72,.52);background:rgba(247,201,72,.065)}
+.life-legend-item.red{border-color:rgba(255,91,91,.56);background:rgba(255,91,91,.075)}
+.life-legend-item.green b{color:var(--green)}.life-legend-item.cyan b{color:var(--cyan)}.life-legend-item.yellow b{color:var(--yellow)}.life-legend-item.red b{color:var(--red)}
+@media(max-width:900px){.life-guide-grid,.life-legend-grid{grid-template-columns:1fr}}
 .ai-fab{position:fixed;right:24px;bottom:24px;z-index:70;width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(32,213,232,.6);background:rgba(32,213,232,.18);color:var(--cyan);font-weight:900;font-size:17px;letter-spacing:.5px;opacity:.6;backdrop-filter:blur(6px);box-shadow:0 12px 28px rgba(0,0,0,.45);transition:.18s}
 .ai-fab:hover{opacity:1;background:var(--cyan);color:#04161b;transform:translateY(-3px);box-shadow:0 16px 34px rgba(32,213,232,.3)}
 .ai-fab span{line-height:0;display:flex;align-items:center;justify-content:center}.ai-fab svg{display:block}
@@ -614,8 +649,6 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
     <button class="tab action-control" data-mode="MANUAL" onclick="setMode('MANUAL')">수동 시험</button>
   </div>
   <div class="toolbar-spacer"></div>
-  <button class="tool-btn home-btn action-control" onclick="goHome()">HOME 복귀</button>
-  <button class="tool-btn" onclick="openPrecheck()">운전 준비 점검</button>
   <button class="tool-btn" onclick="openModal('cameraModal')">카메라 보기 / 설정</button>
   <button class="tool-btn" onclick="openModal('systemModal')">시스템 연결도</button>
   <button class="tool-btn" onclick="openModal('canModal')">통신 상세</button>
@@ -667,9 +700,9 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
       <div class="tof-body" id="tofBody"></div>
     </article>
 
-    <article class="panel placeholder-panel">
-      <div class="panel-head">예약 영역 / Reserved <small>추후 사용</small></div>
-      <div class="placeholder-body" id="reservedBody"><span>추후 내용이 들어갈 영역입니다.</span></div>
+    <article class="panel placeholder-panel life-panel">
+      <div class="panel-head">수명 예측 / Servo Life <small id="lifeBaselineTag">STS3215 x 6</small><span class="head-right"><button class="life-help-btn" onclick="openModal('lifeLegendModal')" title="수명예측 계산 기준">계산 기준</button></span></div>
+      <div class="placeholder-body" id="reservedBody"><span>정상 기준선 로딩 중입니다.</span></div>
     </article>
 
     <article class="panel log-panel">
@@ -742,19 +775,39 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
   </section>
 </div>
 
-<!-- ===== Pre-run checklist modal ===== -->
-<div class="modal-backdrop" id="precheckModal">
+<!-- ===== Servo life interpretation modal ===== -->
+<div class="modal-backdrop" id="lifeLegendModal">
   <section class="modal">
-    <div class="modal-head">자동 운전 전 준비 점검 / Pre-run Checklist <button onclick="closeModal('precheckModal')">×</button></div>
+    <div class="modal-head">수명예측 계산 기준 / Servo Life Guide <button onclick="closeModal('lifeLegendModal')">×</button></div>
     <div class="modal-body">
-      <p class="muted" style="font-size:12px;margin-top:0">자동 운전을 시작하기 전에 연결, 센서, HOME 자세와 하드웨어 비상정지 위치를 확인합니다.</p>
-      <div class="precheck-list" id="precheckItems"></div>
-      <p class="yellow" style="font-size:11px">주의: 실제 비상정지는 하드웨어 E-STOP으로 서보 전원을 차단해야 합니다.</p>
-      <div class="modal-actions">
-        <button class="small-btn" onclick="renderPrecheck()">다시 점검</button>
-        <button class="small-btn" id="precheckAutoBtn" onclick="startAutoFromPrecheck()">점검 후 자동 운전</button>
-        <button class="small-btn" onclick="closeModal('precheckModal')">닫기</button>
+      <div class="life-guide">
+        <div class="life-guide-note">
+          이 패널은 STS3215 공식 보호 한계값, 우리가 모은 정상 자동운전 데이터, 실시간 온도·전류·부하·위치오차를 함께 보고 모터별 상태를 판단합니다.
+        </div>
+        <div class="life-guide-grid">
+          <div class="life-guide-box"><b>공식 cycle</b><strong>1 cyc = 60도 왕복 = 총 120도 이동</strong> 입니다. STS3215 수명 테스트 조건에 맞춰 Σ|각도 변화| / 120으로 계산합니다.</div>
+          <div class="life-guide-box"><b>잔여량</b>100,000 cyc 기준에서 보정 사용 cycle을 뺀 값입니다. 기본 사용량과 보정 사용량 중 더 보수적인 값을 화면에 표시합니다.</div>
+          <div class="life-guide-box"><b>상태 보정</b>전류 I², 부하², 온도 초과량, 위치오차를 보고 같은 움직임이라도 더 힘든 작업이면 보정 cycle을 더 크게 누적합니다.</div>
+          <div class="life-guide-box"><b>정상 기준 범위</b>우리가 수집한 정상 자동운전 데이터의 온도·전류·부하 분포 안에 있다는 뜻입니다. 공식 수치가 아니라 이 로봇팔 맞춤 기준입니다.</div>
+        </div>
+        <div class="life-legend-grid">
+          <div class="life-legend-item green"><b>정상</b><small>공식 한계보다 충분히 낮고, 우리 정상 기준선 안에 있습니다. 즉시 조치가 필요하지 않습니다.</small></div>
+          <div class="life-legend-item cyan"><b>관찰</b><small>정상 범위에서 살짝 벗어나기 시작한 상태입니다. 운전은 가능하지만 추세를 봅니다.</small></div>
+          <div class="life-legend-item yellow"><b>주의</b><small>온도, 전류, 부하, 위치오차 중 하나가 평소보다 높습니다. 순간 신호 하나만으로 수명이 바로 크게 줄지는 않고, 부담이 누적될 때 반영됩니다.</small></div>
+          <div class="life-legend-item yellow"><b>점검 권장</b><small>STS3215 권장 운용 범위 근처이거나 기준선 초과가 큽니다. 쉬게 하거나 기구 간섭을 확인합니다.</small></div>
+          <div class="life-legend-item red"><b>위험</b><small>공식 보호 한계 근처입니다. 자동운전 중단, 냉각, 전원·기구 상태 확인을 우선합니다.</small></div>
+        </div>
       </div>
+    </div>
+  </section>
+</div>
+
+<!-- ===== Servo life motor detail modal ===== -->
+<div class="modal-backdrop" id="lifeJointModal">
+  <section class="modal">
+    <div class="modal-head">모터별 수명 상세 / Servo Detail <button onclick="closeModal('lifeJointModal')">×</button></div>
+    <div class="modal-body" id="lifeJointDetailBody">
+      <div class="life-detail-box">모터 상세 정보를 불러오는 중입니다.</div>
     </div>
   </section>
 </div>
@@ -917,6 +970,7 @@ const state={
   can_health:{received:1842,errors:0,delay_ms:18,last_rx_ms:22},
   calibration:{tof:"OK",camera:"OK",mpu:"OK",servo:"OK"},
   alerts:[],
+  life:{baseline:null,baselineLoaded:false,baselineError:"",officialLimits:null,officialLimitsLoaded:false,officialLimitsError:"",health:{},sessionEquivalentCycles:{J1:0,J2:0,J3:0,J4:0,J5:0,J6:0},sessionFatigueCycles:{J1:0,J2:0,J3:0,J4:0,J5:0,J6:0},totalEquivalentCycles:{J1:0,J2:0,J3:0,J4:0,J5:0,J6:0},fatigueAdjustedEquivalentCycles:{J1:0,J2:0,J3:0,J4:0,J5:0,J6:0},designEquivalentCycles:100000,lastAngles:null,lastUpdated:0,piLoaded:false,pendingSave:false,saveError:"",lastPiSync:0},
   digital_twin:{source:"RPi command + STM32 telemetry",cmd_id:"0x100",telemetry_id:"0x201",current_id:"0x202",latency_ms:23,mirror_preload:0,last_cmd:"CMD_SET_ANGLE 0x03",last_ack:"0x200 OK"}
 };
 const cameraStreams={human:null,gripper:null};
@@ -1023,7 +1077,7 @@ function twinStatus(){
   const collision=state.collision||getCollisionReport("current");
   return{current:c,target:t,error:err,ok:c.mirrorMismatch<=3&&err<=8&&!collision.blocked,collision};
 }
-let view={yaw:340*Math.PI/180,pitch:25*Math.PI/180,zoom:1.2},drag=null,simT=0,lastAutoLog=0;
+let view={yaw:340*Math.PI/180,pitch:25*Math.PI/180,zoom:1.2,panX:0,panZ:0},drag=null,simT=0,lastAutoLog=0;
 let ZOOM_MIN=0.75,ZOOM_MAX=3.0,ZOOM_DEF=1.5;
 const MANUAL_KEY_STEP=1;
 const J4_VISUAL_HOME_OFFSET_DEG=-21;
@@ -1049,6 +1103,442 @@ function addLog(message,type="info"){
   if(state.events.length>300)state.events.length=300;
 }
 function debug(message){$("debugLog").textContent=`[${currentTime()}] ${message}\n`+$("debugLog").textContent.slice(0,2400)}
+
+
+/* ===== Servo life baseline ===== */
+const LIFE_NOISE_DEG=0.5,LIFE_DEG_PER_EQ_CYCLE=120,LIFE_LEGACY_DEG_PER_EQ_CYCLE=120;
+const LIFE_USAGE_SCHEMA="sambo_servo_life_usage_v1";
+const LIFE_DEFAULT_DESIGN_EQ_CYCLES=100000;
+let lastLifeSaveAt=0;
+function cleanLifeTotals(totals={}){
+  const ids=["J1","J2","J3","J4","J5","J6"];
+  return Object.fromEntries(ids.map(id=>{
+    const v=Number(totals[id]);
+    return[id,Number.isFinite(v)&&v>=0?v:0];
+  }));
+}
+function cleanLifeHealthState(health={}){
+  const ids=["J1","J2","J3","J4","J5","J6"];
+  return Object.fromEntries(ids.map(id=>{
+    const h=health[id]||{};
+    const stress=Number(h.stressFactor??h.factor??1);
+    return[id,{severity:Number(h.severity||0),label:h.label||"정상",stressFactor:Number.isFinite(stress)?clamp(stress,1,3):1,score:Number(h.score||100),confidence:h.confidence||"",reasons:Array.isArray(h.reasons)?h.reasons.slice(0,3):[]}];
+  }));
+}
+function lifeUsagePayload(){
+  const life=state.life||{};
+  const design=Number(life.designEquivalentCycles);
+  return{
+    schema:LIFE_USAGE_SCHEMA,
+    usageUnit:"official_life_cycle_120deg",
+    degreesPerEquivalentCycle:LIFE_DEG_PER_EQ_CYCLE,
+    designEquivalentCycles:Number.isFinite(design)&&design>0?design:LIFE_DEFAULT_DESIGN_EQ_CYCLES,
+    totalEquivalentCycles:cleanLifeTotals(life.totalEquivalentCycles||{}),
+    fatigueAdjustedEquivalentCycles:cleanLifeTotals(life.fatigueAdjustedEquivalentCycles||life.totalEquivalentCycles||{}),
+    healthState:cleanLifeHealthState(life.health||{})
+  };
+}
+function loadStoredLifeTotals(){
+  const life=state.life;if(!life)return;
+  life.designEquivalentCycles=LIFE_DEFAULT_DESIGN_EQ_CYCLES;
+  life.totalEquivalentCycles=cleanLifeTotals(life.totalEquivalentCycles||{});
+  life.fatigueAdjustedEquivalentCycles=cleanLifeTotals(life.fatigueAdjustedEquivalentCycles||life.totalEquivalentCycles||{});
+  life.sessionFatigueCycles=cleanLifeTotals(life.sessionFatigueCycles||{});
+  life.piLoaded=false;
+  life.saveError="";
+}
+function applyLifeUsageSnapshot(snapshot,force=false){
+  const life=state.life;if(!life||!snapshot)return false;
+  if(!force&&life.piLoaded)return false;
+  if(!force&&life.pendingSave)return false;
+  const design=Number(snapshot.designEquivalentCycles);
+  life.designEquivalentCycles=Number.isFinite(design)&&design>0?design:LIFE_DEFAULT_DESIGN_EQ_CYCLES;
+  const sourceDeg=Number(snapshot.degreesPerEquivalentCycle||LIFE_LEGACY_DEG_PER_EQ_CYCLE);
+  const scale=Number.isFinite(sourceDeg)&&sourceDeg>0?sourceDeg/LIFE_DEG_PER_EQ_CYCLE:1;
+  const scaleTotals=totals=>Object.fromEntries(Object.entries(cleanLifeTotals(totals||{})).map(([id,v])=>[id,v*scale]));
+  life.totalEquivalentCycles=scaleTotals(snapshot.totalEquivalentCycles||{});
+  life.fatigueAdjustedEquivalentCycles=scaleTotals(snapshot.fatigueAdjustedEquivalentCycles||snapshot.totalEquivalentCycles||{});
+  if(snapshot.healthState&&typeof snapshot.healthState==="object")life.health=cleanLifeHealthState(snapshot.healthState);
+  life.piLoaded=true;
+  life.pendingSave=false;
+  life.saveError="";
+  life.lastPiSync=Date.now();
+  renderLifePredictionCard();
+  return true;
+}
+function sendLifeUsageGet(){
+  if(state.ws?.readyState===WebSocket.OPEN){
+    state.ws.send(JSON.stringify({type:"LIFE_USAGE_GET"}));
+  }
+}
+function saveStoredLifeTotals(force=false){
+  const life=state.life;if(!life)return;
+  const now=Date.now();
+  if(!force&&now-lastLifeSaveAt<2000)return;
+  if(state.ws?.readyState===WebSocket.OPEN){
+    lastLifeSaveAt=now;
+    life.pendingSave=true;
+    life.saveError="";
+    state.ws.send(JSON.stringify({type:"LIFE_USAGE_SAVE",payload:lifeUsagePayload()}));
+  }else{
+    life.pendingSave=true;
+    life.saveError="Pi 저장 대기";
+  }
+}
+function shortestLifeDelta(next,prev){
+  let d=Number(next)-Number(prev);
+  while(d>180)d-=360;
+  while(d<-180)d+=360;
+  return d;
+}
+function lifeAngleSnapshot(){
+  return Object.fromEntries(state.robot.joints.map(j=>[j.id,Number(j.current)]));
+}
+const STS3215_DEFAULT_LIMITS={
+  schema:"sambo_sts3215_official_limits_v1",
+  temperature:{recommendedMaxC:60,warningC:60,softReduceC:65,protectionC:70},
+  current:{idleMa:30,noLoadMa:200,warningMa:2000,stallMa:2700,unitMaPerLsb:6.5},
+  load:{recommendedMaxPercent:60,overloadPercent:80},
+  protection:{defaultProtectionTimeMs:2000}
+};
+const HEALTH_LEVELS=[
+  {severity:0,label:"정상",pillClass:"ok",lifeClass:"green",score:100},
+  {severity:1,label:"관찰",pillClass:"warn",lifeClass:"yellow",score:82},
+  {severity:2,label:"주의",pillClass:"warn",lifeClass:"yellow",score:68},
+  {severity:3,label:"점검 권장",pillClass:"err",lifeClass:"red",score:45},
+  {severity:4,label:"위험",pillClass:"err",lifeClass:"red",score:20}
+];
+function healthLevel(severity){return HEALTH_LEVELS[Math.max(0,Math.min(HEALTH_LEVELS.length-1,severity|0))]}
+function finiteMetric(v){const n=Number(v);return Number.isFinite(n)?n:null}
+function getOfficialLimits(){return state.life?.officialLimits||STS3215_DEFAULT_LIMITS}
+function getBaselineConfidence(){
+  const b=state.life?.baseline,cycles=Number(b?.confidence?.normalBaselineCycles||b?.totals?.normalBaselineCycles||0);
+  if(b?.confidence?.label)return b.confidence.label;
+  if(cycles>=100)return"신뢰 기준";
+  if(cycles>=30)return"정상 기준";
+  if(cycles>=10)return"예비 기준";
+  return"참고";
+}
+function metricStat(base,group,key,fallback=null){
+  const v=base?.samples?.[group]?.[key];
+  return Number.isFinite(Number(v))?Number(v):fallback;
+}
+function squaredStress(value,ref,cap){
+  const v=Number(value),r=Number(ref);
+  if(!Number.isFinite(v)||!Number.isFinite(r)||v<=0||r<=0)return 1;
+  return clamp(Math.pow(v/r,2),1,cap);
+}
+function temperatureStress(temp,base,limits){
+  const t=Number(temp);
+  if(!Number.isFinite(t))return{factor:1,reason:""};
+  const normalRef=Math.max(25,Number(metricStat(base,"tempC","p95",35)||35));
+  const warning=Number(limits?.temperature?.warningC??60);
+  const protection=Number(limits?.temperature?.protectionC??70);
+  if(t<=normalRef)return{factor:1,reason:""};
+  const normalSpan=Math.max(1,warning-normalRef);
+  const warningSpan=Math.max(1,protection-warning);
+  const normalStress=clamp((t-normalRef)/normalSpan,0,1);
+  const protectionStress=t>warning?clamp((t-warning)/warningSpan,0,1):0;
+  const factor=clamp(1+normalStress+protectionStress,1,3);
+  return{factor,reason:t>=warning?"공식 온도 한계 접근":"정상 온도 초과"};
+}
+function trackingStress(j){
+  const target=finiteMetric(j.target),currentAngle=finiteMetric(j.current);
+  if(target==null||currentAngle==null)return{factor:1,reason:""};
+  const err=Math.abs(target-currentAngle);
+  if(err<=5)return{factor:1,reason:""};
+  return{factor:clamp(1+(err-5)/5,1,2),reason:"목표각 추종 부담"};
+}
+function jointPhysicalStress(j,base,limits){
+  const parts=[],reasons=[];
+  let factor=1;
+  const current=finiteMetric(j.current_ma);
+  if(current!=null&&current>0){
+    const currentRef=Math.max(Number(metricStat(base,"currentMa","p95",0)||0),50);
+    const currentFactor=squaredStress(current,currentRef,3);
+    parts.push({name:"current_i2",factor:currentFactor,value:current,ref:currentRef});
+    if(currentFactor>1.05)reasons.push("전류 I² 부담 증가");
+    factor=Math.max(factor,currentFactor);
+  }
+  const load=finiteMetric(j.load);
+  if(load!=null&&load>0){
+    const loadRef=Math.max(Number(metricStat(base,"loadPercent","p95",0)||0),3);
+    const loadFactor=squaredStress(load,loadRef,2.5);
+    parts.push({name:"load_squared",factor:loadFactor,value:load,ref:loadRef});
+    if(loadFactor>1.05)reasons.push("부하 부담 증가");
+    factor=Math.max(factor,loadFactor);
+  }
+  const tempInfo=temperatureStress(j.temp,base,limits);
+  parts.push({name:"temperature",factor:tempInfo.factor,value:finiteMetric(j.temp),ref:metricStat(base,"tempC","p95",null)});
+  if(tempInfo.factor>1.05&&tempInfo.reason)reasons.push(tempInfo.reason);
+  factor=Math.max(factor,tempInfo.factor);
+  const errInfo=trackingStress(j);
+  parts.push({name:"tracking_error",factor:errInfo.factor});
+  if(errInfo.factor>1.05&&errInfo.reason)reasons.push(errInfo.reason);
+  factor=Math.max(factor,errInfo.factor);
+  return{factor:clamp(factor,1,3),parts,reasons};
+}
+function addHealthIssue(result,severity,label,reason,metric){
+  if(severity>result.severity){result.severity=severity;result.label=label}
+  if(reason)result.reasons.push(reason);
+  if(metric)result.metrics.push(metric);
+}
+function jointHealthStatus(j){
+  const base=state.life?.baseline?.joints?.[j.id]||{};
+  const th=base.thresholds||{};
+  const limits=getOfficialLimits();
+  const temp=finiteMetric(j.temp),load=finiteMetric(j.load),current=finiteMetric(j.current_ma);
+  const target=finiteMetric(j.target),currentAngle=finiteMetric(j.current);
+  const tempWatch=Number(th.tempWatchC??Math.max(45,metricStat(base,"tempC","p95",45)+8));
+  const tempCool=Number(th.tempCoolC??50),tempExclude=Number(th.tempExcludeC??55),tempStop=Number(th.tempStopC??60);
+  const currentWarn=Number(th.currentWarnMa??Math.max(300,metricStat(base,"currentMa","p99",0)*2));
+  const currentStop=Number(th.currentStopMa??Math.max(600,metricStat(base,"currentMa","max",0)*1.25));
+  const loadWarn=Number(th.loadWarnPercent??Math.max(20,metricStat(base,"loadPercent","p95",20)*1.3));
+  const loadStop=Number(th.loadStopPercent??Math.max(35,metricStat(base,"loadPercent","p99",35)*1.5));
+  const physical=jointPhysicalStress(j,base,limits);
+  const result={joint:j,base,severity:0,label:"정상",reasons:[],metrics:[],confidence:getBaselineConfidence(),stressFactor:physical.factor,stressParts:physical.parts,score:100,pillClass:"ok",lifeClass:"green"};
+  if(!state.demo){
+    if(j.comm==="STALE")addHealthIssue(result,3,"점검 권장","통신 끊김/지연",`통신 ${j.comm}`);
+    else if(j.comm==="PARTIAL")addHealthIssue(result,2,"주의","일부 피드백 누락",`통신 ${j.comm}`);
+    else if(j.comm==="WAIT")addHealthIssue(result,1,"관찰","피드백 대기",`통신 ${j.comm}`);
+  }
+  if(temp!=null){
+    const officialTemp=limits.temperature||{};
+    if(temp>=Number(officialTemp.protectionC??70))addHealthIssue(result,4,"위험","공식 보호 온도 도달",`${fmt(temp,0)}°C`);
+    else if(temp>=Number(officialTemp.softReduceC??65))addHealthIssue(result,3,"점검 권장","토크 저감 권장 온도",`${fmt(temp,0)}°C`);
+    else if(temp>=Number(officialTemp.warningC??60)||temp>=tempStop)addHealthIssue(result,3,"점검 권장","냉각/운전 중단 권장",`${fmt(temp,0)}°C`);
+    else if(temp>=tempExclude)addHealthIssue(result,2,"주의","정상 기준선 제외 온도",`${fmt(temp,0)}°C`);
+    else if(temp>=tempCool)addHealthIssue(result,2,"주의","정상 운전 온도 상단 초과",`${fmt(temp,0)}°C`);
+    else if(temp>=tempWatch)addHealthIssue(result,1,"관찰","평소 온도보다 높음",`${fmt(temp,0)}°C`);
+  }
+  if(current!=null&&current>0){
+    const officialCurrent=limits.current||{};
+    if(current>=Number(officialCurrent.stallMa??2700))addHealthIssue(result,4,"위험","스톨 전류 근접",`${fmt(current,0)}mA`);
+    else if(current>=Number(officialCurrent.warningMa??2000))addHealthIssue(result,3,"점검 권장","고전류 지속 위험",`${fmt(current,0)}mA`);
+    else if(current>=currentStop)addHealthIssue(result,2,"주의","정상 전류 기준 초과",`${fmt(current,0)}mA`);
+    else if(current>=currentWarn)addHealthIssue(result,1,"관찰","평소 전류보다 높음",`${fmt(current,0)}mA`);
+  }
+  if(load!=null){
+    const officialLoad=limits.load||{};
+    if(load>=Number(officialLoad.overloadPercent??80))addHealthIssue(result,3,"점검 권장","공식 과부하 기준 도달",`${fmt(load,0)}%`);
+    else if(load>=Number(officialLoad.recommendedMaxPercent??60))addHealthIssue(result,2,"주의","권장 지속 부하 상한 초과",`${fmt(load,0)}%`);
+    else if(load>=loadStop)addHealthIssue(result,2,"주의","정상 부하 기준 초과",`${fmt(load,0)}%`);
+    else if(load>=loadWarn)addHealthIssue(result,1,"관찰","평소 부하보다 높음",`${fmt(load,0)}%`);
+  }
+  if(target!=null&&currentAngle!=null){
+    const err=Math.abs(target-currentAngle);
+    if(err>10)addHealthIssue(result,2,"주의","목표각 추종 오차 큼",`${fmt(err)}°`);
+    else if(err>5)addHealthIssue(result,1,"관찰","목표각 추종 오차 증가",`${fmt(err)}°`);
+  }
+  if(physical.factor>=2.5&&result.severity<2)addHealthIssue(result,2,"주의",physical.reasons[0]||"물리 부담 증가",`부담 ${fmt(physical.factor,1)}x`);
+  else if(physical.factor>=1.4&&result.severity<1)addHealthIssue(result,1,"관찰",physical.reasons[0]||"물리 부담 증가",`부담 ${fmt(physical.factor,1)}x`);
+  const level=healthLevel(result.severity);
+  Object.assign(result,{stressFactor:physical.factor,score:level.score,pillClass:level.pillClass,lifeClass:level.lifeClass});
+  if(!result.reasons.length)result.reasons.push("정상 기준 범위");
+  return result;
+}
+function computeHealthMap(){
+  const map=Object.fromEntries(state.robot.joints.map(j=>[j.id,jointHealthStatus(j)]));
+  const j2=state.robot.joints.find(j=>j.id==="J2"),j3=state.robot.joints.find(j=>j.id==="J3");
+  const c2=finiteMetric(j2?.current_ma),c3=finiteMetric(j3?.current_ma);
+  if(c2!=null&&c3!=null&&c2>0&&c3>0){
+    const diff=Math.abs(c2-c3),limit=Math.max(120,(c2+c3)/2*0.8);
+    if(diff>=limit){
+      ["J2","J3"].forEach(id=>{
+        const r=map[id];if(!r)return;
+        addHealthIssue(r,Math.max(r.severity,1),"관찰","J2/J3 전류 차이 증가",`차이 ${fmt(diff,0)}mA`);
+        const level=healthLevel(r.severity);
+        Object.assign(r,{score:level.score,pillClass:level.pillClass,lifeClass:level.lifeClass});
+      });
+    }
+  }
+  state.life.health=map;
+  return map;
+}
+async function loadOfficialLimits(){
+  try{
+    const res=await fetch("official_sts3215_limits.json?ts="+Date.now(),{cache:"no-store"});
+    if(!res.ok)throw Error("HTTP "+res.status);
+    state.life.officialLimits=await res.json();
+    state.life.officialLimitsLoaded=true;
+    state.life.officialLimitsError="";
+  }catch(err){
+    state.life.officialLimits=STS3215_DEFAULT_LIMITS;
+    state.life.officialLimitsLoaded=false;
+    state.life.officialLimitsError=err.message;
+    debug("Official STS3215 limits load failed: "+err.message);
+  }
+}
+async function loadLifeBaseline(){
+  try{
+    const res=await fetch("servo_life_normal_baseline.json?ts="+Date.now(),{cache:"no-store"});
+    if(!res.ok)throw Error("HTTP "+res.status);
+    state.life.baseline=await res.json();
+    state.life.baselineLoaded=true;
+    state.life.baselineError="";
+    const n=state.life.baseline?.totals?.normalBaselineCycles||0;
+    const tag=$("lifeBaselineTag");if(tag)tag.textContent="STS3215 x 6 · "+getBaselineConfidence();
+    addLog("수명예측 정상 기준선 로드 완료: "+n+" 사이클 · "+getBaselineConfidence(),"ok");
+  }catch(err){
+    state.life.baselineLoaded=false;
+    state.life.baselineError=err.message;
+    const tag=$("lifeBaselineTag");if(tag)tag.textContent="기준선 미연결";
+    debug("Life baseline load failed: "+err.message);
+  }
+  renderLifePredictionCard();
+}
+function updateLifePredictionFromJoints(){
+  const life=state.life;if(!life)return;
+  const angles=lifeAngleSnapshot();
+  const live=state.system.server_connected&&!state.demo;
+  if(!life.lastAngles){life.lastAngles=angles;life.lastUpdated=Date.now();return}
+  if(!live){life.lastAngles=angles;life.lastUpdated=Date.now();return}
+  const healthMap=computeHealthMap();
+  state.robot.joints.forEach(j=>{
+    const prev=life.lastAngles[j.id],next=angles[j.id];
+    if(!Number.isFinite(prev)||!Number.isFinite(next))return;
+    const delta=Math.abs(shortestLifeDelta(next,prev));
+    if(delta>=LIFE_NOISE_DEG){
+      const inc=delta/LIFE_DEG_PER_EQ_CYCLE;
+      const factor=Number(healthMap[j.id]?.stressFactor||1);
+      life.sessionEquivalentCycles[j.id]=(life.sessionEquivalentCycles[j.id]||0)+inc;
+      life.sessionFatigueCycles[j.id]=(life.sessionFatigueCycles[j.id]||0)+inc*factor;
+      life.totalEquivalentCycles[j.id]=(life.totalEquivalentCycles[j.id]||0)+inc;
+      life.fatigueAdjustedEquivalentCycles[j.id]=(life.fatigueAdjustedEquivalentCycles[j.id]||0)+inc*factor;
+    }
+  });
+  life.lastAngles=angles;
+  life.lastUpdated=Date.now();
+  saveStoredLifeTotals();
+}
+function lifeJointStatus(j){
+  const health=state.life?.health?.[j.id]||jointHealthStatus(j);
+  return{cls:health.lifeClass,label:health.label,stress:100-health.score,base:health.base,health,stressFactor:health.stressFactor||1};
+}
+function lifeMotorLabel(id){
+  return ({
+    J1:{axis:"J1 (M1)",name:"Base"},
+    J2:{axis:"J2 (M2)",name:"Shoulder"},
+    J3:{axis:"J2 (M3)",name:"Shoulder"},
+    J4:{axis:"J3 (M4)",name:"Elbow"},
+    J5:{axis:"J4 (M5)",name:"Wrist Pitch"},
+    J6:{axis:"J5 (M6)",name:"Wrist Roll"}
+  })[id]||{axis:id,name:"STS3215"};
+}
+function lifeRemainingStats(statuses){
+  const life=state.life||{};
+  const design=Math.max(1,Number(life.designEquivalentCycles||LIFE_DEFAULT_DESIGN_EQ_CYCLES));
+  let bottleneck=statuses[0],usedMax=0,adjustedMax=0;
+  statuses.forEach(s=>{
+    const used=Number(life.totalEquivalentCycles?.[s.joint.id]||0);
+    const adjusted=Number(life.fatigueAdjustedEquivalentCycles?.[s.joint.id]||used);
+    s.usedTotal=used;
+    s.adjustedUsedTotal=adjusted;
+    s.remainingCycles=Math.max(0,design-used);
+    s.adjustedRemainingCycles=Math.max(0,design-adjusted);
+    s.remainingPercent=clamp(s.remainingCycles/design*100,0,100);
+    s.adjustedRemainingPercent=clamp(s.adjustedRemainingCycles/design*100,0,100);
+    if(used>=usedMax){usedMax=used;bottleneck=s}
+    adjustedMax=Math.max(adjustedMax,adjusted);
+  });
+  const remainingCycles=Math.max(0,design-usedMax);
+  const adjustedRemainingCycles=Math.max(0,design-adjustedMax);
+  const remainingPercent=clamp(remainingCycles/design*100,0,100);
+  const adjustedRemainingPercent=clamp(adjustedRemainingCycles/design*100,0,100);
+  return{design,bottleneck,usedMax,adjustedMax,remainingCycles,adjustedRemainingCycles,remainingPercent,adjustedRemainingPercent};
+}
+function lifeSimpleStatus(health,live){
+  if(!live)return"대기";
+  const label=health?.label||"정상";
+  if(label.includes("위험"))return"위험";
+  if(label.includes("점검"))return"점검";
+  if(label.includes("주의"))return"주의";
+  if(label.includes("관찰"))return"관찰";
+  return"정상";
+}
+function lifeSimpleReason(health){
+  const text=(health?.reasons||[]).join(" ");
+  if(!text||text.includes("정상 기준 범위"))return"정상 범위";
+  if(text.includes("온도")||text.includes("뜨거"))return"온도 상승";
+  if(text.includes("전류"))return"전류 증가";
+  if(text.includes("부하"))return"부하 증가";
+  if(text.includes("오차")||text.includes("목표각"))return"위치 오차";
+  if(text.includes("통신")||text.includes("피드백"))return"통신 확인";
+  if(text.includes("J2/J3"))return"전류 차이";
+  return"확인 필요";
+}
+function escHtml(v){
+  return String(v??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+}
+function lifeDetailAction(status){
+  if(status==="위험")return"자동운전을 멈추고 온도, 전원, 기구 간섭을 먼저 확인해야 합니다.";
+  if(status==="점검")return"운전을 잠시 쉬게 하고 해당 관절의 온도, 전류, 기구 걸림을 확인하는 것이 좋습니다.";
+  if(status==="주의")return"바로 고장이라는 뜻은 아니지만, 같은 상태가 반복되는지 추세를 확인해야 합니다.";
+  if(status==="관찰")return"운전은 가능하지만 평소보다 높은 신호가 있는지 조금 더 지켜보면 됩니다.";
+  if(status==="대기")return"실시간 연결을 기다리는 중입니다. 데이터가 들어오면 상태가 자동으로 갱신됩니다.";
+  return"현재는 별도 조치가 필요하지 않습니다.";
+}
+function lifeDetailBurden(used,adjusted){
+  const diff=Number(adjusted)-Number(used);
+  if(!Number.isFinite(diff)||diff<0.05)return"현재 부담이 크지 않아 기본 사용량과 보정 사용량이 거의 같습니다.";
+  return"온도, 전류, 부하, 위치오차 중 부담 신호가 있어 같은 움직임을 조금 더 힘든 작업으로 반영했습니다.";
+}
+function lifeDetailMetricLine(j){
+  const temp=finiteMetric(j?.temp),current=finiteMetric(j?.current_ma),load=finiteMetric(j?.load);
+  const target=finiteMetric(j?.target),angle=finiteMetric(j?.current);
+  const err=target!=null&&angle!=null?Math.abs(target-angle):null;
+  return[
+    temp!=null?`온도 ${fmt(temp,0)}°C`:"온도 대기",
+    current!=null?`전류 ${fmt(current,0)}mA`:"전류 대기",
+    load!=null?`부하 ${fmt(load,0)}%`:"부하 대기",
+    err!=null?`위치오차 ${fmt(err,1)}°`:"위치오차 대기"
+  ].join(" · ");
+}
+function openLifeJointDetail(id){
+  const body=$("lifeJointDetailBody");if(!body)return;
+  const joint=state.robot.joints.find(j=>j.id===id);
+  if(!joint){body.innerHTML='<div class="life-detail-box">모터 정보를 찾을 수 없습니다.</div>';openModal("lifeJointModal");return}
+  const health=state.life?.health?.[id]||jointHealthStatus(joint);
+  const live=state.system.server_connected&&!state.demo;
+  const label=lifeMotorLabel(id),status=lifeSimpleStatus(health,live);
+  const life=state.life||{},design=Math.max(1,Number(life.designEquivalentCycles||LIFE_DEFAULT_DESIGN_EQ_CYCLES));
+  const used=Number(life.totalEquivalentCycles?.[id]||0);
+  const adjusted=Number(life.fatigueAdjustedEquivalentCycles?.[id]||used);
+  const remaining=clamp((design-adjusted)/design*100,0,100);
+  const reason=(health.reasons||[])[0]||"정상 기준 범위";
+  const simpleReason=lifeSimpleReason(health);
+  const cls=live?(health.lifeClass||"green"):"yellow";
+  body.innerHTML=`<div class="life-detail-card">
+    <div class="life-detail-title"><span><b>${escHtml(label.axis)} 상세</b><small>${escHtml(label.name)} · STS3215 공식 120도 기준</small></span><em class="${escHtml(cls)}">${escHtml(status)}</em></div>
+    <div class="life-detail-grid">
+      <div class="life-detail-box"><b>잔여량</b><strong>${fmt(remaining,1)}%</strong><br>보정 사용량을 기준으로 계산한 남은 여유입니다.</div>
+      <div class="life-detail-box"><b>누적 cyc</b><strong>${fmt(adjusted,1)}</strong><br>1 cyc는 60도 왕복, 총 120도 이동입니다.</div>
+      <div class="life-detail-box wide"><b>현재 상태</b>${escHtml(simpleReason)}입니다. ${escHtml(reason)} 기준으로 판단했습니다.</div>
+      <div class="life-detail-box wide"><b>센서 요약</b>${escHtml(lifeDetailMetricLine(joint))}</div>
+      <div class="life-detail-box wide"><b>수명 반영</b>${escHtml(lifeDetailBurden(used,adjusted))}</div>
+      <div class="life-detail-box wide"><b>조치 안내</b>${escHtml(lifeDetailAction(status))}</div>
+    </div>
+  </div>`;
+  openModal("lifeJointModal");
+}
+function renderLifePredictionCard(){
+  const body=$("reservedBody");if(!body||!state.life)return;
+  const base=state.life.baseline;
+  if(!base){
+    body.innerHTML='<div class="compact-line"><span>기준선</span><b class="yellow">'+(state.life.baselineError||"로딩 대기")+'</b></div><div class="compact-line"><span>파일</span><b class="mono">servo_life_normal_baseline.json</b></div>';
+    return;
+  }
+  const healthMap=computeHealthMap();
+  const statuses=state.robot.joints.map(j=>Object.assign({joint:j,eq:state.life.sessionEquivalentCycles[j.id]||0,health:healthMap[j.id]},lifeJointStatus(j)));
+  const worst=statuses.find(s=>s.cls==="red")||statuses.find(s=>s.cls==="yellow")||statuses[0];
+  const totalEq=statuses.reduce((sum,s)=>sum+s.eq,0);
+  const remain=lifeRemainingStats(statuses);
+  const normalCycles=base.totals?.normalBaselineCycles||0;
+  const live=state.system.server_connected&&!state.demo;
+  const remainCls=remain.remainingPercent<=10?"red":remain.remainingPercent<=25?"yellow":"green";
+  const html='<div class="life-joint-grid">'+statuses.map(s=>{const m=lifeMotorLabel(s.joint.id),reason=(s.health?.reasons||[])[0]||"정상 기준 범위",simpleStatus=lifeSimpleStatus(s.health,live);const remainPct=fmt(Math.min(s.remainingPercent,s.adjustedRemainingPercent),1);return '<div class="life-row" title="1회 = 60도 왕복(120도) · 기본 '+fmt(s.usedTotal,1)+' cyc / 보정 '+fmt(s.adjustedUsedTotal,1)+' cyc · '+reason+'"><span class="life-axis"><b>'+m.axis+'</b><small class="life-axis-sub"><span>'+m.name+'</span><button type="button" class="life-detail-btn" data-joint="'+s.joint.id+'" onpointerdown="event.stopPropagation();openLifeJointDetail(this.dataset.joint)" onclick="event.stopPropagation()" title="'+m.axis+' 상세보기" aria-label="'+m.axis+' 상세보기">상세</button></small></span><span class="life-readout"><i>잔여량 : '+remainPct+'%</i><small>누적 cyc '+fmt(s.adjustedUsedTotal,1)+'</small></span><em class="'+(live?s.cls:"yellow")+'">'+simpleStatus+'</em></div>'}).join("")+'</div>';
+  if(body.dataset.lifeHtml!==html){body.innerHTML=html;body.dataset.lifeHtml=html}
+}
 
 /* ===== Header, status panel, and mode changes ===== */
 function setAllMotorsHomeAngles(){
@@ -1289,9 +1779,10 @@ function renderRightPanel(){
   $("jointRows").innerHTML=state.robot.joints.map((j,i)=>{const d=Math.abs(j.target-j.current),st=d>10?"확인 필요":d>5?"주의":"정상",sc=d>10?"err":d>5?"warn":"ok";
     return `<div class="joint-row mono"><b>${JOINT_DISPLAY[i].axis} (M${i+1}) <span class="joint-name">${JOINT_DISPLAY[i].fn}</span></b><span class="joint-value">${deg(j.current)}</span><span class="joint-value">${deg(j.target)}</span><span class="joint-diff ${sc}">${deg(d)}</span><span class="pill ${sc}">${st}</span></div>`}).join("")
     +(()=>{const gr=state.gripper,o=gr.state==="OPEN";return `<div class="joint-row gripper-row mono"><b>GR <span class="joint-name">Gripper</span></b><span class="joint-value">${deg(gr.sg90_angle)}</span><span class="joint-value">${deg(gr.sg90_angle)}</span><span class="joint-diff ok">0.0°</span><span class="pill ${o?"ok":""}">${o?"열림":"닫힘"}</span></div>`})();
-  $("motorRows").innerHTML=state.robot.joints.map((j,i)=>{const danger=j.temp>=65||j.load>=90,warn=j.temp>55||j.load>=80,sc=danger?"err":warn?"warn":"ok",csc=state.demo?sc:(j.comm==="OK"?"ok":j.comm==="PARTIAL"?"warn":j.comm==="STALE"?"err":""),ctext=state.demo?(danger?"위험":warn?"주의":"정상"):(j.comm==="OK"?"정상":j.comm==="PARTIAL"?"주의":j.comm==="STALE"?"끊김":"대기");
+  const healthMap=computeHealthMap();
+  $("motorRows").innerHTML=state.robot.joints.map((j,i)=>{const h=healthMap[j.id]||jointHealthStatus(j),csc=state.demo?(h.severity>=3?"err":h.severity>=1?"warn":"ok"):h.pillClass,ctext=state.demo?(h.severity>=3?"위험":h.severity>=1?"주의":"정상"):h.label,reason=(h.reasons||[]).slice(0,2).join(" / "),danger=h.severity>=3,warn=h.severity>=1;
     return `<div class="motor-row mono"><b>${JOINT_DISPLAY[i].axis} (M${i+1})</b><div><div class="meter"><i class="temp" style="width:${clamp(j.temp/75*100,0,100)}%"></i></div><span class="meter-label">${fmt(j.temp,0)}°C</span></div>
-      <div><div class="meter"><i style="width:${clamp(j.load,0,100)}%;background:${danger?"var(--red)":warn?"var(--yellow)":"var(--cyan)"}"></i></div><span class="meter-label">${fmt(j.load,0)}%</span></div><span class="pill ${csc}">${ctext}</span></div>`}).join("");
+      <div><div class="meter"><i style="width:${clamp(j.load,0,100)}%;background:${danger?"var(--red)":warn?"var(--yellow)":"var(--cyan)"}"></i></div><span class="meter-label">${fmt(j.load,0)}%</span></div><span class="pill ${csc}" title="${reason} · 신뢰도 ${h.confidence}">${ctext}</span></div>`}).join("");
   const g=state.gripper,approach=getApproachGuide(),so=state.sorting||{};
   const tb=$("tofBody");
   if(tb)tb.innerHTML=`<div class="tof-big mono">${fmt(g.tof_mm)}<span class="unit">mm</span></div>
@@ -1308,6 +1799,7 @@ function renderRightPanel(){
       <div><span>사이클</span><b>${so.cycle_s?so.cycle_s+" s":"-"}</b></div>
     </div>
     <div class="sort-last"><span>최근 처리</span><b>${so.last?`${objectLabel(so.last.type)} -> ${so.last.bin} ${so.last.ok?"OK":"NG"}`:"대기"}</b></div>`;
+  renderLifePredictionCard();
   renderManualTwinCard();
 }
 
@@ -1323,7 +1815,13 @@ function getTeachingQuality(){
   return{score,stability,sensorReady,label:score>=90?"매우 안정":score>=80?"사용 가능":"재티칭 권장"};
 }
 function getAlerts(){
-  const alerts=[];state.robot.joints.forEach(j=>{if(j.temp>=65||j.load>=90)alerts.push({cls:"err",text:`${j.id} ${j.name}: 즉시 확인 · ${fmt(j.temp,0)}°C / 부하 ${fmt(j.load,0)}%`});else if(j.temp>55||j.load>=80)alerts.push({cls:"warn",text:`${j.id} ${j.name}: 주의 · ${fmt(j.temp,0)}°C / 부하 ${fmt(j.load,0)}%`})});
+  const alerts=[],healthMap=computeHealthMap();
+  state.robot.joints.forEach(j=>{
+    const h=healthMap[j.id];if(!h)return;
+    const text=`${j.id} ${j.name}: ${h.label} · ${(h.reasons||[])[0]||"정상 기준 범위"} · ${fmt(j.temp,0)}°C / 부하 ${fmt(j.load,0)}%`;
+    if(h.severity>=3)alerts.push({cls:"err",text});
+    else if(h.severity>=2)alerts.push({cls:"warn",text});
+  });
   const collision=state.collision||getCollisionReport("current");
   if(collision.blocked)alerts.push({cls:"err",text:`디지털 트윈 충돌 제한 · ${collision.messages[0]}`});
   if(state.system.server_connected&&state.system.can_status!=="OK")alerts.push({cls:"err",text:"CAN 통신 상태를 확인하세요."});
@@ -1727,8 +2225,8 @@ function drawThreeRobot(){
     applyStlAngles(r,poseAngles);
     updateAnimatedGripper(r);
   }
-  const dist=9.20/view.zoom,phi=view.pitch,theta=view.yaw;
-  r.camera.position.set(dist*Math.sin(phi)*Math.cos(theta),1.28+dist*Math.cos(phi),dist*Math.sin(phi)*Math.sin(theta));r.camera.lookAt(0,.5,.35);
+  const dist=9.20/view.zoom,phi=view.pitch,theta=view.yaw,targetX=view.panX||0,targetZ=.35+(view.panZ||0);
+  r.camera.position.set(targetX+dist*Math.sin(phi)*Math.cos(theta),1.28+dist*Math.cos(phi),targetZ+dist*Math.sin(phi)*Math.sin(theta));r.camera.lookAt(targetX,.5,targetZ);
   r.renderer.render(r.scene,r.camera);
   const pose=poseAngles?fkFromAngles(poseAngles):fk();state.robot.end_effector={x:pose.end.x,y:pose.end.z,z:pose.end.y};
   const collision=state.collision;
@@ -1793,7 +2291,8 @@ function fk(A=null){
   return fkFromAngles(A||getCollisionSafeAngleMap("current"));
 }
 function project(p,W,H){
-  let q=rotY(p,view.yaw),cp=Math.cos(view.pitch),sp=Math.sin(view.pitch),y=q.y*cp-q.z*sp,z=q.y*sp+q.z*cp+560/view.zoom;
+  const shifted=V(p.x-(view.panX||0),p.y,p.z-(view.panZ||0));
+  let q=rotY(shifted,view.yaw),cp=Math.cos(view.pitch),sp=Math.sin(view.pitch),y=q.y*cp-q.z*sp,z=q.y*sp+q.z*cp+560/view.zoom;
   const f=550/z*view.zoom;return{x:W*.52+q.x*f,y:H*.73-y*f,z,scale:f}
 }
 function drawNative3D(){
@@ -1820,12 +2319,18 @@ function drawArmSegment(ctx,W,H,a,b,color,width){const A=project(a,W,H),B=projec
 function drawJoint3D(ctx,W,H,p,label,color){const q=project(p,W,H),r=clamp(15*q.scale,8,16);ctx.fillStyle="#142b42";ctx.strokeStyle=color;ctx.lineWidth=3;ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle=color;ctx.font="bold 10px Consolas";ctx.fillText(label,q.x+r+3,q.y-3)}
 function drawGripper3D(ctx,W,H,pose){const p=pose.end,side=state.gripper.state==="OPEN"?14:7,forward=armDir(pose.yaw,0),right=V(Math.cos(pose.yaw),0,-Math.sin(pose.yaw));[-1,1].forEach(s=>{const a=add(p,mul(right,side*s)),b=add(add(a,mul(forward,28)),V(0,-18,0));drawArmSegment(ctx,W,H,a,b,"#ff8b52",7)});const q=project(p,W,H);ctx.fillStyle="#4ade80";ctx.beginPath();ctx.arc(q.x,q.y,4,0,Math.PI*2);ctx.fill()}
 function drawPart3D(ctx,W,H,p,label){const q=project(p,W,H);ctx.fillStyle="#f7c948";ctx.beginPath();ctx.arc(q.x,q.y,5,0,Math.PI*2);ctx.fill();ctx.fillStyle="#e4eff7";ctx.font="9px Segoe UI";ctx.fillText(label,q.x+7,q.y-4)}
-function rotateView(deg){view.yaw+=deg*Math.PI/180;updateRotDeg()}function reset3DView(){view={yaw:340*Math.PI/180,pitch:25*Math.PI/180,zoom:1.2};updateZoomPct();updateRotDeg();updateTiltDeg()}
+function rotateView(deg){view.yaw+=deg*Math.PI/180;updateRotDeg()}function reset3DView(){view={yaw:340*Math.PI/180,pitch:25*Math.PI/180,zoom:1.2,panX:0,panZ:0};updateZoomPct();updateRotDeg();updateTiltDeg()}
 function zoomStep(dir){const cur=view.zoom/ZOOM_DEF*100,next=dir>0?(Math.floor(cur/10)+1)*10:(Math.ceil(cur/10)-1)*10;view.zoom=clamp(next/100*ZOOM_DEF,ZOOM_MIN,ZOOM_MAX);updateZoomPct()}
 function updateZoomPct(){const e=$("zoomPct");if(e)e.textContent=Math.round(view.zoom/ZOOM_DEF*100)+"%"}
 function updateRotDeg(){const e=$("rotDeg");if(e){let d=Math.round(view.yaw*180/Math.PI)%360;if(d<0)d+=360;e.textContent=d+"°"}}
 function updateTiltDeg(){const e=$("tiltDeg");if(e)e.textContent="⤓"+Math.round(90-view.pitch*180/Math.PI)+"°"}
-function bind3DDrag(){const c=$("robot3dCanvas");if(!c)return;c.onpointerdown=e=>{drag={x:e.clientX,y:e.clientY};c.setPointerCapture?.(e.pointerId)};c.onpointermove=e=>{if(!drag)return;view.yaw+=(e.clientX-drag.x)*.008;view.pitch=clamp(view.pitch+(e.clientY-drag.y)*.007,.05,1.45);drag={x:e.clientX,y:e.clientY}};c.onpointerup=e=>{drag=null;c.releasePointerCapture?.(e.pointerId)};c.onpointerleave=()=>drag=null;c.onwheel=e=>{view.zoom=clamp(view.zoom-e.deltaY*.0017,ZOOM_MIN,ZOOM_MAX);updateZoomPct();e.preventDefault()}}
+function pan3DView(dx,dy){
+  const theta=view.yaw,scale=(0.0105/Math.max(view.zoom,.2));
+  const rightX=Math.cos(theta+Math.PI/2),rightZ=Math.sin(theta+Math.PI/2),forwardX=Math.cos(theta),forwardZ=Math.sin(theta);
+  view.panX=clamp((view.panX||0)-dx*scale*rightX+dy*scale*forwardX,-2.8,2.8);
+  view.panZ=clamp((view.panZ||0)-dx*scale*rightZ+dy*scale*forwardZ,-2.3,2.8);
+}
+function bind3DDrag(){const c=$("robot3dCanvas");if(!c)return;c.oncontextmenu=e=>e.preventDefault();c.onpointerdown=e=>{const mode=e.button===2||e.shiftKey?"pan":"rotate";drag={x:e.clientX,y:e.clientY,mode};c.style.cursor=mode==="pan"?"grabbing":"move";c.setPointerCapture?.(e.pointerId);e.preventDefault()};c.onpointermove=e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(drag.mode==="rotate"){view.yaw+=dx*.008;view.pitch=clamp(view.pitch+dy*.007,.05,1.45);updateRotDeg();updateTiltDeg()}else pan3DView(dx,dy);drag.x=e.clientX;drag.y=e.clientY;draw3D()};c.onpointerup=e=>{drag=null;c.style.cursor="grab";c.releasePointerCapture?.(e.pointerId)};c.onpointerleave=()=>{drag=null;c.style.cursor="grab"};c.onwheel=e=>{view.zoom=clamp(view.zoom-e.deltaY*.0017,ZOOM_MIN,ZOOM_MAX);updateZoomPct();draw3D();e.preventDefault()};c.style.cursor="grab"}
 
 /* ===== Top-down robot workspace ===== */
 function drawTopDown(){
@@ -2018,13 +2523,6 @@ function generateRunReport(){
   const report={generated_at:new Date().toISOString(),data_source:state.demo?"DEMO MODE":"LIVE WebSocket",mode:state.mode,system:state.system,can_health:state.can_health,robot:state.robot,gripper:state.gripper,vision:state.vision,path:state.path,precheck:getPrecheckItems().map(([name,ok,detail])=>({name,ok,detail})),recent_events:state.events.slice(0,30)};
   blobDownload("sambo_robot_run_report.json",JSON.stringify(report,null,2),"application/json;charset=utf-8");addLog("운전 상태 리포트 저장 완료","ok");
 }
-function openPrecheck(){renderPrecheck();openModal("precheckModal")}
-function renderPrecheck(){
-  const checks=getPrecheckItems(),ready=checks.every(x=>x[1]);
-  $("precheckItems").innerHTML=checks.map(([name,ok,detail])=>`<div class="precheck-item"><b class="${ok?"green":"yellow"}">${ok?"✓":"!"} ${name}</b>${detail}</div>`).join("");
-  $("precheckAutoBtn").disabled=!ready;$("precheckAutoBtn").style.opacity=ready?"1":".42";
-}
-function startAutoFromPrecheck(){if(!getPrecheckItems().every(x=>x[1]))return;closeModal("precheckModal");setMode("AUTO_RUN");addLog("운전 준비 점검 완료 — 자동 운전 시작","ok")}
 document.addEventListener("keydown",e=>{
   const typing=/INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
   if(e.key==="Home"&&!typing){e.preventDefault();goHome();return}
@@ -2068,12 +2566,21 @@ function connectWS(){
   const wsUrl=getWsUrl();
   let ws;try{ws=new WebSocket(wsUrl)}catch{return}
   state.ws=ws;
-  ws.onopen=()=>{state.demo=false;state.system.server_connected=true;addLog("서버 연결 — 실제 데이터 수신 대기","ok");debug("WebSocket connected");renderAll()};
+  ws.onopen=()=>{state.demo=false;state.system.server_connected=true;addLog("서버 연결 — 실제 데이터 수신 대기","ok");debug("WebSocket connected");sendLifeUsageGet();if(state.life?.pendingSave)setTimeout(()=>saveStoredLifeTotals(true),250);renderAll()};
   ws.onmessage=e=>{try{const d=JSON.parse(e.data);applyIncoming(d);state.demo=false;state.system.server_connected=true;state.lastFrame=Date.now();requestUiRender()}catch(err){state.system.ws_errors=(state.system.ws_errors||0)+1;debug("JSON parse error: "+err.message)}};
   ws.onclose=()=>{state.demo=true;state.system.server_connected=false;debug(`${wsUrl} disconnected. DEMO MODE enabled.`);renderAll();setTimeout(connectWS,2400)};
   ws.onerror=()=>{try{ws.close()}catch{}};
 }
 function applyIncoming(d){
+  if(d.type==="LIFE_USAGE_ERROR"){state.life.saveError=d.message||"Pi 저장 실패";debug("Life usage save failed: "+state.life.saveError);return}
+  if(d.type==="LIFE_USAGE_SAVED"){
+    state.life.pendingSave=false;
+    state.life.saveError="";
+    state.life.lastPiSync=Date.now();
+    return;
+  }
+  if(d.type==="LIFE_USAGE_STATE"&&d.life_usage){applyLifeUsageSnapshot(d.life_usage,false);return}
+  if(d.life_usage)applyLifeUsageSnapshot(d.life_usage,false);
   if(d.mode)setMode(d.mode,true);if(d.system)Object.assign(state.system,d.system);
   if(d.robot?.joints){d.robot.joints.forEach(n=>{const i=jointIndexById(n.id),j=state.robot.joints[i];if(j){const next=Object.assign({},n);if(next.current!=null)next.current=rawToLogicalAngleByIndex(i,next.current);if(state.mode==="MANUAL")delete next.target;Object.assign(j,next)}});if(d.robot.end_effector)state.robot.end_effector=d.robot.end_effector}
   else state.robot.joints.forEach((j,i)=>{if(d[j.id]!=null){const logical=rawToLogicalAngleByIndex(i,d[j.id]);j.current=logical;if(state.mode!=="MANUAL")j.target=logical}});
@@ -2087,6 +2594,7 @@ function applyIncoming(d){
   if(d.human_pose)Object.assign(state.human_pose,d.human_pose);if(d.gripper)Object.assign(state.gripper,typeof d.gripper==="string"?{state:d.gripper.toUpperCase()}:d.gripper);
   if(d.vision){Object.assign(state.vision,d.vision);if(d.vision.correction)Object.assign(state.vision.correction,d.vision.correction)}
   if(d.path)Object.assign(state.path,d.path);if(d.precheck)Object.assign(state.precheck,d.precheck);if(d.can_health)Object.assign(state.can_health,d.can_health);if(d.calibration)Object.assign(state.calibration,d.calibration);if(Array.isArray(d.alerts))state.alerts=d.alerts;
+  updateLifePredictionFromJoints();
   if(d.event?.message)addLog(d.event.message,(d.event.level||"INFO").toLowerCase());
 }
 
@@ -2150,6 +2658,11 @@ setInterval(()=>{const now=currentTime();setText("clock",now);const sc=$("splash
 const bootTime=Date.now();
 const initialWsUrl=getWsUrl();if($("wsUrlLabel"))$("wsUrlLabel").textContent=initialWsUrl;
 addLog("시뮬레이션 데이터 표시 — 서버 연결 대기","warn");addLog(`WebSocket ${initialWsUrl} 연결 대기`,"info");addLog("6축 STS3215 상태 패널 준비 완료","ok");
+loadStoredLifeTotals();
+loadOfficialLimits();
+loadLifeBaseline();
+window.addEventListener("visibilitychange",()=>{if(document.hidden)saveStoredLifeTotals(true)});
+window.addEventListener("pagehide",()=>saveStoredLifeTotals(true));
 try{let u=localStorage.getItem("gripperCamUrl");if(!u){u="http://"+location.hostname+":8091/?action=stream"}if(!state.camera)state.camera={gripper_url:""};state.camera.gripper_url=u;applyGripperStream()}catch(e){};setMode("AUTO_RUN");connectWS();requestAnimationFrame(frame);
 </script>
 <script src="./sambo_object_overlay.js"></script>

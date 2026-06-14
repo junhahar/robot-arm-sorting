@@ -16,9 +16,11 @@ Sambo dashboard WS bridge v3 = v2(스냅샷 텔레메트리) + 모션 명령.
 """
 import asyncio
 import json
+import math
 import struct
 import threading
 import time
+from pathlib import Path
 
 import can
 import websockets
@@ -77,6 +79,151 @@ motors = {i: {"current": None, "temp": None, "load": None, "target": None,
           for i in range(1, 7)}
 health = {"received": 0, "last_rx_ms": 0}
 
+LIFE_USAGE_SCHEMA = "sambo_servo_life_usage_v1"
+LIFE_USAGE_PATH = Path(__file__).resolve().parent / "servo_life_usage.json"
+LIFE_JOINT_IDS = tuple(NAMES.values())
+LIFE_DEFAULT_DESIGN_EQ_CYCLES = 100000.0
+LIFE_USAGE_UNIT = "official_life_cycle_120deg"
+LIFE_DEG_PER_EQ_CYCLE = 120.0
+LIFE_LEGACY_DEG_PER_EQ_CYCLE = 120.0
+life_lock = threading.Lock()
+
+
+def _finite_float(value, default=0.0):
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return default
+    return v if math.isfinite(v) else default
+
+
+def _blank_life_usage():
+    return {
+        "schema": LIFE_USAGE_SCHEMA,
+        "usageUnit": LIFE_USAGE_UNIT,
+        "degreesPerEquivalentCycle": LIFE_DEG_PER_EQ_CYCLE,
+        "designEquivalentCycles": LIFE_DEFAULT_DESIGN_EQ_CYCLES,
+        "totalEquivalentCycles": {joint_id: 0.0 for joint_id in LIFE_JOINT_IDS},
+        "fatigueAdjustedEquivalentCycles": {joint_id: 0.0 for joint_id in LIFE_JOINT_IDS},
+        "healthState": {},
+        "updatedAt": None,
+        "storedOn": "raspberry_pi",
+    }
+
+
+def _normalize_health_state(payload):
+    if not isinstance(payload, dict):
+        return {}
+    result = {}
+    for joint_id in LIFE_JOINT_IDS:
+        raw = payload.get(joint_id)
+        if not isinstance(raw, dict):
+            continue
+        stress = _finite_float(raw.get("stressFactor", raw.get("factor", 1.0)), 1.0)
+        result[joint_id] = {
+            "severity": int(_finite_float(raw.get("severity"), 0.0)),
+            "label": str(raw.get("label") or "정상"),
+            "stressFactor": max(1.0, min(3.0, stress)),
+            "score": _finite_float(raw.get("score"), 100.0),
+            "confidence": str(raw.get("confidence") or ""),
+            "reasons": raw.get("reasons") if isinstance(raw.get("reasons"), list) else [],
+        }
+    return result
+
+
+def _normalize_life_usage(payload):
+    data = _blank_life_usage()
+    if not isinstance(payload, dict):
+        return data
+
+    design = _finite_float(payload.get("designEquivalentCycles"), LIFE_DEFAULT_DESIGN_EQ_CYCLES)
+    data["designEquivalentCycles"] = design if design > 0 else LIFE_DEFAULT_DESIGN_EQ_CYCLES
+    source_deg = _finite_float(payload.get("degreesPerEquivalentCycle"), LIFE_LEGACY_DEG_PER_EQ_CYCLE)
+    scale = source_deg / LIFE_DEG_PER_EQ_CYCLE if source_deg > 0 else 1.0
+
+    totals = payload.get("totalEquivalentCycles") or {}
+    if isinstance(totals, dict):
+        for joint_id in LIFE_JOINT_IDS:
+            value = _finite_float(totals.get(joint_id), 0.0)
+            data["totalEquivalentCycles"][joint_id] = max(0.0, value * scale)
+
+    adjusted = payload.get("fatigueAdjustedEquivalentCycles") or {}
+    if isinstance(adjusted, dict):
+        for joint_id in LIFE_JOINT_IDS:
+            fallback = _finite_float((totals if isinstance(totals, dict) else {}).get(joint_id), 0.0)
+            value = _finite_float(adjusted.get(joint_id), fallback)
+            data["fatigueAdjustedEquivalentCycles"][joint_id] = max(0.0, value * scale)
+    else:
+        data["fatigueAdjustedEquivalentCycles"] = dict(data["totalEquivalentCycles"])
+
+    health_state = payload.get("healthState")
+    if isinstance(health_state, dict):
+        data["healthState"] = _normalize_health_state(health_state)
+
+    updated_at = payload.get("updatedAt")
+    if isinstance(updated_at, str) and updated_at:
+        data["updatedAt"] = updated_at
+    return data
+
+
+def _load_life_usage():
+    try:
+        if LIFE_USAGE_PATH.exists():
+            raw = json.loads(LIFE_USAGE_PATH.read_text(encoding="utf-8"))
+            normalized = _normalize_life_usage(raw)
+            if (
+                raw.get("usageUnit") != LIFE_USAGE_UNIT
+                or raw.get("degreesPerEquivalentCycle") != LIFE_DEG_PER_EQ_CYCLE
+                or raw.get("healthState") != normalized.get("healthState")
+            ):
+                tmp_path = LIFE_USAGE_PATH.with_name(LIFE_USAGE_PATH.name + ".tmp")
+                tmp_path.write_text(json.dumps(normalized, ensure_ascii=False, indent=2), encoding="utf-8")
+                tmp_path.replace(LIFE_USAGE_PATH)
+            return normalized
+    except Exception as e:
+        print("[LIFE] usage load failed:", e)
+    return _blank_life_usage()
+
+
+life_usage = _load_life_usage()
+
+
+def life_usage_snapshot():
+    with life_lock:
+        return {
+            "schema": life_usage.get("schema", LIFE_USAGE_SCHEMA),
+            "usageUnit": life_usage.get("usageUnit", LIFE_USAGE_UNIT),
+            "degreesPerEquivalentCycle": life_usage.get("degreesPerEquivalentCycle", LIFE_DEG_PER_EQ_CYCLE),
+            "designEquivalentCycles": life_usage.get("designEquivalentCycles", LIFE_DEFAULT_DESIGN_EQ_CYCLES),
+            "totalEquivalentCycles": dict(life_usage.get("totalEquivalentCycles", {})),
+            "fatigueAdjustedEquivalentCycles": dict(life_usage.get("fatigueAdjustedEquivalentCycles", life_usage.get("totalEquivalentCycles", {}))),
+            "healthState": dict(life_usage.get("healthState", {})),
+            "updatedAt": life_usage.get("updatedAt"),
+            "storedOn": "raspberry_pi",
+        }
+
+
+def save_life_usage(payload):
+    global life_usage
+    normalized = _normalize_life_usage(payload)
+    normalized["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    tmp_path = LIFE_USAGE_PATH.with_name(LIFE_USAGE_PATH.name + ".tmp")
+    with life_lock:
+        life_usage = normalized
+        tmp_path.write_text(json.dumps(life_usage, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp_path.replace(LIFE_USAGE_PATH)
+        return {
+            "schema": life_usage.get("schema", LIFE_USAGE_SCHEMA),
+            "usageUnit": life_usage.get("usageUnit", LIFE_USAGE_UNIT),
+            "degreesPerEquivalentCycle": life_usage.get("degreesPerEquivalentCycle", LIFE_DEG_PER_EQ_CYCLE),
+            "designEquivalentCycles": life_usage.get("designEquivalentCycles", LIFE_DEFAULT_DESIGN_EQ_CYCLES),
+            "totalEquivalentCycles": dict(life_usage.get("totalEquivalentCycles", {})),
+            "fatigueAdjustedEquivalentCycles": dict(life_usage.get("fatigueAdjustedEquivalentCycles", life_usage.get("totalEquivalentCycles", {}))),
+            "healthState": dict(life_usage.get("healthState", {})),
+            "updatedAt": life_usage.get("updatedAt"),
+            "storedOn": "raspberry_pi",
+        }
+
 # ── 모션 상태 (generation 기반 선점) ──
 mlock = threading.Lock()
 motion = {"seq": None, "gen": 0, "label": "", "min_dur": MIN_DURATION}
@@ -84,6 +231,10 @@ motion = {"seq": None, "gen": 0, "label": "", "min_dur": MIN_DURATION}
 # ── 그리퍼 요청 상태 (가장 최근 각도만 송신, gen 으로 갱신 감지) ──
 glock = threading.Lock()
 gripper_req = {"angle": None, "gen": 0}
+
+# MG90S 그리퍼는 위치 피드백이 없다(STS3215처럼 현재각을 못 읽음).
+# 따라서 '마지막으로 STM에 내린 명령각'을 그대로 현재각으로 보고한다(open-loop). lock 으로 보호.
+gripper_state = {"angle": None}
 
 
 def can_reader():
@@ -132,6 +283,8 @@ def can_reader():
                         if m:
                             m["target"] = ((d[3] << 8) | d[2]) / 10.0
                             m["cmd_rx"] = now
+                    elif aid == 0x100 and len(d) >= 2 and d[0] == CMD_GRIPPER:
+                        gripper_state["angle"] = int(max(GRIPPER_MIN, min(GRIPPER_MAX, d[1])))
                 last = now
         except Exception as e:
             print("[CAN] error:", e); time.sleep(1)
@@ -180,9 +333,13 @@ def request_motion(seq, label, min_dur=MIN_DURATION):
 
 def request_gripper(angle):
     """가장 최근 그리퍼 목표각으로 교체(이전 요청 선점)."""
+    a = float(angle)
     with glock:
-        gripper_req["angle"] = float(angle)
+        gripper_req["angle"] = a
         gripper_req["gen"] += 1
+    # 명령하는 즉시 현재각으로 기록(피드백이 없으므로 명령각 = 현재각).
+    with lock:
+        gripper_state["angle"] = int(max(GRIPPER_MIN, min(GRIPPER_MAX, round(a))))
 
 
 def _move_to(bus, targets, my_gen, min_dur=MIN_DURATION):
@@ -282,9 +439,17 @@ def build_snapshot():
                     j[k] = m[k]
             joints.append(j)
         hp = dict(health)
+        ga = gripper_state["angle"]
     runtime = load_latest_runtime_state()
     vision = runtime.get("vision", {})
-    gripper = runtime.get("gripper", {})
+    # 그리퍼(MG90S)는 피드백이 없다. 브리지가 마지막에 STM으로 내린 명령각을 현재각으로 덮어쓴다.
+    gripper = dict(runtime.get("gripper", {}))
+    if ga is not None:
+        gripper["sg90_angle"] = ga
+        gripper["state"] = "OPEN" if ga < (GRIPPER_MIN + GRIPPER_MAX) / 2 else "CLOSED"
+        gripper["source"] = "dashboard_bridge_cmd"
+        gripper["fresh"] = True
+        gripper["reason"] = "bridge_command"
     system = {"server_connected": True, "can_status": derive_can_status(comms)}
     if vision.get("fresh"):
         system.update({"camera_status": "OK", "ai_status": "RUNNING"})
@@ -292,6 +457,7 @@ def build_snapshot():
             "system": system,
             "vision": vision,
             "gripper": gripper,
+            "life_usage": life_usage_snapshot(),
             "can_health": hp}
 
 
@@ -323,7 +489,23 @@ async def ws_handler(ws):
                 d = json.loads(message)
             except Exception:
                 continue
-            if d.get("type") == "COMMAND":
+            msg_type = d.get("type")
+            if msg_type == "LIFE_USAGE_GET":
+                await ws.send(json.dumps({"type": "LIFE_USAGE_STATE", "life_usage": life_usage_snapshot()},
+                                         ensure_ascii=False))
+                continue
+            if msg_type == "LIFE_USAGE_SAVE":
+                try:
+                    saved = save_life_usage(d.get("payload") or {})
+                    await ws.send(json.dumps({"type": "LIFE_USAGE_SAVED", "life_usage": saved},
+                                             ensure_ascii=False))
+                    print("[LIFE] usage saved")
+                except Exception as e:
+                    await ws.send(json.dumps({"type": "LIFE_USAGE_ERROR", "message": str(e)},
+                                             ensure_ascii=False))
+                    print("[LIFE] usage save failed:", e)
+                continue
+            if msg_type == "COMMAND":
                 cmd = d.get("command")
                 payload = d.get("payload") or {}
                 if cmd == "AUTO_START":
