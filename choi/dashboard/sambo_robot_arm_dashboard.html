@@ -2615,8 +2615,8 @@ function requestUiRender(force=false){
   else setTimeout(()=>requestAnimationFrame(run),wait);
 }
 function renderAll(){
-  updateLifeUsage();
-  renderHeader();renderPrimary();renderPath();renderRightPanel();renderReservedPanel();
+  updateLifePredictionFromJoints();
+  renderHeader();renderPrimary();renderPath();renderRightPanel();renderLifePredictionCard();
   if(state.mode==="MANUAL"){
     // 행 DOM은 진입 시 1회만 생성. 라이브 스냅샷마다 innerHTML을 다시 쓰면
     // 버튼이 깜빡이고, mousedown↔mouseup 사이 element가 교체돼 click이 씹힌다.
@@ -2636,7 +2636,7 @@ setInterval(()=>{const now=currentTime();setText("clock",now);const sc=$("splash
 const bootTime=Date.now();
 const initialWsUrl=getWsUrl();if($("wsUrlLabel"))$("wsUrlLabel").textContent=initialWsUrl;
 addLog("서버 연결 대기 — 실데이터 수신 시 화면 갱신","warn");addLog(`WebSocket ${initialWsUrl} 연결 대기`,"info");addLog("6축 STS3215 상태 패널 준비 완료","ok");
-try{let u=localStorage.getItem("gripperCamUrl");if(!u){u="http://"+location.hostname+":8091/?action=stream"}if(!state.camera)state.camera={gripper_url:""};state.camera.gripper_url=u;applyGripperStream()}catch(e){};setMode("AUTO_RUN");connectWS();requestAnimationFrame(frame);
+try{let u=localStorage.getItem("gripperCamUrl");if(!u){u="http://"+location.hostname+":8091/?action=stream"}if(!state.camera)state.camera={gripper_url:""};state.camera.gripper_url=u;applyGripperStream()}catch(e){};loadStoredLifeTotals();loadOfficialLimits();loadLifeBaseline();setMode("AUTO_RUN");connectWS();requestAnimationFrame(frame);
 </script>
 <script src="./sambo_object_overlay.js"></script>
 <script src="./sambo_pc_ollama_chat.js?v=20260614_pc_ollama"></script>
