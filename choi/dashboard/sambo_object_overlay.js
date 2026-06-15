@@ -679,17 +679,10 @@
   }
 
   function updateHud(detection) {
-    const el = ensureHud();
-    if (!el) return;
-    if (!detection) {
-      el.className = "sambo-vision-hud search";
-      el.innerHTML = `<div class="box"><div class="top"><span class="lock"><i class="dot"></i>VISION SEARCH</span><span>SCAN FLOOR</span></div><div class="object">물체 대기</div><div class="coords"><span>X -- mm</span><span>Y -- mm</span></div><div class="meta">WebSocket vision 또는 overlay API 대기</div><div class="bar"><span style="width:0%"></span></div></div>`;
-      return;
+    if (hudEl?.parentNode) {
+      hudEl.remove();
+      hudEl = null;
     }
-    el.className = "sambo-vision-hud lock";
-    const conf = clamp(detection.confidence * 100, 0, 100);
-    const age = detection.ageMs != null ? `${Math.round(detection.ageMs)} ms` : "live";
-    el.innerHTML = `<div class="box"><div class="top"><span class="lock"><i class="dot"></i>VISION LOCK</span><span>${detection.source}</span></div><div class="object">${detection.label} ${conf.toFixed(0)}%</div><div class="coords"><span>X ${detection.xMm >= 0 ? "+" : ""}${detection.xMm.toFixed(1)} mm</span><span>Y ${detection.yMm >= 0 ? "+" : ""}${detection.yMm.toFixed(1)} mm</span></div><div class="meta">stable ${detection.stableFrames || 0}/3 - ${age} - ${detection.pointSource}</div><div class="bar"><span style="width:${conf.toFixed(0)}%"></span></div></div>`;
   }
 
   function tick(now) {

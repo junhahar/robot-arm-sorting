@@ -1142,12 +1142,13 @@ function loadStoredLifeTotals(){
   life.fatigueAdjustedEquivalentCycles=cleanLifeTotals(life.fatigueAdjustedEquivalentCycles||life.totalEquivalentCycles||{});
   life.sessionFatigueCycles=cleanLifeTotals(life.sessionFatigueCycles||{});
   life.piLoaded=false;
+  life.pendingSave=false;
   life.saveError="";
 }
 function applyLifeUsageSnapshot(snapshot,force=false){
   const life=state.life;if(!life||!snapshot)return false;
   if(!force&&life.piLoaded)return false;
-  if(!force&&life.pendingSave)return false;
+  if(!force&&life.pendingSave&&life.piLoaded)return false;
   const design=Number(snapshot.designEquivalentCycles);
   life.designEquivalentCycles=Number.isFinite(design)&&design>0?design:LIFE_DEFAULT_DESIGN_EQ_CYCLES;
   const sourceDeg=Number(snapshot.degreesPerEquivalentCycle||LIFE_LEGACY_DEG_PER_EQ_CYCLE);
@@ -1172,6 +1173,12 @@ function saveStoredLifeTotals(force=false){
   const life=state.life;if(!life)return;
   const now=Date.now();
   if(!force&&now-lastLifeSaveAt<2000)return;
+  if(!life.piLoaded){
+    life.pendingSave=true;
+    life.saveError="Pi JSON load pending";
+    sendLifeUsageGet();
+    return;
+  }
   if(state.ws?.readyState===WebSocket.OPEN){
     lastLifeSaveAt=now;
     life.pendingSave=true;
@@ -2580,7 +2587,7 @@ function connectWS(){
   const wsUrl=getWsUrl();
   let ws;try{ws=new WebSocket(wsUrl)}catch{return}
   state.ws=ws;
-  ws.onopen=()=>{state.demo=false;state.system.server_connected=true;addLog("서버 연결 — 실제 데이터 수신 대기","ok");debug("WebSocket connected");sendLifeUsageGet();if(state.life?.pendingSave)setTimeout(()=>saveStoredLifeTotals(true),250);renderAll()};
+  ws.onopen=()=>{state.demo=false;state.system.server_connected=true;addLog("서버 연결 — 실제 데이터 수신 대기","ok");debug("WebSocket connected");sendLifeUsageGet();renderAll()};
   ws.onmessage=e=>{try{const d=JSON.parse(e.data);applyIncoming(d);state.demo=false;state.system.server_connected=true;state.lastFrame=Date.now();requestUiRender()}catch(err){state.system.ws_errors=(state.system.ws_errors||0)+1;debug("JSON parse error: "+err.message)}};
   ws.onclose=()=>{state.demo=true;state.system.server_connected=false;debug(`${wsUrl} disconnected.`);renderAll();setTimeout(connectWS,2400)};
   ws.onerror=()=>{try{ws.close()}catch{}};
