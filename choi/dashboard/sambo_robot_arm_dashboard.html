@@ -2657,7 +2657,7 @@ function applyIncoming(d){
   if(d.type==="LIFE_USAGE_STATE"&&d.life_usage){applyLifeUsageSnapshot(d.life_usage,false);return}
   if(d.type==="TEACH_SAVED"){state.teach.poses[d.name]={angles:d.angles,saved_at:d.saved_at};state.teach.lastError="";addLog("티칭 저장됨: "+d.name+(d.saved_at?" ("+d.saved_at+")":""),"ok");sendTeachList();renderLifePredictionCard();return}
   if(d.type==="TEACH_ERROR"){state.teach.lastError=(d.name?d.name+": ":"")+(d.message||"저장 실패");addLog("티칭 실패: "+state.teach.lastError,"err");renderLifePredictionCard();return}
-  if(d.type==="TEACH_STATE"){state.teach.taught=d.taught||[];state.teach.missing=d.missing||[];if(d.poses)Object.assign(state.teach.poses,d.poses);renderLifePredictionCard();return}
+  if(d.type==="TEACH_STATE"){state.teach.taught=d.taught||[];state.teach.missing=d.missing||[];if(d.poses)for(const n in d.poses){const v=d.poses[n];state.teach.poses[n]=(v&&v.angles)?v:{angles:v};}renderLifePredictionCard();return}
   if(d.life_usage)applyLifeUsageSnapshot(d.life_usage,false);
   if(d.mode)setMode(d.mode,true);if(d.system)Object.assign(state.system,d.system);
   if(d.robot?.joints){d.robot.joints.forEach(n=>{const i=jointIndexById(n.id),j=state.robot.joints[i];if(j){const next=Object.assign({},n);if(next.current!=null)next.current=rawToLogicalAngleByIndex(i,next.current);if(state.mode==="MANUAL")delete next.target;Object.assign(j,next)}});if(d.robot.end_effector)state.robot.end_effector=d.robot.end_effector}
