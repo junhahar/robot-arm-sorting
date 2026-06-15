@@ -943,7 +943,7 @@ document.addEventListener("keydown",e=>{
 const JOINT_NAMES={J1:"Base",J2:"Shoulder",J3:"Elbow",J4:"Wrist Pitch",J5:"Wrist Roll",J6:"End Assist"};
 // 표시 전용: 6모터(M1~M6) → 5축(J1~J5). J2 어깨는 거울쌍 M2·M3 2모터. (내부 id는 그대로, 화면 라벨만 이 매핑 사용)
 const JOINT_DISPLAY=[{axis:"J1",fn:"Base"},{axis:"J2",fn:"Shoulder"},{axis:"J2",fn:"Shoulder"},{axis:"J3",fn:"Elbow"},{axis:"J4",fn:"Wrist Pitch"},{axis:"J5",fn:"Wrist Roll"}];
-const STEP_LABELS={HOME:"HOME 복귀",SCAN:"스캔 중",DETECT:"물체 감지",PRE_GRASP:"집기 전 접근",GRASP:"집기",LIFT:"들어 올리기",CARRY:"운반",PLACE:"분류통 배치",TEACHING:"티칭 중",PAUSED:"일시 정지",ERROR:"오류 정지"};
+const STEP_LABELS={HOME:"HOME",SCAN:"스캔 중",DETECT:"물체 감지·분류",PRE_GRASP:"집기 전 접근",GRASP:"집기",LIFT:"들어 올리기",CARRY:"운반",PLACE:"분류통 배치",TEACHING:"티칭 중",PAUSED:"일시 정지",ERROR:"오류 정지"};
 const OBJECT_LABELS={BOLT:"볼트",NUT:"너트",WASHER:"와셔",NONE:"대기"};
 const PHOTO_HOME_ANGLES=[180,180,180,180,180,180];
 const SERVO_RAW_HOME_ANGLES=[180,180,180,180,180,180];
@@ -965,7 +965,8 @@ const state={
   ]},
   gripper:{state:"OPEN",sg90_angle:60,tof_mm:48.2,object_detected:true,pick_ready:true},
   vision:{target:"NONE",confidence:.0,stable_frames:0,bbox:null,correction:{dx_mm:0,dy_mm:0}},
-  path:{current_step:"HOME",steps:["HOME","SCAN","DETECT","PRE_GRASP","GRASP","LIFT","CARRY","PLACE","HOME"],progress_percent:0},
+  pick:{status:"SCAN_READY",step:""},
+  path:{current_step:"HOME",steps:["HOME","SCAN","DETECT","PRE_GRASP","GRASP","LIFT","CARRY","PLACE"],progress_percent:0},
   precheck:{home_confirmed:true,path_loaded:true,servo_ready:true,sg90_ready:true,tof_ready:true},
   can_health:{received:1842,errors:0,delay_ms:18,last_rx_ms:22},
   calibration:{tof:"OK",camera:"OK",mpu:"OK",servo:"OK"},
@@ -1699,7 +1700,7 @@ function renderStandardStage(){
       </div>
     </article>
     <article class="panel media-panel" id="robot3dPanel"><div class="panel-head">로봇 3D 분류 셀 / Sorting Twin
-      <span class="head-right sim3d-tools"><button onclick="rotateView(-15)" title="좌회전 15°">↶ 15°</button><span class="zoom-pct" id="rotDeg">340°</span><button onclick="rotateView(15)" title="우회전 15°">15° ↷</button><button onclick="reset3DView()">기본 시점</button><button onclick="zoomStep(-1)" title="축소">−</button><span class="zoom-pct" id="zoomPct">80%</span><button onclick="zoomStep(1)" title="확대">+</button></span>
+      <span class="head-right sim3d-tools"><button onclick="rotateView(-15)" title="좌회전 15°">↶ 15°</button><span class="zoom-pct" id="rotDeg">340°</span><button onclick="rotateView(15)" title="우회전 15°">15° ↷</button><button onclick="tiltView(-15)" title="위에서 보기">⤒</button><span class="zoom-pct" id="tiltDeg">⤓65°</span><button onclick="tiltView(15)" title="아래에서 보기">⤓</button><button onclick="reset3DView()">기본 시점</button><button onclick="zoomStep(-1)" title="축소">−</button><span class="zoom-pct" id="zoomPct">80%</span><button onclick="zoomStep(1)" title="확대">+</button></span>
       </div><div class="media-wrap"><canvas id="robot3dCanvas"></canvas><div class="hud hud-right mono" id="eeHud"></div><div class="sim-labels" id="simLabels"></div></div>
     </article>`;
   applyGripperStream();bind3DDrag();
@@ -1714,7 +1715,7 @@ function renderManualStage(){
       <button class="small-btn" onclick="resetAllManual()">전체 초기화</button><button class="small-btn" onclick="applyAllManual()">전체 적용</button>
       </div></div></article>
     <article class="panel media-panel" id="robot3dPanel"><div class="panel-head">로봇 3D 분류 셀 / Sorting Twin
-      <span class="head-right sim3d-tools"><button onclick="rotateView(-15)" title="좌회전 15°">↶ 15°</button><span class="zoom-pct" id="rotDeg">340°</span><button onclick="rotateView(15)" title="우회전 15°">15° ↷</button><button onclick="reset3DView()">기본 시점</button><button onclick="zoomStep(-1)" title="축소">−</button><span class="zoom-pct" id="zoomPct">80%</span><button onclick="zoomStep(1)" title="확대">+</button></span>
+      <span class="head-right sim3d-tools"><button onclick="rotateView(-15)" title="좌회전 15°">↶ 15°</button><span class="zoom-pct" id="rotDeg">340°</span><button onclick="rotateView(15)" title="우회전 15°">15° ↷</button><button onclick="tiltView(-15)" title="위에서 보기">⤒</button><span class="zoom-pct" id="tiltDeg">⤓65°</span><button onclick="tiltView(15)" title="아래에서 보기">⤓</button><button onclick="reset3DView()">기본 시점</button><button onclick="zoomStep(-1)" title="축소">−</button><span class="zoom-pct" id="zoomPct">80%</span><button onclick="zoomStep(1)" title="확대">+</button></span>
       </div><div class="media-wrap"><canvas id="robot3dCanvas"></canvas><div class="hud hud-right mono" id="eeHud"></div><div class="sim-labels" id="simLabels"></div></div>
     </article>`;
   renderManualRows();bind3DDrag();
@@ -1747,18 +1748,34 @@ function renderPrimary(){
   applyGripperStream();
 }
 
+function deriveCurrentStep(){
+  // 현재 단계 = 잡기 중이면 pick.step(접근~배치), 아니면 비전으로 스캔/감지, 정지면 홈(원점).
+  const steps=state.path.steps||[],pk=state.pick||{};let step="HOME";
+  if(pk.status==="BUSY"){
+    step=steps.includes(pk.step)?pk.step:"PLACE";   // RETURN 등은 마지막 단계 유지(되감김 깜빡임 방지)
+  }else{
+    const v=state.vision||{},alive=(v.age_ms!=null?v.age_ms:9e9)<2500;
+    if(alive&&v.target&&v.target!=="NONE")step="DETECT";
+    else if(alive)step="SCAN";
+    else step="HOME";                               // 카메라/검출 정지 → 홈(원점/대기)
+  }
+  state.path.current_step=step;
+  const idx=steps.indexOf(step),denom=Math.max(steps.length-1,1);
+  state.path.progress_percent=idx>0?Math.round(idx/denom*100):0;   // 홈=0%, 마지막=100%
+}
 function renderPath(){
-  const p=state.path,steps=p.steps||[],isEstop=state.system.estop,running=state.auto&&state.auto.running;
-  const curIdx=steps.indexOf(p.current_step);
+  const p=state.path,steps=p.steps||[],isEstop=state.system.estop;
+  const curIdx=steps.indexOf(p.current_step),active=!isEstop&&curIdx>=0;
   const track=$("stepChartTrack");
   if(track)track.innerHTML=steps.map((step,i)=>{
-    const done=running&&i<curIdx,current=running&&i===curIdx,cls=isEstop?"":current?"current":done?"done":"";
-    return `${i?`<i class="step-line ${done?"done":""}"></i>`:""}<div class="step-node ${cls}"><span class="step-dot mono">${String(i+1).padStart(2,"0")}</span><span class="step-label">${STEP_LABELS[step]||step}</span></div>`;
+    const done=active&&i<curIdx,current=active&&i===curIdx,cls=isEstop?"":current?"current":done?"done":"";
+    const num=step==="HOME"?"H":String(i).padStart(2,"0");   // 홈은 H, 사이클은 01~07
+    return `${i?`<i class="step-line ${done?"done":""}"></i>`:""}<div class="step-node ${cls}"><span class="step-dot mono">${num}</span><span class="step-label">${STEP_LABELS[step]||step}</span></div>`;
   }).join("");
-  setText("stepChartNo",isEstop?"!!":String(running?Math.max(curIdx+1,1):0).padStart(2,"0"));
-  setText("stepChartName",isEstop?"E-STOP 정지":running?(STEP_LABELS[p.current_step]||p.current_step):"대기");
-  setText("stepChartDesc",isEstop?"하드웨어 E-STOP과 서보 전원을 확인하세요.":running?"센서 피드백을 확인하며 자동 분류를 진행합니다.":"시작 버튼을 누르면 자동 분류 단계가 진행됩니다.");
-  setText("stepChartPct",Math.round(running?(p.progress_percent||0):0));
+  setText("stepChartNo",isEstop?"!!":(active&&p.current_step!=="HOME"?String(curIdx).padStart(2,"0"):""));
+  setText("stepChartName",isEstop?"E-STOP 정지":(STEP_LABELS[p.current_step]||"대기"));
+  setText("stepChartDesc",isEstop?"하드웨어 E-STOP과 서보 전원을 확인하세요.":active&&p.current_step!=="HOME"?"센서 피드백을 확인하며 분류 단계를 진행합니다.":"홈(원점) 대기 — 시작/PICK을 누르거나 물체를 올리세요.");
+  setText("stepChartPct",Math.round(active?(p.progress_percent||0):0));
 }
 
 function renderRightPanel(){
@@ -2295,7 +2312,7 @@ function drawArmSegment(ctx,W,H,a,b,color,width){const A=project(a,W,H),B=projec
 function drawJoint3D(ctx,W,H,p,label,color){const q=project(p,W,H),r=clamp(15*q.scale,8,16);ctx.fillStyle="#142b42";ctx.strokeStyle=color;ctx.lineWidth=3;ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle=color;ctx.font="bold 10px Consolas";ctx.fillText(label,q.x+r+3,q.y-3)}
 function drawGripper3D(ctx,W,H,pose){const p=pose.end,side=state.gripper.state==="OPEN"?14:7,forward=armDir(pose.yaw,0),right=V(Math.cos(pose.yaw),0,-Math.sin(pose.yaw));[-1,1].forEach(s=>{const a=add(p,mul(right,side*s)),b=add(add(a,mul(forward,28)),V(0,-18,0));drawArmSegment(ctx,W,H,a,b,"#ff8b52",7)});const q=project(p,W,H);ctx.fillStyle="#4ade80";ctx.beginPath();ctx.arc(q.x,q.y,4,0,Math.PI*2);ctx.fill()}
 function drawPart3D(ctx,W,H,p,label){const q=project(p,W,H);ctx.fillStyle="#f7c948";ctx.beginPath();ctx.arc(q.x,q.y,5,0,Math.PI*2);ctx.fill();ctx.fillStyle="#e4eff7";ctx.font="9px Segoe UI";ctx.fillText(label,q.x+7,q.y-4)}
-function rotateView(deg){view.yaw+=deg*Math.PI/180;updateRotDeg()}function reset3DView(){view={yaw:340*Math.PI/180,pitch:25*Math.PI/180,zoom:1.2,panX:0,panZ:0};updateZoomPct();updateRotDeg();updateTiltDeg()}
+function rotateView(deg){view.yaw+=deg*Math.PI/180;updateRotDeg()}function tiltView(deg){view.pitch=clamp(view.pitch+deg*Math.PI/180,.05,2.9);updateTiltDeg()}function reset3DView(){view={yaw:340*Math.PI/180,pitch:25*Math.PI/180,zoom:1.2,panX:0,panZ:0};updateZoomPct();updateRotDeg();updateTiltDeg()}
 function zoomStep(dir){const cur=view.zoom/ZOOM_DEF*100,next=dir>0?(Math.floor(cur/10)+1)*10:(Math.ceil(cur/10)-1)*10;view.zoom=clamp(next/100*ZOOM_DEF,ZOOM_MIN,ZOOM_MAX);updateZoomPct()}
 function updateZoomPct(){const e=$("zoomPct");if(e)e.textContent=Math.round(view.zoom/ZOOM_DEF*100)+"%"}
 function updateRotDeg(){const e=$("rotDeg");if(e){let d=Math.round(view.yaw*180/Math.PI)%360;if(d<0)d+=360;e.textContent=d+"°"}}
@@ -2306,7 +2323,7 @@ function pan3DView(dx,dy){
   view.panX=clamp((view.panX||0)+dx*scale*rightX-dy*scale*forwardX,-2.8,2.8);
   view.panZ=clamp((view.panZ||0)+dx*scale*rightZ-dy*scale*forwardZ,-2.3,2.8);
 }
-function bind3DDrag(){const c=$("robot3dCanvas");if(!c)return;c.oncontextmenu=e=>e.preventDefault();c.onpointerdown=e=>{const mode=e.button===2||e.shiftKey?"pan":"rotate";drag={x:e.clientX,y:e.clientY,mode};c.style.cursor=mode==="pan"?"grabbing":"move";c.setPointerCapture?.(e.pointerId);e.preventDefault()};c.onpointermove=e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(drag.mode==="rotate"){view.yaw+=dx*.008;view.pitch=clamp(view.pitch+dy*.007,.05,1.45);updateRotDeg();updateTiltDeg()}else pan3DView(dx,dy);drag.x=e.clientX;drag.y=e.clientY;draw3D()};c.onpointerup=e=>{drag=null;c.style.cursor="grab";c.releasePointerCapture?.(e.pointerId)};c.onpointerleave=()=>{drag=null;c.style.cursor="grab"};c.onwheel=e=>{view.zoom=clamp(view.zoom-e.deltaY*.0017,ZOOM_MIN,ZOOM_MAX);updateZoomPct();draw3D();e.preventDefault()};c.style.cursor="grab"}
+function bind3DDrag(){const c=$("robot3dCanvas");if(!c)return;c.oncontextmenu=e=>e.preventDefault();c.onpointerdown=e=>{const mode=e.button===2||e.shiftKey?"pan":"rotate";drag={x:e.clientX,y:e.clientY,mode};c.style.cursor=mode==="pan"?"grabbing":"move";c.setPointerCapture?.(e.pointerId);e.preventDefault()};c.onpointermove=e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(drag.mode==="rotate"){view.yaw+=dx*.008;view.pitch=clamp(view.pitch+dy*.007,.05,2.9);updateRotDeg();updateTiltDeg()}else pan3DView(dx,dy);drag.x=e.clientX;drag.y=e.clientY;draw3D()};c.onpointerup=e=>{drag=null;c.style.cursor="grab";c.releasePointerCapture?.(e.pointerId)};c.onpointerleave=()=>{drag=null;c.style.cursor="grab"};c.onwheel=e=>{view.zoom=clamp(view.zoom-e.deltaY*.0017,ZOOM_MIN,ZOOM_MAX);updateZoomPct();draw3D();e.preventDefault()};c.style.cursor="grab"}
 
 /* ===== Top-down robot workspace ===== */
 function drawTopDown(){
@@ -2590,7 +2607,7 @@ function applyIncoming(d){
   if(d.can_frame)applyCanFrame(d.can_frame);
   if(d.human_pose)Object.assign(state.human_pose,d.human_pose);if(d.gripper){const _g=typeof d.gripper==="string"?{state:d.gripper.toUpperCase()}:Object.assign({},d.gripper);if(gripperPreviewDirty){delete _g.sg90_angle;delete _g.sg90_angle_deg;delete _g.state;}Object.assign(state.gripper,_g);}
   if(d.vision){Object.assign(state.vision,d.vision);if(d.vision.correction)Object.assign(state.vision.correction,d.vision.correction)}
-  if(d.path)Object.assign(state.path,d.path);if(d.precheck)Object.assign(state.precheck,d.precheck);if(d.can_health)Object.assign(state.can_health,d.can_health);if(d.calibration)Object.assign(state.calibration,d.calibration);if(Array.isArray(d.alerts))state.alerts=d.alerts;
+  if(d.path)Object.assign(state.path,d.path);if(d.precheck)Object.assign(state.precheck,d.precheck);if(d.can_health)Object.assign(state.can_health,d.can_health);if(d.calibration)Object.assign(state.calibration,d.calibration);if(Array.isArray(d.alerts))state.alerts=d.alerts;if(d.pick&&typeof d.pick==="object")state.pick=Object.assign(state.pick||{},d.pick);deriveCurrentStep();
   if(d.event?.message)addLog(d.event.message,(d.event.level||"INFO").toLowerCase());
 }
 
