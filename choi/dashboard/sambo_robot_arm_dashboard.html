@@ -655,6 +655,8 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
   <div class="header-status">
     <div class="run-controls">
       <button class="run-btn pick" id="pickBtn" onclick="pickRobot()">PICK</button>
+      <button class="run-btn" id="grabOkBtn" onclick="labelGrab(true)"><b>✓ 성공</b><small>GRAB OK</small></button>
+      <button class="run-btn" id="grabNgBtn" onclick="labelGrab(false)"><b>✗ 실패</b><small>GRAB NG</small></button>
       <button class="run-btn sweep" id="sweepBtn" onclick="toggleSweep()"><b>↔ 탐색</b><small>SWEEP</small></button>
       <button class="run-btn start" id="startBtn" onclick="startAutoRun()"><b>▶ 시작</b><small>AUTO RUN</small></button>
       <button class="run-btn stop active" id="stopBtn" onclick="stopAutoRun()"><b>■ 종료</b><small>END</small></button>
@@ -1086,7 +1088,7 @@ let view={yaw:340*Math.PI/180,pitch:25*Math.PI/180,zoom:1.2,panX:0,panZ:0},drag=
 let ZOOM_MIN=0.75,ZOOM_MAX=3.0,ZOOM_DEF=1.5;
 const MANUAL_KEY_STEP=1;
 const J4_VISUAL_HOME_OFFSET_DEG=-21;
-const J4_VISUAL_ELBOW_GAIN=0.85; // 엘보 시각 게인: 트윈이 명령보다 살짝 더 돌아서 줄임(1.0=1:1, 작을수록 덜 돔)
+const J4_VISUAL_ELBOW_GAIN=0.8; // 엘보 시각 게인: 트윈이 명령보다 살짝 더 돌아서 줄임(1.0=1:1, 작을수록 덜 돔)
 const J5_VISUAL_HOME_OFFSET_DEG=57;
 const J2_VISUAL_HOME_OFFSET_DEG=-6; // 어깨 영점 보정: 트윈 라벨 180°가 실제 180° 자세가 되도록(라벨 186°였던 자세=실제 180°)
 const MANUAL_KEY_BINDINGS={q:[0,1],a:[0,-1],w:[1,1],s:[1,-1],e:[3,1],d:[3,-1],r:[4,1],f:[4,-1],t:[5,1],g:[5,-1]};
@@ -1604,6 +1606,11 @@ function pickRobot(){
   _sweeping=false;setSweepBtn();                     // PICK이 브리지에서 스윕을 멈추므로 표시 동기화
   const sent=sendDashboardCommand("PICK");
   addLog(sent?"PICK 송신 (RPi)":"PICK — 미연결: 명령 미전송",sent?"ok":"warn");
+}
+function labelGrab(ok){
+  // 방금 잡기 성공/실패 수동 라벨 → 브리지가 grab_data.jsonl 마지막 줄 success에 기록
+  const sent=sendDashboardCommand("GRAB_LABEL",{success:ok});
+  addLog(sent?("방금 잡기: "+(ok?"성공":"실패")+" 기록"):"라벨 — 미연결",sent?"ok":"warn");
 }
 function stopAutoRun(){
   if(!confirm("현재 사이클을 마친 뒤 원점(HOME)으로 이동합니다.\n주변에 사람이 없는지 확인하세요."))return;
