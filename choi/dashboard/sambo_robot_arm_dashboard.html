@@ -459,7 +459,8 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 .run-btn.reset-estop:hover{background:linear-gradient(180deg,#8a6a0e,#4e3a0a);color:#fff0c0}
 .run-btn.stop{border:1px solid rgba(255,119,119,.92);background:linear-gradient(180deg,#d42634,#941925);color:#fff}
 .run-btn.stop.active,.run-btn.stop:hover{filter:brightness(1.08);box-shadow:0 0 0 2px rgba(255,91,91,.16),0 10px 24px rgba(0,0,0,.28)}
-.run-btn.halt{border:1px solid rgba(247,201,72,.85);background:rgba(36,28,7,.9);color:#f7c948}.run-btn.halt:hover,.run-btn.halt:active{background:linear-gradient(180deg,#cba32f,#8a6d12);color:#1a1402;box-shadow:0 0 0 2px rgba(247,201,72,.18),0 10px 24px rgba(0,0,0,.28)}
+.run-btn.sweep{border:1px solid rgba(167,139,250,.7);background:rgba(22,16,40,.86);color:#a78bfa}
+.run-btn.sweep.active,.run-btn.sweep:hover{background:linear-gradient(180deg,#5b3fa0,#3a2768);color:#e7dcff;box-shadow:0 0 0 2px rgba(167,139,250,.18),0 10px 24px rgba(0,0,0,.28)}
 .operation-header .header-status{gap:12px;flex:1}
 .operation-header .status-chip{height:48px;min-width:228px;border-radius:9px;padding:0 14px;background:#0b1728;border-color:#1d4164;font-size:12px;box-shadow:inset 0 1px rgba(255,255,255,.04)}
 .operation-header .status-chip b{font-size:15px;color:var(--text)}
@@ -654,8 +655,8 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
   <div class="header-status">
     <div class="run-controls">
       <button class="run-btn pick" id="pickBtn" onclick="pickRobot()">PICK</button>
+      <button class="run-btn sweep" id="sweepBtn" onclick="toggleSweep()"><b>↔ 탐색</b><small>SWEEP</small></button>
       <button class="run-btn start" id="startBtn" onclick="startAutoRun()"><b>▶ 시작</b><small>AUTO RUN</small></button>
-      <button class="run-btn halt" id="haltBtn" onclick="haltRobot()"><b>⏸ 정지</b><small>STOP</small></button>
       <button class="run-btn stop active" id="stopBtn" onclick="stopAutoRun()"><b>■ 종료</b><small>END</small></button>
       <button class="run-btn estop" id="estopBtn" onclick="triggerEstop()"><b>⏻ E-STOP</b><small>비상정지</small></button>
       <button class="run-btn reset-estop" id="resetEstopBtn" onclick="resetEstop()" style="display:none"><b>↺ 해제</b><small>RESET</small></button>
@@ -1085,6 +1086,7 @@ let view={yaw:340*Math.PI/180,pitch:25*Math.PI/180,zoom:1.2,panX:0,panZ:0},drag=
 let ZOOM_MIN=0.75,ZOOM_MAX=3.0,ZOOM_DEF=1.5;
 const MANUAL_KEY_STEP=1;
 const J4_VISUAL_HOME_OFFSET_DEG=-21;
+const J4_VISUAL_ELBOW_GAIN=0.9; // 엘보 시각 게인: 트윈이 명령보다 살짝 더 돌아서 줄임(1.0=1:1, 작을수록 덜 돔)
 const J5_VISUAL_HOME_OFFSET_DEG=57;
 const J2_VISUAL_HOME_OFFSET_DEG=-6; // 어깨 영점 보정: 트윈 라벨 180°가 실제 180° 자세가 되도록(라벨 186°였던 자세=실제 180°)
 const MANUAL_KEY_BINDINGS={q:[0,1],a:[0,-1],w:[1,1],s:[1,-1],e:[3,1],d:[3,-1],r:[4,1],f:[4,-1],t:[5,1],g:[5,-1]};
@@ -1585,8 +1587,21 @@ function startAutoRun(){
   addLog(sent?"자동 운전 시작 명령 송신 (RPi)":"자동 운전 시작 — DEMO 경로 진행","ok");
   renderHeader();renderPath();draw3D();
 }
+let _sweeping=false;
+function setSweepBtn(){const b=$("sweepBtn");if(b)b.classList.toggle("active",_sweeping);}
+function toggleSweep(){
+  // 탐색(검증용): M1 좌우 등속 스윕 토글. 종료/E-STOP/PICK이 브리지에서 스윕을 멈추므로
+  // 그 핸들러들에서 _sweeping=false 로 표시를 동기화한다(상태는 서버 스냅샷에 없음).
+  _sweeping=!_sweeping;
+  const sent=sendDashboardCommand(_sweeping?"SWEEP":"SWEEP_STOP");
+  if(!sent)_sweeping=false;                          // 미연결이면 토글 취소
+  setSweepBtn();
+  addLog(sent?(_sweeping?"탐색 시작 — M1 좌우 스윕 (RPi)":"탐색 정지 — 제자리 (RPi)")
+            :"탐색 — 미연결: 명령 미전송",sent?"ok":"warn");
+}
 function pickRobot(){
   // S 버튼과 동일: 검출된 물체 1회 잡기(확인창 없이 즉시 전송).
+  _sweeping=false;setSweepBtn();                     // PICK이 브리지에서 스윕을 멈추므로 표시 동기화
   const sent=sendDashboardCommand("PICK");
   addLog(sent?"PICK 송신 (RPi)":"PICK — 미연결: 명령 미전송",sent?"ok":"warn");
 }
@@ -1594,15 +1609,9 @@ function stopAutoRun(){
   if(!confirm("현재 사이클을 마친 뒤 원점(HOME)으로 이동합니다.\n주변에 사람이 없는지 확인하세요."))return;
   if(!state.auto)state.auto={running:false};
   state.auto.running=false;
+  _sweeping=false;setSweepBtn();                     // 종료가 스윕도 멈춤 → 표시 동기화
   const sent=sendDashboardCommand("END");
   addLog(sent?"종료 명령 송신 — 사이클 후 원점 (RPi)":"종료 — 현재 자세 유지","warn");
-  renderHeader();renderPath();draw3D();
-}
-function haltRobot(){
-  // 정지(즉시정지): 확인창 없음(지연 방지). 진행 중 이동을 현재 위치에서 그대로 멈춤.
-  if(state.auto)state.auto.running=false;
-  const sent=sendDashboardCommand("HALT");
-  addLog(sent?"정지 — 로봇팔 현재 위치에서 즉시 정지 (RPi)":"정지 — 미연결: 명령 미전송","warn");
   renderHeader();renderPath();draw3D();
 }
 function setMode(mode,fromSocket=false){
@@ -1644,6 +1653,7 @@ function applyFocusView(){
 function triggerEstop(){
   if(state.system.estop)return;
   state.system.estop=true;state.mode="E_STOP";document.body.classList.add("estop-active");
+  _sweeping=false;setSweepBtn();                     // E-STOP이 스윕도 멈춤 → 표시 동기화
   const reset=$("resetEstopBtn");if(reset)reset.style.display="block";
   sendDashboardCommand("ESTOP");
   addLog("E-STOP 발동 — 즉시 중단 후 스캔→원점 후퇴, 명령 잠금","err");
@@ -2030,7 +2040,7 @@ function getTwinPoseFromAngles(A){
   return{
     base,
     shoulder,
-    elbow:motorToJointDelta("J4",A.J4)+J4_VISUAL_HOME_OFFSET_DEG,
+    elbow:motorToJointDelta("J4",A.J4)*J4_VISUAL_ELBOW_GAIN+J4_VISUAL_HOME_OFFSET_DEG,
     wristPitch:-motorToJointDelta("J5",A.J5)+J5_VISUAL_HOME_OFFSET_DEG,
     wristRoll,
     endAssist:wristRoll,
@@ -2168,7 +2178,7 @@ function addThreeSortBins(T,r){
   scanZone.rotation.x=-Math.PI/2;scanZone.position.set(0,.018,1.5);group.add(scanZone);
   const scanEdges=new T.LineSegments(new T.EdgesGeometry(scanZone.geometry),new T.LineBasicMaterial({color:0xa2aeb8,transparent:true,opacity:.6}));
   scanEdges.rotation.x=-Math.PI/2;scanEdges.position.set(0,.02,1.5);group.add(scanEdges);
-  const scanLabel=makeSceneLabel(T,"스캔/집기 영역","#aab4bd","SCAN · PICK");scanLabel.position.set(0,.18,1.56);group.add(scanLabel);
+  const scanLabel=makeSceneLabel(T,"스캔/집기 영역","#aab4bd","SCAN · PICK");scanLabel.position.set(0,.18,2.55);group.add(scanLabel);
   r.scene.add(group);r.sortBins=group;
 }
 async function loadActualStlRobot(T,r){

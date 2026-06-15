@@ -876,6 +876,12 @@ async def ws_handler(ws):
                         print(f"[CMD] GRIPPER → {float(ang):.0f}°")
                     else:
                         print("[CMD] GRIPPER: 각도 없음")
+                elif cmd == "SWEEP":
+                    start_sweep()                       # M1 120↔240 등속 좌우 스윕(이미 구현)
+                    print("[CMD] SWEEP → 스윕 시작")
+                elif cmd == "SWEEP_STOP":
+                    m1 = stop_sweep()                   # 스윕 멈추고 현재 M1에서 정지
+                    print(f"[CMD] SWEEP_STOP → M1={m1:.1f}")
                 elif cmd in ("PICK", "S", "VISION_SEND"):
                     res = handle_pick()
                     print(f"[CMD] PICK → {res}")
