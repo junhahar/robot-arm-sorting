@@ -742,7 +742,7 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
     </article>
 
     <article class="panel placeholder-panel life-panel">
-      <div class="panel-head">티칭 좌표 / Teaching Poses <small>수동모드에서 자세 잡고 [저장]</small></div>
+      <div class="panel-head" id="teachHead" data-mode="">티칭 좌표 / Teaching Poses <small>수동모드에서 자세 잡고 [저장]</small></div>
       <div class="placeholder-body" id="reservedBody"><span>로딩 중…</span></div>
     </article>
 
@@ -1554,8 +1554,15 @@ function openLifeJointDetail(id){
 // ── 티칭 좌표 패널 (수명예측 박스 용도변경) ──
 const TEACH_DEFS=[["cnc_infeed","CNC 인피드"],["cnc_grab","CNC 파지"],["rack_v0","적재 V홈1"],["rack_v1","적재 V홈2"]];
 function teachAnglesStr(p){if(!p||!p.angles)return null;const a=p.angles;return [1,2,3,4,5,6].map(m=>{const v=a[m]!=null?a[m]:a[String(m)];return v==null?"-":Math.round(Number(v))}).join("/");}
-function renderLifePredictionCard(){           // 용도변경: 티칭 좌표 목록 렌더
+function renderLifePredictionCard(){           // 용도변경: 티칭 좌표 (수동시험에서만, 자동운전은 빈 박스)
   const body=$("reservedBody");if(!body)return;
+  const head=$("teachHead");
+  if(state.mode!=="MANUAL"){                    // 자동운전 등: 빈 박스(나중에 다른 용도로 채움)
+    if(head&&head.dataset.mode!=="auto"){head.innerHTML="";head.dataset.mode="auto";}
+    if(body.dataset.teachHtml!=="__empty__"){body.innerHTML="";body.dataset.teachHtml="__empty__";}
+    return;
+  }
+  if(head&&head.dataset.mode!=="manual"){head.innerHTML='티칭 좌표 / Teaching Poses <small>수동모드에서 자세 잡고 [저장]</small>';head.dataset.mode="manual";}
   const t=state.teach||{poses:{},taught:[],missing:[]};
   const html='<div class="teach-list">'+TEACH_DEFS.map(([name,label])=>{
     const p=(t.poses||{})[name],taught=(t.taught||[]).includes(name)||!!p,ang=teachAnglesStr(p);
