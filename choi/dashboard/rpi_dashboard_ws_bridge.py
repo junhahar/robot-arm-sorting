@@ -17,6 +17,7 @@ Sambo dashboard WS bridge v3 = v2(스냅샷 텔레메트리) + 모션 명령.
 import asyncio
 import json
 import math
+import socket
 import struct
 import threading
 import time
@@ -57,6 +58,15 @@ STREAM_MOVE_MS = 80
 SCAN_POSE = {1: 180.0, 2: 104.8, 3: 248.2, 4: 112.7, 5: 140.8, 6: 180.0}
 HOME_POSE = {i: 180.0 for i in range(1, 7)}
 MANUAL_MIN_DURATION = 0.3   # 수동 jog/적용 최소 소요시간[s] (작은 각도도 부드럽게)
+
+# ── M1 등속(스캔/스윕) + 5005 (ik_server 대체) ──
+CMD_SET_ANGLE_SPEED = 0x07   # STS3215 등속(위치+속도) — 틱틱 방지
+SCAN_SPEED_REG = 250         # 스캔/센터링 등속 속도(reg)
+SWEEP_SPEED = 28.0           # 스윕 시간추정 속도(°/s)
+SWEEP_SPEED_REG = 320        # 스윕 등속 reg
+SWEEP_LEFT, SWEEP_RIGHT = 120.0, 240.0
+M1_SCAN_MIN, M1_SCAN_MAX = 120.0, 240.0   # M1 스캔 안전범위(180±60)
+IK_PORT = 5005               # detect의 scan/home/sweep/stop 수신
 
 # ── 관절 소프트 한계 (raw 명령각, rpi_keyboard_control_v1_11 MOTOR_LIMITS와 동일) ──
 # 수동 시험에서 명령각이 이 범위를 넘지 않게 끝에서 자른다(clamp). 하드스톱 충돌 방지.
@@ -331,7 +341,8 @@ def _send_gripper(bus, angle):
 
 def request_motion(seq, label, min_dur=MIN_DURATION, speed=AXIS_SPEED):
     """seq: [(targets_dict, sub_label), ...]. 새 요청은 진행 중 이동을 선점.
-    speed: deg/s (수동 기본 20, pick 30)."""
+    speed: deg/s (수동 기본 20, pick 30). M1 스윕 중이면 먼저 정지(0x03↔0x07 충돌 방지)."""
+    stop_sweep()
     with mlock:
         motion["seq"] = seq
         motion["gen"] += 1
@@ -429,6 +440,7 @@ pick_state = {"status": "SCAN_READY", "step": ""}   # SCAN_READY | BUSY
 pick_lock = threading.Lock()
 run_flags = {"estop": False, "stop_after_cycle": False}   # E-Stop 래치 / 종료(사이클 후 원점)
 BUSY_FLAG = Path(__file__).resolve().parent / "robot_busy.flag"   # 있으면 detect가 인식 정지
+CNC_FLAG = Path(__file__).resolve().parent / "cnc_busy.flag"      # 있으면 detect가 파이프 제외(가공중)
 
 
 def _set_busy(b):
@@ -438,6 +450,17 @@ def _set_busy(b):
             BUSY_FLAG.write_text("1")
         else:
             BUSY_FLAG.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+def _set_cnc_busy(b):
+    """파이프 CNC 가공 중 깃발. detect가 있으면 파이프 제외(볼트/너트만). (계약 7c)"""
+    try:
+        if b:
+            CNC_FLAG.write_text("1")
+        else:
+            CNC_FLAG.unlink(missing_ok=True)
     except Exception:
         pass
 
@@ -472,6 +495,7 @@ class _PickApi:
     submit_and_wait = staticmethod(submit_and_wait)
     request_gripper = staticmethod(request_gripper)
     get_gen = staticmethod(get_gen)
+    set_cnc_busy = staticmethod(_set_cnc_busy)
 
 
 _pick_api = _PickApi()
@@ -540,6 +564,147 @@ def handle_pick():
 def _pick_snapshot():
     with pick_lock:
         return {"status": pick_state["status"], "step": pick_state["step"]}
+
+
+# ── M1 스캔/센터링 등속 + 스윕 + 5005 리스너 (ik_server_pose 대체) ──────────
+_m1_bus = None
+_sweep_stop = threading.Event()
+_sweep_thread = None
+_sweep_m1 = 180.0
+
+
+def _m1_can():
+    global _m1_bus
+    if _m1_bus is None:
+        _m1_bus = can.interface.Bus(channel=CAN_INTERFACE, interface="socketcan")
+    return _m1_bus
+
+
+def _send_angle_speed(mid, deg, speed):
+    """위치+Goal_Speed(0x07)로 STS3215 등속 회전(위치명령 최고속 튐 방지)."""
+    deg = max(0.0, min(360.0, deg))
+    ax10 = int(round(deg * 10)); sp = int(speed) & 0xFFFF
+    data = [CMD_SET_ANGLE_SPEED, mid, ax10 & 0xFF, (ax10 >> 8) & 0xFF,
+            sp & 0xFF, (sp >> 8) & 0xFF, 0, 0]
+    try:
+        _m1_can().send(can.Message(arbitration_id=0x100, data=data, is_extended_id=False))
+    except Exception:
+        pass
+
+
+def rotate_m1(target_deg, speed=SCAN_SPEED_REG):
+    """M1을 등속으로 target까지(스캔/센터링). 안전범위 클램프."""
+    t = max(M1_SCAN_MIN, min(M1_SCAN_MAX, float(target_deg)))
+    _send_angle_speed(1, t, speed)
+    return t
+
+
+def _glide(start, goal):
+    """start→goal 등속 한 방 + 시간추정. stop 시 현재 추정각에서 정지."""
+    global _sweep_m1
+    dist = abs(goal - start)
+    if dist < 0.5:
+        _sweep_m1 = goal; return goal
+    dur = dist / SWEEP_SPEED
+    sign = 1.0 if goal > start else -1.0
+    _send_angle_speed(1, goal, SWEEP_SPEED_REG)
+    t0 = time.time()
+    while not _sweep_stop.is_set():
+        el = time.time() - t0
+        if el >= dur:
+            _sweep_m1 = goal; return goal
+        _sweep_m1 = start + sign * SWEEP_SPEED * el
+        time.sleep(0.03)
+    cur = start + sign * SWEEP_SPEED * (time.time() - t0)
+    cur = min(max(cur, min(start, goal)), max(start, goal))
+    _sweep_m1 = cur
+    _send_angle_speed(1, cur, SWEEP_SPEED_REG)
+    return cur
+
+
+def _sweep_worker():
+    while not _sweep_stop.is_set():
+        _glide(_sweep_m1, SWEEP_LEFT)
+        if _sweep_stop.is_set():
+            return
+        _glide(_sweep_m1, SWEEP_RIGHT)
+
+
+def start_sweep():
+    global _sweep_thread, _sweep_m1
+    stop_sweep()
+    with lock:
+        a = motors[1]["current"]
+    if a is not None:
+        _sweep_m1 = a
+    _sweep_stop.clear()
+    _sweep_thread = threading.Thread(target=_sweep_worker, daemon=True)
+    _sweep_thread.start()
+
+
+def stop_sweep():
+    global _sweep_thread
+    _sweep_stop.set()
+    if _sweep_thread is not None:
+        _sweep_thread.join(timeout=1.0)
+        _sweep_thread = None
+    return _sweep_m1
+
+
+def ik5005_server():
+    """detect의 M1 스캔/홈/스윕/정지 명령(5005) 수신 → 실행. ik_server_pose 대체.
+    프로토콜 그대로라 detect 변경 없음. 잡기(pick)는 WS PICK로 처리하므로 여기선 거부."""
+    srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        srv.bind(("0.0.0.0", IK_PORT)); srv.listen(1)
+    except OSError as e:
+        print(f"[5005] bind 실패: {e}")
+        return
+    print(f"[5005] ik 명령 수신 대기 (scan/home/sweep/stop) — ik_server 대체")
+    while True:
+        try:
+            conn, _addr = srv.accept()
+        except Exception:
+            continue
+        with conn:
+            try:
+                buf = conn.recv(4096)
+                if not buf:
+                    continue
+                req = json.loads(buf.decode())
+            except Exception:
+                try:
+                    conn.sendall(b'{"ok":false,"err":"bad json"}')
+                except Exception:
+                    pass
+                continue
+            act = req.get("action")
+            with pick_lock:
+                _es = run_flags["estop"]
+            if _es and act in ("home", "scan", "sweep"):
+                try:
+                    conn.sendall(json.dumps({"ok": False, "err": "E-STOP"}).encode())
+                except Exception:
+                    pass
+                continue
+            try:
+                if act == "home":
+                    conn.sendall(json.dumps({"ok": True, "action": "home"}).encode())
+                    request_motion([(HOME_POSE, "원점(5005 home)")], "5005 HOME")
+                elif act == "scan":
+                    m1 = rotate_m1(req.get("m1", 180.0))
+                    conn.sendall(json.dumps({"ok": True, "m1": round(m1, 1)}).encode())
+                elif act == "sweep":
+                    start_sweep()
+                    conn.sendall(json.dumps({"ok": True, "sweeping": True}).encode())
+                elif act == "stop":
+                    m1 = stop_sweep()
+                    conn.sendall(json.dumps({"ok": True, "m1": round(m1, 1)}).encode())
+                else:
+                    conn.sendall(json.dumps({"ok": False, "err": "pick은 WS PICK 사용"}).encode())
+            except Exception as e:
+                print(f"[5005] {act} 처리 오류: {e}")
 
 
 def derive_can_status(comms):
@@ -747,7 +912,9 @@ async def main():
     threading.Thread(target=can_reader, daemon=True).start()
     threading.Thread(target=motion_worker, daemon=True).start()
     threading.Thread(target=gripper_worker, daemon=True).start()
+    threading.Thread(target=ik5005_server, daemon=True).start()   # detect M1 스캔/홈/스윕 수신(ik_server 대체)
     _set_busy(False)                      # 시작 시 잔여 깃발 제거(이전 크래시 대비)
+    _set_cnc_busy(False)
     print(f"Sambo WS Bridge v4 — ws://0.0.0.0:{WS_PORT}, snapshot {SEND_HZ}Hz, "
           f"motion+manual+gripper+halt enabled")
     async with websockets.serve(ws_handler, WS_HOST, WS_PORT):
