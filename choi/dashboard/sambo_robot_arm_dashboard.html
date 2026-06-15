@@ -553,7 +553,7 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 .tof-judge{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--dim)}
 .tof-judge b{font-size:13px}
 .placeholder-body{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:14px;color:var(--dim);font-size:11px;text-align:center}
-.life-panel .placeholder-body{display:block;text-align:left;overflow:hidden;padding:7px 10px}
+.life-panel .placeholder-body{display:block;text-align:left;overflow-y:auto;padding:4px 9px}
 .life-joint-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
 .life-row{display:grid;grid-template-columns:104px minmax(98px,1fr) 52px;gap:6px;align-items:center;min-height:38px;padding:5px 6px;border:1px solid rgba(28,56,85,.46);border-radius:7px;background:rgba(9,21,34,.62);overflow:hidden}
 .life-axis b{display:block;color:var(--cyan);font-size:13px;line-height:1;font-weight:900}.life-axis small{display:block;margin-top:3px;color:#8ea6ba;font-size:9px;font-weight:800;line-height:1.05;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -590,6 +590,18 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 .life-legend-item.red{border-color:rgba(255,91,91,.56);background:rgba(255,91,91,.075)}
 .life-legend-item.green b{color:var(--green)}.life-legend-item.cyan b{color:var(--cyan)}.life-legend-item.yellow b{color:var(--yellow)}.life-legend-item.red b{color:var(--red)}
 @media(max-width:900px){.life-guide-grid,.life-legend-grid{grid-template-columns:1fr}}
+/* 티칭 좌표 패널 (수명예측 박스 용도변경) */
+.teach-list{display:flex;flex-direction:column;gap:3px}
+.teach-row{display:grid;grid-template-columns:80px minmax(0,1fr) auto;gap:8px;align-items:center;min-height:27px;padding:3px 8px;border:1px solid rgba(28,56,85,.46);border-radius:7px;background:rgba(9,21,34,.62)}
+.teach-name{color:var(--cyan);font-size:12.5px;font-weight:900;line-height:1.1}
+.teach-ang{font-size:11.5px;color:var(--green);font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.teach-ang.empty{color:#7f93a5;font-weight:700}
+.teach-btns{display:flex;gap:5px}
+.teach-btn{height:23px;padding:0 10px;border-radius:6px;font-size:11px;font-weight:900;border:1px solid var(--line);background:rgba(13,27,45,.85);color:var(--muted);transition:.15s}
+.teach-btn.save{border-color:rgba(74,222,128,.5);color:var(--green)}.teach-btn.save:hover{background:rgba(74,222,128,.12)}
+.teach-btn.go{border-color:rgba(56,189,248,.5);color:#38bdf8}.teach-btn.go:hover{background:rgba(56,189,248,.12)}
+.teach-btn:disabled{opacity:.38;cursor:not-allowed}
+.teach-err{margin-top:7px;padding:6px 9px;border:1px solid rgba(255,91,91,.5);border-radius:7px;background:rgba(255,91,91,.08);color:#ff9a9a;font-size:11px;font-weight:800}
 .ai-fab{position:fixed;right:24px;bottom:24px;z-index:70;width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(32,213,232,.6);background:rgba(32,213,232,.18);color:var(--cyan);font-weight:900;font-size:17px;letter-spacing:.5px;opacity:.6;backdrop-filter:blur(6px);box-shadow:0 12px 28px rgba(0,0,0,.45);transition:.18s}
 .ai-fab:hover{opacity:1;background:var(--cyan);color:#04161b;transform:translateY(-3px);box-shadow:0 16px 34px rgba(32,213,232,.3)}
 .ai-fab span{line-height:0;display:flex;align-items:center;justify-content:center}.ai-fab svg{display:block}
@@ -730,8 +742,8 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
     </article>
 
     <article class="panel placeholder-panel life-panel">
-      <div class="panel-head">수명 예측 / Servo Life <small id="lifeBaselineTag">STS3215 x 6</small><span class="head-right"><button class="life-help-btn" onclick="openModal('lifeLegendModal')" title="수명예측 계산 기준">계산 기준</button></span></div>
-      <div class="placeholder-body" id="reservedBody"><span>정상 기준선 로딩 중입니다.</span></div>
+      <div class="panel-head">티칭 좌표 / Teaching Poses <small>수동모드에서 자세 잡고 [저장]</small></div>
+      <div class="placeholder-body" id="reservedBody"><span>로딩 중…</span></div>
     </article>
 
     <article class="panel log-panel">
@@ -975,6 +987,7 @@ const state={
   gripper:{state:"OPEN",sg90_angle:60,tof_mm:48.2,object_detected:true,pick_ready:true},
   vision:{target:"NONE",confidence:.0,stable_frames:0,bbox:null,correction:{dx_mm:0,dy_mm:0}},
   pick:{status:"SCAN_READY",step:""},
+  teach:{poses:{},taught:[],missing:["cnc_infeed","cnc_grab","rack_v0","rack_v1"],lastError:""},
   path:{current_step:"HOME",steps:["HOME","SCAN","DETECT","PRE_GRASP","GRASP","LIFT","CARRY","PLACE"],progress_percent:0},
   precheck:{home_confirmed:true,path_loaded:true,servo_ready:true,sg90_ready:true,tof_ready:true},
   can_health:{received:1842,errors:0,delay_ms:18,last_rx_ms:22},
@@ -1088,9 +1101,11 @@ let view={yaw:340*Math.PI/180,pitch:25*Math.PI/180,zoom:1.2,panX:0,panZ:0},drag=
 let ZOOM_MIN=0.75,ZOOM_MAX=3.0,ZOOM_DEF=1.5;
 const MANUAL_KEY_STEP=1;
 const J4_VISUAL_HOME_OFFSET_DEG=-21;
-const J4_VISUAL_ELBOW_GAIN=0.8; // 엘보 시각 게인: 트윈이 명령보다 살짝 더 돌아서 줄임(1.0=1:1, 작을수록 덜 돔)
+const J4_VISUAL_ELBOW_GAIN=0.85; // 엘보(M4·UI"J3") 시각 게인(1.0=1:1, 클수록 더 돔)
 const J5_VISUAL_HOME_OFFSET_DEG=57;
+const J5_VISUAL_WRISTPITCH_GAIN=0.8; // 손목피치(M5·UI"J4") 시각 게인(1.0=1:1, 클수록 더 돔)
 const J2_VISUAL_HOME_OFFSET_DEG=-6; // 어깨 영점 보정: 트윈 라벨 180°가 실제 180° 자세가 되도록(라벨 186°였던 자세=실제 180°)
+const J2_VISUAL_SHOULDER_GAIN=1.2; // 어깨 시각 게인(1.0=1:1, 클수록 더 돔)
 const MANUAL_KEY_BINDINGS={q:[0,1],a:[0,-1],w:[1,1],s:[1,-1],e:[3,1],d:[3,-1],r:[4,1],f:[4,-1],t:[5,1],g:[5,-1]};
 
 /* ===== Helpers ===== */
@@ -1536,23 +1551,36 @@ function openLifeJointDetail(id){
   </div>`;
   openModal("lifeJointModal");
 }
-function renderLifePredictionCard(){
-  const body=$("reservedBody");if(!body||!state.life)return;
-  const base=state.life.baseline;
-  if(!base){
-    body.innerHTML='<div class="compact-line"><span>기준선</span><b class="yellow">'+(state.life.baselineError||"로딩 대기")+'</b></div><div class="compact-line"><span>파일</span><b class="mono">servo_life_normal_baseline.json</b></div>';
-    return;
-  }
-  const healthMap=computeHealthMap();
-  const statuses=state.robot.joints.map(j=>Object.assign({joint:j,eq:state.life.sessionEquivalentCycles[j.id]||0,health:healthMap[j.id]},lifeJointStatus(j)));
-  const worst=statuses.find(s=>s.cls==="red")||statuses.find(s=>s.cls==="yellow")||statuses[0];
-  const totalEq=statuses.reduce((sum,s)=>sum+s.eq,0);
-  const remain=lifeRemainingStats(statuses);
-  const normalCycles=base.totals?.normalBaselineCycles||0;
-  const live=state.system.server_connected&&!state.demo;
-  const remainCls=remain.remainingPercent<=10?"red":remain.remainingPercent<=25?"yellow":"green";
-  const html='<div class="life-joint-grid">'+statuses.map(s=>{const m=lifeMotorLabel(s.joint.id),reason=(s.health?.reasons||[])[0]||"정상 기준 범위",simpleStatus=lifeSimpleStatus(s.health,live);const remainPct=fmt(Math.min(s.remainingPercent,s.adjustedRemainingPercent),1);return '<div class="life-row" title="1회 = 60도 왕복(120도) · 기본 '+fmt(s.usedTotal,1)+' cyc / 보정 '+fmt(s.adjustedUsedTotal,1)+' cyc · '+reason+'"><span class="life-axis"><b>'+m.axis+'</b><small class="life-axis-sub"><span>'+m.name+'</span><button type="button" class="life-detail-btn" data-joint="'+s.joint.id+'" onpointerdown="event.stopPropagation();openLifeJointDetail(this.dataset.joint)" onclick="event.stopPropagation()" title="'+m.axis+' 상세보기" aria-label="'+m.axis+' 상세보기">상세</button></small></span><span class="life-readout"><i>잔여량 : '+remainPct+'%</i><small>누적 cyc '+fmt(s.adjustedUsedTotal,1)+'</small></span><em class="'+(live?s.cls:"yellow")+'">'+simpleStatus+'</em></div>'}).join("")+'</div>';
-  if(body.dataset.lifeHtml!==html){body.innerHTML=html;body.dataset.lifeHtml=html}
+// ── 티칭 좌표 패널 (수명예측 박스 용도변경) ──
+const TEACH_DEFS=[["cnc_infeed","CNC 인피드"],["cnc_grab","CNC 파지"],["rack_v0","적재 V홈1"],["rack_v1","적재 V홈2"]];
+function teachAnglesStr(p){if(!p||!p.angles)return null;const a=p.angles;return [1,2,3,4,5,6].map(m=>{const v=a[m]!=null?a[m]:a[String(m)];return v==null?"-":Math.round(Number(v))}).join("/");}
+function renderLifePredictionCard(){           // 용도변경: 티칭 좌표 목록 렌더
+  const body=$("reservedBody");if(!body)return;
+  const t=state.teach||{poses:{},taught:[],missing:[]};
+  const html='<div class="teach-list">'+TEACH_DEFS.map(([name,label])=>{
+    const p=(t.poses||{})[name],taught=(t.taught||[]).includes(name)||!!p,ang=teachAnglesStr(p);
+    const angHtml=ang?'<span class="teach-ang mono" title="M1~M6 raw 각도">'+ang+'</span>'
+                 :taught?'<span class="teach-ang">✓ 저장됨</span>'
+                 :'<span class="teach-ang empty">— 미저장 —</span>';
+    const goDis=ang?'':' disabled title="각도 미보유 — 다시 [저장]하면 이동 가능"';
+    return '<div class="teach-row"><span class="teach-name">'+label+'</span>'+angHtml
+      +'<span class="teach-btns"><button class="teach-btn save" onclick="teachSave(\''+name+'\')">저장</button>'
+      +'<button class="teach-btn go" onclick="teachGo(\''+name+'\')"'+goDis+'>이동</button></span></div>';
+  }).join("")+'</div>'+(t.lastError?'<div class="teach-err">'+t.lastError+'</div>':'');
+  if(body.dataset.teachHtml!==html){body.innerHTML=html;body.dataset.teachHtml=html;}
+}
+function sendTeachList(){if(state.ws?.readyState===WebSocket.OPEN)state.ws.send(JSON.stringify({type:"TEACH_LIST"}));}
+function teachSave(name){
+  if(state.ws?.readyState===WebSocket.OPEN){state.ws.send(JSON.stringify({type:"TEACH_SAVE",name}));addLog("티칭 저장 요청: "+name,"info");}
+  else addLog("티칭 저장 — 미연결","warn");
+}
+function teachGo(name){
+  const p=(state.teach.poses||{})[name];
+  if(!p||!p.angles){addLog("이동 불가 — '"+name+"' 각도 미보유(다시 저장 필요)","warn");return;}
+  if(!confirm("'"+name+"' 저장 자세로 팔을 이동합니다.\n주변 안전을 확인하세요."))return;
+  const targets=[1,2,3,4,5,6].map(m=>({motor_id:m,angle_deg:Number(p.angles[m]!=null?p.angles[m]:p.angles[String(m)])}));
+  const sent=sendDashboardCommand("MANUAL_MOVE",{targets});
+  addLog((sent?"티칭 이동 송신: ":"티칭 이동(미연결): ")+name,sent?"ok":"warn");
 }
 
 /* ===== Header, status panel, and mode changes ===== */
@@ -2042,13 +2070,13 @@ function getTwinPoseFromAngles(A){
   const base=-motorToJointDelta("J1",A.J1);
   const shoulderM2=motorToJointDelta("J2",A.J2);
   const shoulderM3=motorToJointDelta("J3",A.J3);
-  const shoulder=-(shoulderM2+shoulderM3)/2+J2_VISUAL_HOME_OFFSET_DEG;
+  const shoulder=-((shoulderM2+shoulderM3)/2)*J2_VISUAL_SHOULDER_GAIN+J2_VISUAL_HOME_OFFSET_DEG;
   const wristRoll=motorToJointDelta("J6",A.J6);
   return{
     base,
     shoulder,
     elbow:motorToJointDelta("J4",A.J4)*J4_VISUAL_ELBOW_GAIN+J4_VISUAL_HOME_OFFSET_DEG,
-    wristPitch:-motorToJointDelta("J5",A.J5)+J5_VISUAL_HOME_OFFSET_DEG,
+    wristPitch:-motorToJointDelta("J5",A.J5)*J5_VISUAL_WRISTPITCH_GAIN+J5_VISUAL_HOME_OFFSET_DEG,
     wristRoll,
     endAssist:wristRoll,
     mirrorMismatch:Math.abs(shoulderM2-shoulderM3)
@@ -2613,7 +2641,7 @@ function connectWS(){
   const wsUrl=getWsUrl();
   let ws;try{ws=new WebSocket(wsUrl)}catch{return}
   state.ws=ws;
-  ws.onopen=()=>{state.demo=false;state.system.server_connected=true;addLog("서버 연결 — 실제 데이터 수신 대기","ok");debug("WebSocket connected");sendLifeUsageGet();renderAll()};
+  ws.onopen=()=>{state.demo=false;state.system.server_connected=true;addLog("서버 연결 — 실제 데이터 수신 대기","ok");debug("WebSocket connected");sendLifeUsageGet();sendTeachList();renderAll()};
   ws.onmessage=e=>{try{const d=JSON.parse(e.data);applyIncoming(d);state.demo=false;state.system.server_connected=true;state.lastFrame=Date.now();requestUiRender()}catch(err){state.system.ws_errors=(state.system.ws_errors||0)+1;debug("JSON parse error: "+err.message)}};
   ws.onclose=()=>{state.demo=true;state.system.server_connected=false;debug(`${wsUrl} disconnected.`);renderAll();setTimeout(connectWS,2400)};
   ws.onerror=()=>{try{ws.close()}catch{}};
@@ -2627,6 +2655,9 @@ function applyIncoming(d){
     return;
   }
   if(d.type==="LIFE_USAGE_STATE"&&d.life_usage){applyLifeUsageSnapshot(d.life_usage,false);return}
+  if(d.type==="TEACH_SAVED"){state.teach.poses[d.name]={angles:d.angles,saved_at:d.saved_at};state.teach.lastError="";addLog("티칭 저장됨: "+d.name+(d.saved_at?" ("+d.saved_at+")":""),"ok");sendTeachList();renderLifePredictionCard();return}
+  if(d.type==="TEACH_ERROR"){state.teach.lastError=(d.name?d.name+": ":"")+(d.message||"저장 실패");addLog("티칭 실패: "+state.teach.lastError,"err");renderLifePredictionCard();return}
+  if(d.type==="TEACH_STATE"){state.teach.taught=d.taught||[];state.teach.missing=d.missing||[];if(d.poses)Object.assign(state.teach.poses,d.poses);renderLifePredictionCard();return}
   if(d.life_usage)applyLifeUsageSnapshot(d.life_usage,false);
   if(d.mode)setMode(d.mode,true);if(d.system)Object.assign(state.system,d.system);
   if(d.robot?.joints){d.robot.joints.forEach(n=>{const i=jointIndexById(n.id),j=state.robot.joints[i];if(j){const next=Object.assign({},n);if(next.current!=null)next.current=rawToLogicalAngleByIndex(i,next.current);if(state.mode==="MANUAL")delete next.target;Object.assign(j,next)}});if(d.robot.end_effector)state.robot.end_effector=d.robot.end_effector}
