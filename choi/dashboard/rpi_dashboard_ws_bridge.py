@@ -427,6 +427,7 @@ PICK_TIMEOUT_S = 30.0      # submit_and_wait 한 phase 최대 대기(무응답 �
 
 pick_state = {"status": "SCAN_READY", "step": ""}   # SCAN_READY | BUSY
 pick_lock = threading.Lock()
+run_flags = {"estop": False, "stop_after_cycle": False}   # E-Stop 래치 / 종료(사이클 후 원점)
 BUSY_FLAG = Path(__file__).resolve().parent / "robot_busy.flag"   # 있으면 detect가 인식 정지
 
 
@@ -490,6 +491,7 @@ def _pick_worker(v):
     def on_step(stage):
         with pick_lock:
             pick_state["step"] = stage
+    result = ("error", "unknown")
     try:
         result = pick_runner.run(
             _pick_api, [v["x_mm"], v["y_mm"]], v.get("target", "NONE"),
@@ -498,12 +500,20 @@ def _pick_worker(v):
             on_step=on_step)
         print(f"[PICK] result: {result}")
     except Exception as e:
+        result = ("error", str(e))
         print(f"[PICK] error: {e}")
     finally:
         _set_busy(False)                  # detect 인식 재개(스캔)
         with pick_lock:
             pick_state["status"] = "SCAN_READY"
             pick_state["step"] = ""
+            end = run_flags["stop_after_cycle"]; es = run_flags["estop"]
+            if end:
+                run_flags["stop_after_cycle"] = False
+    # 종료(END) 요청 + 정상 완료 + E-Stop 아님 → 원점 복귀
+    if end and not es and result[0] == "done":
+        request_motion([(HOME_POSE, "원점")], "END → 원점")
+        print("[PICK] END → 원점 복귀")
 
 
 def handle_pick():
@@ -577,7 +587,9 @@ def build_snapshot():
         gripper["source"] = "dashboard_bridge_cmd"
         gripper["fresh"] = True
         gripper["reason"] = "bridge_command"
-    system = {"server_connected": True, "can_status": derive_can_status(comms)}
+    with pick_lock:
+        es = run_flags["estop"]
+    system = {"server_connected": True, "can_status": derive_can_status(comms), "estop": es}
     if vision.get("fresh"):
         system.update({"camera_status": "OK", "ai_status": "RUNNING"})
     return {"robot": {"joints": joints},
@@ -636,6 +648,11 @@ async def ws_handler(ws):
             if msg_type == "COMMAND":
                 cmd = d.get("command")
                 payload = d.get("payload") or {}
+                with pick_lock:
+                    _es = run_flags["estop"]
+                if _es and cmd not in ("ESTOP", "ESTOP_RESET", "HALT", "PING"):
+                    print(f"[CMD] {cmd} 거부 (E-STOP 래치)")
+                    continue
                 if cmd == "AUTO_START":
                     request_motion([(SCAN_POSE, "스캔자세")], "START → 스캔자세")
                     print("[CMD] AUTO_START → 스캔자세 이동")
@@ -697,6 +714,26 @@ async def ws_handler(ws):
                 elif cmd in ("PICK", "S", "VISION_SEND"):
                     res = handle_pick()
                     print(f"[CMD] PICK → {res}")
+                elif cmd == "ESTOP":
+                    with pick_lock:
+                        run_flags["estop"] = True
+                    request_motion([(SCAN_POSE, "E-STOP 스캔복귀"), (HOME_POSE, "E-STOP 원점")], "E-STOP 후퇴")
+                    print("[CMD] ESTOP → 중단·스캔→원점·래치")
+                elif cmd == "ESTOP_RESET":
+                    with pick_lock:
+                        run_flags["estop"] = False
+                    print("[CMD] ESTOP_RESET → 해제")
+                elif cmd == "END":
+                    with pick_lock:
+                        busy = pick_state["status"] == "BUSY"
+                        run_flags["stop_after_cycle"] = True
+                    if not busy:
+                        request_motion([(SCAN_POSE, "스캔복귀"), (HOME_POSE, "원점")], "END → 원점")
+                        with pick_lock:
+                            run_flags["stop_after_cycle"] = False
+                        print("[CMD] END → (유휴) 원점 복귀")
+                    else:
+                        print("[CMD] END → 사이클 후 원점 (대기)")
                 elif cmd == "PING":
                     print("[CMD] PING (무동작, 수신확인용)")
                 else:

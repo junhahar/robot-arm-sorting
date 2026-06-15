@@ -453,6 +453,10 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 .run-btn.start.active,.run-btn.start:hover{background:linear-gradient(180deg,#14734d,#0b3c31);color:#b8ffd9;box-shadow:0 0 0 2px rgba(74,222,128,.16),0 10px 24px rgba(0,0,0,.28)}
 .run-btn.pick{border:1px solid rgba(56,189,248,.7);background:rgba(8,26,40,.86);color:#38bdf8;align-items:center;justify-content:center;font-size:15px}
 .run-btn.pick.active,.run-btn.pick:hover{background:linear-gradient(180deg,#0e6390,#0a3a54);color:#bfe9ff;box-shadow:0 0 0 2px rgba(56,189,248,.16),0 10px 24px rgba(0,0,0,.28)}
+.run-btn.estop{border:1px solid rgba(255,91,91,.85);background:rgba(40,10,10,.9);color:#ff7676}
+.run-btn.estop.active,.run-btn.estop:hover{background:linear-gradient(180deg,#a01b1b,#5e0d0d);color:#ffd4d4;box-shadow:0 0 0 2px rgba(255,91,91,.2),0 10px 24px rgba(0,0,0,.3)}
+.run-btn.reset-estop{border:1px solid rgba(247,201,72,.75);background:rgba(38,30,8,.88);color:#f7c948}
+.run-btn.reset-estop:hover{background:linear-gradient(180deg,#8a6a0e,#4e3a0a);color:#fff0c0}
 .run-btn.stop{border:1px solid rgba(255,119,119,.92);background:linear-gradient(180deg,#d42634,#941925);color:#fff}
 .run-btn.stop.active,.run-btn.stop:hover{filter:brightness(1.08);box-shadow:0 0 0 2px rgba(255,91,91,.16),0 10px 24px rgba(0,0,0,.28)}
 .run-btn.halt{border:1px solid rgba(247,201,72,.85);background:rgba(36,28,7,.9);color:#f7c948}.run-btn.halt:hover,.run-btn.halt:active{background:linear-gradient(180deg,#cba32f,#8a6d12);color:#1a1402;box-shadow:0 0 0 2px rgba(247,201,72,.18),0 10px 24px rgba(0,0,0,.28)}
@@ -653,6 +657,8 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
       <button class="run-btn start" id="startBtn" onclick="startAutoRun()"><b>▶ 시작</b><small>AUTO RUN</small></button>
       <button class="run-btn halt" id="haltBtn" onclick="haltRobot()"><b>⏸ 정지</b><small>STOP</small></button>
       <button class="run-btn stop active" id="stopBtn" onclick="stopAutoRun()"><b>■ 종료</b><small>END</small></button>
+      <button class="run-btn estop" id="estopBtn" onclick="triggerEstop()"><b>⏻ E-STOP</b><small>비상정지</small></button>
+      <button class="run-btn reset-estop" id="resetEstopBtn" onclick="resetEstop()" style="display:none"><b>↺ 해제</b><small>RESET</small></button>
     </div>
     <div class="status-chip header-hidden mode-chip" id="modeChip">TEACHING</div>
     <div class="status-chip"><i class="dot warn" id="serverDot"></i><span><b id="serverText">서버 대기</b><small id="serverSub">Raspberry Pi 연결</small></span></div>
@@ -1585,11 +1591,11 @@ function pickRobot(){
   addLog(sent?"PICK 송신 (RPi)":"PICK — 미연결: 명령 미전송",sent?"ok":"warn");
 }
 function stopAutoRun(){
-  if(!confirm("스캔 자세로 복귀 후 원점(180°)으로 이동합니다.\n주변에 사람이 없는지 확인하세요."))return;
+  if(!confirm("현재 사이클을 마친 뒤 원점(HOME)으로 이동합니다.\n주변에 사람이 없는지 확인하세요."))return;
   if(!state.auto)state.auto={running:false};
   state.auto.running=false;
-  const sent=sendDashboardCommand("AUTO_STOP");
-  addLog(sent?"자동 운전 종료 명령 송신 (RPi)":"자동 운전 종료 — 현재 자세 유지","warn");
+  const sent=sendDashboardCommand("END");
+  addLog(sent?"종료 명령 송신 — 사이클 후 원점 (RPi)":"종료 — 현재 자세 유지","warn");
   renderHeader();renderPath();draw3D();
 }
 function haltRobot(){
@@ -1639,13 +1645,15 @@ function triggerEstop(){
   if(state.system.estop)return;
   state.system.estop=true;state.mode="E_STOP";document.body.classList.add("estop-active");
   const reset=$("resetEstopBtn");if(reset)reset.style.display="block";
-  addLog("E-STOP 발동 — 모터 전원 차단 확인 필요","err");debug("E-STOP UI pressed. Hardware NC power cutoff must be verified.");
+  sendDashboardCommand("ESTOP");
+  addLog("E-STOP 발동 — 즉시 중단 후 스캔→원점 후퇴, 명령 잠금","err");
   renderAll();
 }
 function resetEstop(){
-  if(!confirm("하드웨어 E-STOP 해제와 주변 안전을 확인했습니까? 이 버튼은 화면 상태만 복귀시킵니다."))return;
+  if(!confirm("E-STOP을 해제합니다. 주변 안전을 확인했습니까?"))return;
   state.system.estop=false;document.body.classList.remove("estop-active");const reset=$("resetEstopBtn");if(reset)reset.style.display="none";
-  state.mode="PAUSED";addLog("E-STOP 화면 상태 복귀 — 하드웨어 안전 상태를 다시 확인하세요","warn");renderAll();
+  sendDashboardCommand("ESTOP_RESET");
+  state.mode="PAUSED";addLog("E-STOP 해제 — 명령 잠금 풀림","warn");renderAll();
 }
 function renderHeader(){
   const s=state.system,isEstop=s.estop;
