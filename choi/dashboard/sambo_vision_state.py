@@ -147,6 +147,8 @@ def normalize_vision_state(payload: Mapping[str, Any], *, now: Optional[float] =
     distance = _number(data.get("distance_mm", data.get("D")))
     if distance is not None:
         result["distance_mm"] = distance
+    if "near" in data:
+        result["near"] = bool(data.get("near"))   # 계약A: detect가 gy>fh/2로 계산 → 그대로 통과
     ik = data.get("ik") or data.get("cmd")
     if isinstance(ik, Mapping):
         result["ik"] = {str(k): _number(v, v) for k, v in ik.items()}

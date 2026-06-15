@@ -2345,7 +2345,7 @@ function resetManualJoint(i){
   syncManualRows();renderRightPanel();draw3D();
 }
 function resetManualGripper(){
-  setManualGripperAngle(Number(manualActualGripper??state.gripper.sg90_angle));
+  gripperPreviewDirty=false;setManualGripperAngle(Number(manualActualGripper??state.gripper.sg90_angle));
   syncManualGripperRow();renderRightPanel();draw3D();
 }
 function resetAllManual(){
@@ -2361,14 +2361,14 @@ function applyAllManual(){
   const sent=sendDashboardCommand("MANUAL_MOVE",{targets});
   sendDashboardCommand("GRIPPER",{sg90_angle_deg:Number(state.gripper.sg90_angle),state:state.gripper.state});
   state.robot.joints.forEach(j=>{manualActual[j.id]=Number(j.target);j.current=Number(j.target)});
-  manualActualGripper=Number(state.gripper.sg90_angle);
+  manualActualGripper=Number(state.gripper.sg90_angle);gripperPreviewDirty=false;
   addLog(`전체 적용 — 6축 + 그리퍼 목표각 ${sent?"송신":"DEMO 적용"}`,sent?"ok":"info");
   renderRightPanel();renderManualTwinCard();draw3D();
 }
 const GRIPPER_SERVO_MIN=60,GRIPPER_SERVO_MAX=180;
 const MANUAL_JOG_STEP=1,GRIPPER_JOG_STEP=5;
 const MANUAL_PREVIEW_RESET_MS=3000;
-let manualPreviewResetTimer=null,manualPreviewBaseline=null,manualPreviewGripperBaseline=null;
+let manualPreviewResetTimer=null,manualPreviewBaseline=null,manualPreviewGripperBaseline=null,gripperPreviewDirty=false;
 /* 관절 소프트 한계 (raw 명령각, rpi_keyboard_control_v1_11 / 브리지 MOTOR_LIMITS와 동일).
    슬라이더·입력박스는 논리각으로 표시하므로 raw→논리 변환해 한계를 적용한다. 거울쌍(J2·J3)은
    한계가 합 360°으로 대칭이라 서로 모순 없이 맞물린다. 최종 안전 클램프는 브리지가 raw로 재수행. */
@@ -2452,13 +2452,13 @@ function syncManualGripperRow(){
   if(range&&range!==document.activeElement)range.value=state.gripper.sg90_angle;
   if(angle)angle.value=fmt(state.gripper.sg90_angle,0);
 }
-function manualGripper(v){setManualGripperAngle(Number(v)<(GRIPPER_SERVO_MIN+GRIPPER_SERVO_MAX)/2?GRIPPER_SERVO_MIN:GRIPPER_SERVO_MAX);syncManualGripperRow();renderRightPanel();draw3D()}
+function manualGripper(v){gripperPreviewDirty=true;setManualGripperAngle(Number(v)<(GRIPPER_SERVO_MIN+GRIPPER_SERVO_MAX)/2?GRIPPER_SERVO_MIN:GRIPPER_SERVO_MAX);syncManualGripperRow();renderRightPanel();draw3D()}
 function manualGripperStep(v){manualGripper(Number(state.gripper.sg90_angle||0)+v)}
 function manualGripperJog(delta){manualGripperStep(delta)}
 function manualGripperWheel(e){e.preventDefault();manualGripperStep(e.deltaY<0?5:-5)}
 function manualGripperKey(e){if(e.key==="Enter"){e.preventDefault();e.target.blur();addLog("그리퍼 목표각 미리보기 완료 — 적용 버튼을 누르면 송신됩니다.","info")}}
 function sendManualGripper(){
-  clearManualPreviewReset();
+  clearManualPreviewReset();gripperPreviewDirty=false;
   const sent=sendDashboardCommand("GRIPPER",{sg90_angle_deg:Number(state.gripper.sg90_angle),state:state.gripper.state});
   addLog(`그리퍼 목표각 ${fmt(state.gripper.sg90_angle,0)}° ${sent?"송신":"DEMO 적용"}`,sent?"ok":"info");
   manualActualGripper=Number(state.gripper.sg90_angle);renderRightPanel();draw3D();return sent;
@@ -2588,7 +2588,7 @@ function applyIncoming(d){
     if(Array.isArray(d.command.targets))d.command.targets.forEach(t=>{const i=Number(t.motor_id)-1,j=state.robot.joints[i];if(j&&t.angle_deg!=null)j.target=t.logical_angle_deg!=null?Number(t.logical_angle_deg):rawToLogicalAngleByIndex(i,t.angle_deg)});
   }
   if(d.can_frame)applyCanFrame(d.can_frame);
-  if(d.human_pose)Object.assign(state.human_pose,d.human_pose);if(d.gripper)Object.assign(state.gripper,typeof d.gripper==="string"?{state:d.gripper.toUpperCase()}:d.gripper);
+  if(d.human_pose)Object.assign(state.human_pose,d.human_pose);if(d.gripper){const _g=typeof d.gripper==="string"?{state:d.gripper.toUpperCase()}:Object.assign({},d.gripper);if(gripperPreviewDirty){delete _g.sg90_angle;delete _g.sg90_angle_deg;delete _g.state;}Object.assign(state.gripper,_g);}
   if(d.vision){Object.assign(state.vision,d.vision);if(d.vision.correction)Object.assign(state.vision.correction,d.vision.correction)}
   if(d.path)Object.assign(state.path,d.path);if(d.precheck)Object.assign(state.precheck,d.precheck);if(d.can_health)Object.assign(state.can_health,d.can_health);if(d.calibration)Object.assign(state.calibration,d.calibration);if(Array.isArray(d.alerts))state.alerts=d.alerts;
   if(d.event?.message)addLog(d.event.message,(d.event.level||"INFO").toLowerCase());

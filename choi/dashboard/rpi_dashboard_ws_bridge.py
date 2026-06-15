@@ -427,6 +427,18 @@ PICK_TIMEOUT_S = 30.0      # submit_and_wait 한 phase 최대 대기(무응답 �
 
 pick_state = {"status": "SCAN_READY", "step": ""}   # SCAN_READY | BUSY
 pick_lock = threading.Lock()
+BUSY_FLAG = Path(__file__).resolve().parent / "robot_busy.flag"   # 있으면 detect가 인식 정지
+
+
+def _set_busy(b):
+    """잡기/이동 중 깃발. detect가 이 파일이 있으면 인식·기록을 멈춤(스캔 정지 상태에서만 인식)."""
+    try:
+        if b:
+            BUSY_FLAG.write_text("1")
+        else:
+            BUSY_FLAG.unlink(missing_ok=True)
+    except Exception:
+        pass
 
 
 def get_gen():
@@ -488,6 +500,7 @@ def _pick_worker(v):
     except Exception as e:
         print(f"[PICK] error: {e}")
     finally:
+        _set_busy(False)                  # detect 인식 재개(스캔)
         with pick_lock:
             pick_state["status"] = "SCAN_READY"
             pick_state["step"] = ""
@@ -508,6 +521,7 @@ def handle_pick():
             return "gate_fail"
         pick_state["status"] = "BUSY"
         pick_state["step"] = "PRE_GRASP"
+    _set_busy(True)                       # detect 인식 정지(이동 중)
     threading.Thread(target=_pick_worker, args=(v,), daemon=True).start()
     print(f"[PICK] start: {v.get('target')} @ ({v.get('x_mm')},{v.get('y_mm')})")
     return "started"
@@ -696,6 +710,7 @@ async def main():
     threading.Thread(target=can_reader, daemon=True).start()
     threading.Thread(target=motion_worker, daemon=True).start()
     threading.Thread(target=gripper_worker, daemon=True).start()
+    _set_busy(False)                      # 시작 시 잔여 깃발 제거(이전 크래시 대비)
     print(f"Sambo WS Bridge v4 — ws://0.0.0.0:{WS_PORT}, snapshot {SEND_HZ}Hz, "
           f"motion+manual+gripper+halt enabled")
     async with websockets.serve(ws_handler, WS_HOST, WS_PORT):
