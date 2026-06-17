@@ -297,9 +297,24 @@ button{cursor:pointer}
   padding:3px 6px;color:var(--muted);background:#0a1727;border:1px solid var(--line);border-radius:4px;font-size:9px
 }
 .sim3d-tools button:hover{color:var(--cyan);border-color:var(--cyan)}
-.sim-labels{position:absolute;left:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:5px;max-width:72%}
+.sim-labels{position:absolute;left:10px;right:218px;bottom:10px;display:flex;flex-wrap:wrap;gap:5px;max-width:calc(100% - 228px)}
 .sim-labels span{font-size:9px;padding:3px 5px;border:1px solid rgba(28,56,85,.78);border-radius:4px;color:var(--dim);background:rgba(5,12,20,.68)}
 .sim-labels span.now{color:var(--cyan);border-color:rgba(32,213,232,.55)}
+.led-buzzer-sim{position:absolute;right:10px;bottom:10px;width:192px;padding:7px;border:1px solid rgba(28,56,85,.78);border-radius:7px;background:rgba(5,12,20,.78);backdrop-filter:blur(4px);color:var(--muted);font-size:9px}
+.led-buzzer-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px}
+.led-buzzer-head b{font-size:10px;color:var(--text);white-space:nowrap}.led-buzzer-head span{font-size:8px;color:var(--dim);white-space:nowrap}
+.led-buzzer-state{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px;font-size:9px}
+.led-buzzer-state b{color:var(--cyan);font-size:10px;white-space:nowrap}.led-buzzer-state span{color:var(--dim);white-space:nowrap}
+.led-buzzer-outputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.led-output{min-width:0;height:42px;border:1px solid rgba(28,56,85,.62);border-radius:6px;background:rgba(9,21,34,.68);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;overflow:hidden}
+.led-output i{width:15px;height:15px;border-radius:50%;border:1px solid rgba(133,157,178,.5);background:#111827;box-shadow:inset 0 0 5px rgba(0,0,0,.8)}
+.led-output span{font-size:8px;line-height:1;color:var(--dim);white-space:nowrap}
+.led-output.red i.on{background:#ff4f4f;border-color:#ff7676;box-shadow:0 0 12px rgba(255,91,91,.85),inset 0 0 5px rgba(255,255,255,.4)}
+.led-output.green i.on{background:#4ade80;border-color:#86efac;box-shadow:0 0 12px rgba(74,222,128,.8),inset 0 0 5px rgba(255,255,255,.36)}
+.led-output.buzzer i{border-radius:5px;width:17px;height:14px}
+.led-output.buzzer i.on{background:#f7c948;border-color:#fde68a;box-shadow:0 0 13px rgba(247,201,72,.86),inset 0 0 5px rgba(255,255,255,.36)}
+.led-output.buzzer i.on+span{color:var(--yellow)}
+.led-buzzer-note{margin-top:5px;color:#9fb5c6;font-size:8px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ===== Lower stage ===== */
 .lower-stage{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(365px,.8fr);gap:7px}
@@ -1823,6 +1838,18 @@ function onGripperStreamError(){
 }
 
 /* ===== Dynamic center content ===== */
+function ledBuzzerSimMarkup(){
+  return `<div class="led-buzzer-sim" id="ledBuzzerSim">
+    <div class="led-buzzer-head"><b>LED + 부저 Nano</b><span id="ledBuzzerFrame">CAN 0x410</span></div>
+    <div class="led-buzzer-state"><b id="ledBuzzerState">대기</b><span id="ledBuzzerCode">state 0</span></div>
+    <div class="led-buzzer-outputs">
+      <div class="led-output red"><i id="ledBuzzerRed"></i><span>빨강</span></div>
+      <div class="led-output green"><i id="ledBuzzerGreen"></i><span>초록</span></div>
+      <div class="led-output buzzer"><i id="ledBuzzerBuzz"></i><span>부저</span></div>
+    </div>
+    <div class="led-buzzer-note" id="ledBuzzerNote">표시용 Nano 출력 시뮬레이션</div>
+  </div>`;
+}
 function renderStandardStage(){
   $("mainStage").className="main-stage split-stage";
   $("mainStage").innerHTML=`
@@ -1840,7 +1867,7 @@ function renderStandardStage(){
     </article>
     <article class="panel media-panel" id="robot3dPanel"><div class="panel-head">로봇 3D 시뮬레이션 / Robot 3D Simulation
       <span class="head-right sim3d-tools"><button onclick="rotateView(-15)" title="좌회전 15°">↶ 15°</button><span class="zoom-pct" id="rotDeg">340°</span><button onclick="rotateView(15)" title="우회전 15°">15° ↷</button><button onclick="tiltView(-15)" title="위에서 보기">⤒</button><span class="zoom-pct" id="tiltDeg">⤓65°</span><button onclick="tiltView(15)" title="아래에서 보기">⤓</button><button onclick="reset3DView()">기본 시점</button><button onclick="zoomStep(-1)" title="축소">−</button><span class="zoom-pct" id="zoomPct">80%</span><button onclick="zoomStep(1)" title="확대">+</button></span>
-      </div><div class="media-wrap"><canvas id="robot3dCanvas"></canvas><div class="hud hud-right mono" id="eeHud"></div><div class="sim-labels" id="simLabels"></div></div>
+      </div><div class="media-wrap"><canvas id="robot3dCanvas"></canvas><div class="hud hud-right mono" id="eeHud"></div><div class="sim-labels" id="simLabels"></div>${ledBuzzerSimMarkup()}</div>
     </article>`;
   applyGripperStream();bind3DDrag();
 }
@@ -1855,7 +1882,7 @@ function renderManualStage(){
       </div></div></article>
     <article class="panel media-panel" id="robot3dPanel"><div class="panel-head">로봇 3D 시뮬레이션 / Robot 3D Simulation
       <span class="head-right sim3d-tools"><button onclick="rotateView(-15)" title="좌회전 15°">↶ 15°</button><span class="zoom-pct" id="rotDeg">340°</span><button onclick="rotateView(15)" title="우회전 15°">15° ↷</button><button onclick="tiltView(-15)" title="위에서 보기">⤒</button><span class="zoom-pct" id="tiltDeg">⤓65°</span><button onclick="tiltView(15)" title="아래에서 보기">⤓</button><button onclick="reset3DView()">기본 시점</button><button onclick="zoomStep(-1)" title="축소">−</button><span class="zoom-pct" id="zoomPct">80%</span><button onclick="zoomStep(1)" title="확대">+</button></span>
-      </div><div class="media-wrap"><canvas id="robot3dCanvas"></canvas><div class="hud hud-right mono" id="eeHud"></div><div class="sim-labels" id="simLabels"></div></div>
+      </div><div class="media-wrap"><canvas id="robot3dCanvas"></canvas><div class="hud hud-right mono" id="eeHud"></div><div class="sim-labels" id="simLabels"></div>${ledBuzzerSimMarkup()}</div>
     </article>`;
   renderManualRows();bind3DDrag();
 }
@@ -1949,6 +1976,48 @@ function renderCnc(){
     if(bar)bar.classList.add("hidden");
   }
   setText("cncRack",(c.rack_count||0)+"/"+(c.rack_max||2));
+}
+const DISPLAY_STATUS_META={
+  IDLE:{code:0,label:"IDLE",ko:"CNC 비어 있음",note:"초록 ON · 부저 OFF"},
+  MACHINING:{code:1,label:"MACHINING",ko:"CNC 가공 중",note:"빨강 ON · 부저 OFF"},
+  DONE_WAIT:{code:2,label:"DONE_WAIT",ko:"가공 완료 대기",note:"초록 느린 점멸"},
+  RACK_FULL:{code:3,label:"RACK_FULL",ko:"적재함 만재",note:"빨강 두 번 + 부저 두 번"},
+  ERROR:{code:4,label:"ERROR",ko:"오류",note:"빨강/초록/부저 빠른 점멸"},
+  CAN_LOST:{code:255,label:"CAN_LOST",ko:"상태 프레임 끊김",note:"빨강/초록 교차 점멸"}
+};
+function ledPhase(now,halfPeriodMs){return (Math.floor(now/halfPeriodMs)%2)===0}
+function ledDoublePulse(now,cycleMs){const t=now%cycleMs;return t<120||(t>=220&&t<340)}
+function getLedBuzzerStatusKey(){
+  const c=state.cnc||{},sys=state.system||{};
+  const st=String(c.state||"idle").toLowerCase();
+  const rackCount=Number(c.rack_count||0),rackMax=Number(c.rack_max||2),rackFull=rackMax>0&&rackCount>=rackMax;
+  const canBad=sys.server_connected&&["ERR","ERROR","LOST","OFF"].includes(String(sys.can_status||"").toUpperCase());
+  if(sys.estop||canBad)return"ERROR";
+  if(!state.demo&&!sys.server_connected)return"CAN_LOST";
+  if(st==="running"||st==="machining")return"MACHINING";
+  if(st==="done"||st==="done_wait"||st==="complete")return rackFull?"RACK_FULL":"DONE_WAIT";
+  if(rackFull)return"RACK_FULL";
+  return"IDLE";
+}
+function getLedBuzzerOutputs(key,now){
+  if(key==="IDLE")return{red:false,green:true,buzzer:false};
+  if(key==="MACHINING")return{red:true,green:false,buzzer:false};
+  if(key==="DONE_WAIT")return{red:false,green:ledPhase(now,500),buzzer:false};
+  if(key==="RACK_FULL")return{red:ledDoublePulse(now,1200),green:false,buzzer:ledDoublePulse(now,1800)};
+  if(key==="ERROR"){const blink=ledPhase(now,120);return{red:blink,green:blink,buzzer:blink}}
+  const p=ledPhase(now,650);return{red:p,green:!p,buzzer:false};
+}
+function renderLedBuzzerSim(){
+  if(!$("ledBuzzerSim"))return;
+  const now=Date.now(),key=getLedBuzzerStatusKey(),meta=DISPLAY_STATUS_META[key]||DISPLAY_STATUS_META.CAN_LOST,out=getLedBuzzerOutputs(key,now);
+  $("ledBuzzerSim").className=`led-buzzer-sim state-${key.toLowerCase()}${out.buzzer?" buzzer-on":""}`;
+  $("ledBuzzerRed")?.classList.toggle("on",out.red);
+  $("ledBuzzerGreen")?.classList.toggle("on",out.green);
+  $("ledBuzzerBuzz")?.classList.toggle("on",out.buzzer);
+  setText("ledBuzzerState",meta.ko);
+  setText("ledBuzzerCode",`state ${meta.code}`);
+  setText("ledBuzzerFrame",`0x410 · ${meta.label}`);
+  setText("ledBuzzerNote",meta.note);
 }
 
 function renderRightPanel(){
@@ -2535,7 +2604,7 @@ function drawNative3D(){
   $("simLabels").innerHTML=(state.path.steps||[]).slice(0,-1).map(s=>`<span class="${s===state.path.current_step?"now":""}">${s}</span>`).join("");
   state.robot.end_effector={x:pose.end.x,y:pose.end.z,z:pose.end.y};
 }
-function draw3D(){const canvas=$("robot3dCanvas");if(!canvas||canvas.clientWidth<20||canvas.clientHeight<20)return;updateZoomPct();updateRotDeg();updateTiltDeg();if(!drawThreeRobot())drawNative3D()}
+function draw3D(){const canvas=$("robot3dCanvas");if(!canvas||canvas.clientWidth<20||canvas.clientHeight<20)return;updateZoomPct();updateRotDeg();updateTiltDeg();if(!drawThreeRobot())drawNative3D();renderLedBuzzerSim()}
 function drawGround(ctx,W,H){ctx.strokeStyle="rgba(75,119,150,.22)";ctx.lineWidth=1;for(let n=-300;n<=300;n+=40){line3(ctx,W,H,V(-310,0,n),V(310,0,n));line3(ctx,W,H,V(n,0,-60),V(n,0,310))}}
 function line3(ctx,W,H,a,b){const A=project(a,W,H),B=project(b,W,H);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke()}
 function drawZone3D(ctx,W,H,c,r,label,color){ctx.strokeStyle=color;ctx.fillStyle=color+"18";const pts=[];for(let i=0;i<32;i++)pts.push(project(V(c.x+Math.cos(i/32*Math.PI*2)*r,c.y,c.z+Math.sin(i/32*Math.PI*2)*r),W,H));ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.fill();ctx.stroke();const q=project(c,W,H);ctx.fillStyle=color;ctx.font="10px Segoe UI";ctx.fillText(label,q.x-28,q.y)}
