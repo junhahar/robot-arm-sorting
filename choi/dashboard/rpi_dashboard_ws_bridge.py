@@ -42,6 +42,11 @@ try:
 except Exception as e:
     print(f"[PICK] pick_runner disabled: {e}")
     pick_runner = None
+try:
+    import auto_runner_workflow
+except Exception as e:
+    print(f"[AUTO] auto_runner_workflow disabled: {e}")
+    auto_runner_workflow = None
 
 CAN_INTERFACE = "can0"
 WS_HOST = "0.0.0.0"
@@ -58,6 +63,9 @@ STREAM_MOVE_MS = 80
 SCAN_POSE = {1: 180.0, 2: 104.8, 3: 248.2, 4: 112.7, 5: 140.8, 6: 180.0}
 HOME_POSE = {i: 180.0 for i in range(1, 7)}
 MANUAL_MIN_DURATION = 0.3   # 수동 jog/적용 최소 소요시간[s] (작은 각도도 부드럽게)
+ARRIVE_TOL = 3.0            # 도착 판정 허용오차[deg] — 닫힌루프(open-loop "덜 도착" 보정). 너무 빡세면 정착못해 덜덜
+ARRIVE_TIMEOUT = 2.0        # 도착 대기 최대[s] — 초과시 미달 경고 후 진행(토크부족/기계)
+ARRIVE_DT = 0.05           # 도착 폴링/목표 재전송 주기[s]
 
 # ── M1 등속(스캔/스윕) + 5005 (ik_server 대체) ──
 CMD_SET_ANGLE_SPEED = 0x07   # STS3215 등속(위치+속도) — 틱틱 방지
@@ -95,6 +103,9 @@ motors = {i: {"current": None, "temp": None, "load": None, "target": None,
               "flags": 0, "current_ma": None, "rx": 0.0, "cmd_rx": 0.0}
           for i in range(1, 7)}
 health = {"received": 0, "last_rx_ms": 0}
+tof = {"mm": None, "status": None, "rx": 0.0, "dbg_t": 0.0}   # 그리퍼 ToF(VL53L0X) 파지판정. 나노→CAN 0x300(CAN_프로토콜_정리.md §7)
+TOF_DEBUG = True                                             # 보정중 콘솔에 ToF mm 출력 → 보정 끝나면 False
+grip_result = {"state": None, "mm": None, "t": 0.0}          # 파지판정 결과(대시보드 tof-judge 표시용)
 
 LIFE_USAGE_SCHEMA = "sambo_servo_life_usage_v1"
 LIFE_USAGE_PATH = Path(__file__).resolve().parent / "servo_life_usage.json"
@@ -245,6 +256,7 @@ def save_life_usage(payload):
 mlock = threading.Lock()
 motion = {"seq": None, "gen": 0, "label": "", "min_dur": MIN_DURATION,
           "speed": AXIS_SPEED, "completed_gen": 0}
+_last_cmd = {i: None for i in range(1, 7)}   # 모터별 마지막 "명령값"(=슬라이더로 보낸 값). 티칭 저장은 이걸 씀(deadband 이중적용 방지)
 
 # ── 그리퍼 요청 상태 (가장 최근 각도만 송신, gen 으로 갱신 감지) ──
 glock = threading.Lock()
@@ -295,6 +307,15 @@ def can_reader():
                             if d[3]:
                                 m["current_ma"] = round(((d[1] | (d[2] << 8)) & 0x7FFF) * 6.5)
                             m["rx"] = now
+                    elif aid == 0x300 and len(d) >= 3:
+                        # 그리퍼 ToF(VL53L0X, 나노→0x300): d[0..1]=mm(LE), d[2]=status(0=OK/1=범위초과/2=센서오류)
+                        if d[2] != 2:   # 센서오류(2)만 버림. 0=정상, 1=범위초과(빈 그리퍼=유효정보)
+                            tof["mm"] = d[0] | (d[1] << 8)
+                            tof["status"] = d[2]
+                            tof["rx"] = now
+                            if TOF_DEBUG and (now - tof["dbg_t"]) > 0.7:
+                                tof["dbg_t"] = now
+                                print(f"[ToF] {tof['mm']} mm (st={d[2]})")
                     elif aid == 0x100 and len(d) >= 4 and d[0] == 0x03:
                         mid = d[1]
                         m = motors.get(mid)
@@ -339,9 +360,10 @@ def _send_gripper(bus, angle):
         pass
 
 
-def request_motion(seq, label, min_dur=MIN_DURATION, speed=AXIS_SPEED):
+def request_motion(seq, label, min_dur=MIN_DURATION, speed=AXIS_SPEED, compensate=True):
     """seq: [(targets_dict, sub_label), ...]. 새 요청은 진행 중 이동을 선점.
-    speed: deg/s (수동 기본 20, pick 30). M1 스윕 중이면 먼저 정지(0x03↔0x07 충돌 방지)."""
+    speed: deg/s (수동 기본 20, pick 30). M1 스윕 중이면 먼저 정지(0x03↔0x07 충돌 방지).
+    compensate: deadband 보상(도착확인) 적용 여부. 고정자세(스캔/원점)·PICK은 False(움찔/오버슈트 방지)."""
     stop_sweep()
     with mlock:
         motion["seq"] = seq
@@ -349,6 +371,7 @@ def request_motion(seq, label, min_dur=MIN_DURATION, speed=AXIS_SPEED):
         motion["label"] = label
         motion["min_dur"] = min_dur
         motion["speed"] = speed
+        motion["compensate"] = compensate
         return motion["gen"]
 
 
@@ -363,7 +386,7 @@ def request_gripper(angle):
         gripper_state["angle"] = int(max(GRIPPER_MIN, min(GRIPPER_MAX, round(a))))
 
 
-def _move_to(bus, targets, my_gen, min_dur=MIN_DURATION, speed=AXIS_SPEED):
+def _move_to(bus, targets, my_gen, min_dur=MIN_DURATION, speed=AXIS_SPEED, compensate=True):
     with lock:
         seeds = {m: (motors[m]["current"] if motors[m]["current"] is not None else 180.0)
                  for m in targets}
@@ -380,7 +403,10 @@ def _move_to(bus, targets, my_gen, min_dur=MIN_DURATION, speed=AXIS_SPEED):
         time.sleep(DT)
     for m in targets:
         _send_angle(bus, m, targets[m])
-    return True
+    with lock:                                      # ★마지막 "명령값" 기록 — 티칭 저장은 telemetry(실제) 대신 이걸 씀.
+        for m in targets:                           #   조그=슬라이더 명령값 그대로 저장 → 재명령시 deadband 한 번만 먹혀 일관(볼트너트 방식).
+            _last_cmd[m] = targets[m]
+    return True                                     # (보상/도착확인 제거: deadband는 명령값 저장으로 흡수, 움찔·오버슈트 없음)
 
 
 def motion_worker():
@@ -389,6 +415,7 @@ def motion_worker():
         with mlock:
             seq = motion["seq"]; gen = motion["gen"]; label = motion["label"]
             min_dur = motion["min_dur"]; speed = motion["speed"]
+            compensate = motion.get("compensate", True)
             motion["seq"] = None
         if seq is None:
             time.sleep(0.03); continue
@@ -400,7 +427,7 @@ def motion_worker():
         print(f"[MOVE] start: {label}")
         for targets, sub in seq:
             print(f"[MOVE]   -> {sub}")
-            if not _move_to(bus, targets, gen, min_dur, speed):
+            if not _move_to(bus, targets, gen, min_dur, speed, compensate):
                 print(f"[MOVE]   preempted at {sub}")
                 break
         else:
@@ -439,8 +466,58 @@ PICK_TIMEOUT_S = 30.0      # submit_and_wait 한 phase 최대 대기(무응답 �
 pick_state = {"status": "SCAN_READY", "step": ""}   # SCAN_READY | BUSY
 pick_lock = threading.Lock()
 run_flags = {"estop": False, "stop_after_cycle": False}   # E-Stop 래치 / 종료(사이클 후 원점)
+
+# ── 안전: 온도/부하 감시 (온도→graceful 종료 / 부하→즉시 정지+홀드) ──
+TEMP_LIMIT = 58.0          # °C — 초과시 현재작업 끝내고 원점(graceful 종료)
+LOAD_EACH_LIMIT = 95.0     # % — 한 축이라도 지속 초과시 즉시정지(박힘/고장). ★정상 peak 관찰 후 튜닝
+LOAD_TOTAL_LIMIT = 300.0   # % — 6축 합 지속 초과시
+LOAD_SUSTAIN_S = 0.5       # 부하 초과가 이만큼 지속돼야 발동(정상 이동 순간 스파이크 무시)
+
+
+def safety_monitor():
+    """모터 온도/부하 감시. 온도≥임계→graceful 종료(stop_after_cycle). 부하≥임계(지속)→즉시정지+현재각 홀드(사람 확인 후 END)."""
+    temp_tripped = False
+    load_over_since = None
+    load_tripped = False
+    while True:
+        time.sleep(0.1)
+        with lock:
+            temps = [motors[m]["temp"] for m in range(1, 7)]
+            loads = [motors[m]["load"] for m in range(1, 7)]
+            curs = {m: motors[m]["current"] for m in range(1, 7)}
+        # 온도 → graceful 종료(현재작업 끝→원점)
+        hot = [(i + 1, t) for i, t in enumerate(temps) if t is not None and t >= TEMP_LIMIT]
+        if hot and not temp_tripped:
+            temp_tripped = True
+            with pick_lock:
+                run_flags["stop_after_cycle"] = True
+            print(f"[SAFETY] ⚠온도 {hot} ≥{TEMP_LIMIT}°C → 현재작업 끝나고 원점(종료)")
+        elif not hot:
+            temp_tripped = False
+        # 부하 → 즉시 정지+홀드 (지속 확인 — 순간 스파이크 무시)
+        valid = [x for x in loads if x is not None]
+        over_each = [(i + 1, l) for i, l in enumerate(loads) if l is not None and l >= LOAD_EACH_LIMIT]
+        total = sum(valid)
+        if over_each or total >= LOAD_TOTAL_LIMIT:
+            if load_over_since is None:
+                load_over_since = time.time()
+            elif (time.time() - load_over_since) >= LOAD_SUSTAIN_S and not load_tripped:
+                load_tripped = True
+                hold = {m: curs[m] for m in range(1, 7) if curs[m] is not None}
+                if hold:
+                    request_motion([(hold, "부하정지 홀드")], "SAFETY 부하 정지")   # 그 자리 정지+홀드(후퇴 안 함)
+                with pick_lock:
+                    run_flags["stop_after_cycle"] = True
+                print(f"[SAFETY] ⚠부하 초과(각:{over_each} 합:{total:.0f}%) {LOAD_SUSTAIN_S}s 지속 → 즉시 정지+홀드. 확인 후 END로 풀거나 해결.")
+        else:
+            load_over_since = None
+            load_tripped = False
 BUSY_FLAG = Path(__file__).resolve().parent / "robot_busy.flag"   # 있으면 detect가 인식 정지
 CNC_FLAG = Path(__file__).resolve().parent / "cnc_busy.flag"      # 있으면 detect가 파이프 제외(가공중)
+RUN_FLAG = Path(__file__).resolve().parent / "run.flag"          # 있으면 detect가 자동탐색(sweep+센터링)
+GRAB_DATA = Path(__file__).resolve().parent / "grab_data.jsonl"  # 잡기마다 어깨부하 프로파일 기록(파지실패 분석용)
+TEACH_FILE = Path(__file__).resolve().parent / "teach_poses.json"  # 티칭 포즈 영속(수동모드→TEACH_SAVE→pick_runner가 읽음)
+TEACH_NAMES = ("cnc_infeed", "cnc_grab", "rack_v0", "rack_v1")
 
 
 def _set_busy(b):
@@ -463,6 +540,73 @@ def _set_cnc_busy(b):
             CNC_FLAG.unlink(missing_ok=True)
     except Exception:
         pass
+
+
+def _set_run(b):
+    """탐색 신호. detect가 run.flag 있으면 자동 sweep+센터링(스스로 M1 몰음)."""
+    try:
+        if b:
+            RUN_FLAG.write_text("1")
+        else:
+            RUN_FLAG.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+def _teach_read_doc():
+    try:
+        return json.loads(TEACH_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {"version": 1, "poses": {}}
+
+
+def _teach_save(name):
+    """마지막 "명령값"(슬라이더로 보낸 값)을 name 포즈로 저장. telemetry(실제) 대신 명령값 → deadband 한 번만 먹혀 재현 일관.
+    (명령 없는 모터는 telemetry 폴백)"""
+    if name not in TEACH_NAMES:
+        return None
+    with lock:
+        angles = {str(m): (_last_cmd[m] if _last_cmd[m] is not None else motors[m]["current"])
+                  for m in range(1, 7)}
+    if any(v is None for v in angles.values()):
+        return None                                    # 명령·telemetry 둘 다 없음 → 저장 안 함
+    doc = _teach_read_doc()
+    doc.setdefault("version", 1)
+    doc.setdefault("poses", {})
+    doc["poses"][name] = {"angles": angles, "saved_at": time.strftime("%Y-%m-%d %H:%M")}
+    try:
+        TEACH_FILE.write_text(json.dumps(doc, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        return None
+    return doc["poses"][name]
+
+
+def _teach_list():
+    saved = _teach_read_doc().get("poses") or {}
+    taught = [n for n in TEACH_NAMES if saved.get(n)]
+    missing = [n for n in TEACH_NAMES if not saved.get(n)]
+    poses = {}                                         # 이름→각도(평탄) — 새로고침 후 표시·[이동] 복원용
+    for n in taught:
+        e = saved.get(n)
+        a = e.get("angles") if isinstance(e, dict) else None
+        if a:
+            poses[n] = a
+    return taught, missing, poses
+
+
+def _label_last_grab(success):
+    """방금 잡기의 성공/실패 라벨을 grab_data.jsonl 마지막 줄 success에 채움(수동 표시)."""
+    try:
+        lines = GRAB_DATA.read_text(encoding="utf-8").splitlines()
+        if not lines:
+            return
+        rec = json.loads(lines[-1])
+        rec["success"] = bool(success)
+        lines[-1] = json.dumps(rec, ensure_ascii=False)
+        GRAB_DATA.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        print(f"[GRAB_LABEL] 마지막 잡기 success={bool(success)}")
+    except Exception as e:
+        print(f"[GRAB_LABEL] 실패: {e}")
 
 
 def get_gen():
@@ -490,15 +634,78 @@ def submit_and_wait(seq, speed=PICK_SPEED, min_dur=MIN_DURATION, timeout=PICK_TI
     return "timeout"
 
 
+def read_tof():
+    """라이브 ToF 거리(mm). 미수신/오래됨(>1s)이면 None → 파지판정 보류."""
+    if tof["rx"] and (time.monotonic() - tof["rx"]) < 1.0:
+        return tof["mm"]
+    return None
+
+
+def set_grip_result(state, mm=None):
+    """pick_runner 파지판정 결과 보고 → 스냅샷으로 대시보드(tof-judge)에 표시."""
+    with lock:
+        grip_result["state"] = state          # "성공" | "실패"
+        grip_result["mm"] = mm
+        grip_result["t"] = time.monotonic()
+
+
+def should_stop():
+    """auto_runner 루프 정지 신호 (END/AUTO_STOP→stop_after_cycle, ESTOP→estop)."""
+    with pick_lock:
+        return run_flags["estop"] or run_flags["stop_after_cycle"]
+
+
+def set_step(stage):
+    with pick_lock:
+        pick_state["step"] = stage
+
+
 class _PickApi:
-    """pick_runner에 주입할 DI 객체 (pick_runner가 브리지를 import 안 하게)."""
+    """pick_runner/auto_runner에 주입할 DI 객체 (모듈이 브리지를 import 안 하게)."""
     submit_and_wait = staticmethod(submit_and_wait)
     request_gripper = staticmethod(request_gripper)
     get_gen = staticmethod(get_gen)
     set_cnc_busy = staticmethod(_set_cnc_busy)
+    read_tof = staticmethod(read_tof)
+    set_grip_result = staticmethod(set_grip_result)
+    should_stop = staticmethod(should_stop)
+    get_vision = staticmethod(get_vision)
+    set_step = staticmethod(set_step)
 
 
 _pick_api = _PickApi()
+
+
+# ── 자동 워크플로우(auto_runner) 스레드 제어 ──
+_auto_thread = None
+
+
+def _auto_alive():
+    return _auto_thread is not None and _auto_thread.is_alive()
+
+
+def _start_auto():
+    """AUTO_START → auto_runner 워크플로우 루프 시작. ENABLED=False면 run()이 즉시 반환(no-op)."""
+    global _auto_thread
+    if auto_runner_workflow is None:
+        print("[AUTO] auto_runner 모듈 없음"); return
+    if _auto_alive():
+        print("[AUTO] 이미 실행 중"); return
+    with pick_lock:
+        run_flags["stop_after_cycle"] = False
+        run_flags["estop"] = False
+
+    def _worker():
+        try:
+            _set_run(True)        # detect 스윕/센터링 ON (루프가 vision 받게)
+            res = auto_runner_workflow.run(_pick_api, log=None)
+            print(f"[AUTO] 워크플로우 종료: {res}")
+        except Exception as e:
+            print(f"[AUTO] 워크플로우 오류: {e}")
+        finally:
+            _set_run(False)       # detect OFF
+    _auto_thread = threading.Thread(target=_worker, daemon=True)
+    _auto_thread.start()
 
 
 def _pick_gate(v):
@@ -515,6 +722,23 @@ def _pick_worker(v):
     def on_step(stage):
         with pick_lock:
             pick_state["step"] = stage
+    # ── 파지 데이터 수집: 어깨 M2·M3 부하/전류를 0.1초마다 기록(잡기 성공/실패 분석용) ──
+    _samples = []
+    _samp_stop = threading.Event()
+
+    def _sampler():
+        while not _samp_stop.is_set():
+            with lock:                        # 6축 전부 load+current (어느 채널이 갈리는지 나중에 분석)
+                row = ([round(time.time(), 2)]
+                       + [motors[m]["load"] for m in range(1, 7)]
+                       + [motors[m]["current_ma"] for m in range(1, 7)])
+            with pick_lock:
+                row.append(pick_state["step"])
+            _samples.append(row)
+            time.sleep(0.1)
+
+    _samp_t = threading.Thread(target=_sampler, daemon=True)
+    _samp_t.start()
     result = ("error", "unknown")
     try:
         result = pick_runner.run(
@@ -527,6 +751,19 @@ def _pick_worker(v):
         result = ("error", str(e))
         print(f"[PICK] error: {e}")
     finally:
+        _samp_stop.set(); _samp_t.join(timeout=0.5)
+        try:                              # 잡기 1회 = 1줄 (어깨부하 프로파일). success는 나중 라벨
+            with GRAB_DATA.open("a", encoding="utf-8") as _f:
+                _f.write(json.dumps({
+                    "ts": round(time.time(), 1), "target": v.get("target"),
+                    "x_mm": v.get("x_mm"), "y_mm": v.get("y_mm"),
+                    "result": result[0], "success": None,
+                    "cols": (["t"] + [f"m{m}_load" for m in range(1, 7)]
+                             + [f"m{m}_ma" for m in range(1, 7)] + ["step"]),
+                    "samples": _samples,
+                }, ensure_ascii=False) + "\n")
+        except Exception as _e:
+            print(f"[GRAB_DATA] 기록 실패: {_e}")
         _set_busy(False)                  # detect 인식 재개(스캔)
         with pick_lock:
             pick_state["status"] = "SCAN_READY"
@@ -536,7 +773,7 @@ def _pick_worker(v):
                 run_flags["stop_after_cycle"] = False
     # 종료(END) 요청 + 정상 완료 + E-Stop 아님 → 원점 복귀
     if end and not es and result[0] == "done":
-        request_motion([(HOME_POSE, "원점")], "END → 원점")
+        request_motion([(HOME_POSE, "원점")], "END → 원점", compensate=False)
         print("[PICK] END → 원점 복귀")
 
 
@@ -623,11 +860,14 @@ def _glide(start, goal):
 
 
 def _sweep_worker():
-    while not _sweep_stop.is_set():
-        _glide(_sweep_m1, SWEEP_LEFT)
-        if _sweep_stop.is_set():
-            return
-        _glide(_sweep_m1, SWEEP_RIGHT)
+    # 좌→우 1회 훑고 스캔(180) 복귀 후 종료 (무한반복 X — detect가 못 찾으면 스캔 대기)
+    _glide(_sweep_m1, SWEEP_LEFT)
+    if _sweep_stop.is_set():
+        return
+    _glide(_sweep_m1, SWEEP_RIGHT)
+    if _sweep_stop.is_set():
+        return
+    _glide(_sweep_m1, 180.0)
 
 
 def start_sweep():
@@ -691,15 +931,21 @@ def ik5005_server():
             try:
                 if act == "home":
                     conn.sendall(json.dumps({"ok": True, "action": "home"}).encode())
-                    request_motion([(HOME_POSE, "원점(5005 home)")], "5005 HOME")
+                    request_motion([(HOME_POSE, "원점(5005 home)")], "5005 HOME", compensate=False)
                 elif act == "scan":
                     m1 = rotate_m1(req.get("m1", 180.0))
                     conn.sendall(json.dumps({"ok": True, "m1": round(m1, 1)}).encode())
                 elif act == "sweep":
-                    start_sweep()
-                    conn.sendall(json.dumps({"ok": True, "sweeping": True}).encode())
+                    if not RUN_FLAG.exists():    # ★run.flag OFF면 거부 — END/STOP 뒤 도착한 detect 스윕이 원점이동 중 재시작하던 레이스 방지
+                        conn.sendall(json.dumps({"ok": False, "err": "run.flag OFF"}).encode())
+                    else:
+                        start_sweep()
+                        conn.sendall(json.dumps({"ok": True, "sweeping": True}).encode())
                 elif act == "stop":
-                    m1 = stop_sweep()
+                    est = stop_sweep()
+                    with lock:
+                        _rm1 = motors[1]["current"]      # ★실제 M1(telemetry) 우선 — 시간추정값은 desync→위치오차 수십mm 증폭
+                    m1 = _rm1 if _rm1 is not None else est
                     conn.sendall(json.dumps({"ok": True, "m1": round(m1, 1)}).encode())
                 else:
                     conn.sendall(json.dumps({"ok": False, "err": "pick은 WS PICK 사용"}).encode())
@@ -752,6 +998,10 @@ def build_snapshot():
         gripper["source"] = "dashboard_bridge_cmd"
         gripper["fresh"] = True
         gripper["reason"] = "bridge_command"
+    if tof["rx"] and (now - tof["rx"]) < 2.0:
+        gripper["tof_mm"] = tof["mm"]   # 대시보드 ToF 거리(라이브 0x300) → gripper.tof_mm로 표시
+    if grip_result["state"] and (now - grip_result["t"]) < 10.0:
+        gripper["grip_result"] = grip_result["state"]   # 파지 성공/실패(판정 후 10s 표시)
     with pick_lock:
         es = run_flags["estop"]
     system = {"server_connected": True, "can_status": derive_can_status(comms), "estop": es}
@@ -810,6 +1060,49 @@ async def ws_handler(ws):
                                              ensure_ascii=False))
                     print("[LIFE] usage save failed:", e)
                 continue
+            if msg_type == "TEACH_SAVE":
+                name = d.get("name")
+                if BUSY_FLAG.exists():
+                    await ws.send(json.dumps({"type": "TEACH_ERROR", "name": name,
+                                              "message": "잡기/이동 중 — 수동모드에서 저장하세요"}, ensure_ascii=False))
+                    continue
+                saved = _teach_save(name)
+                if saved is None:
+                    await ws.send(json.dumps({"type": "TEACH_ERROR", "name": name,
+                                              "message": "저장 실패(이름 오류 또는 각도 미수신)"}, ensure_ascii=False))
+                    print(f"[TEACH] 저장 실패: {name}")
+                else:
+                    await ws.send(json.dumps({"type": "TEACH_SAVED", "name": name,
+                                              "angles": saved["angles"], "saved_at": saved["saved_at"]},
+                                             ensure_ascii=False))
+                    print(f"[TEACH] {name} 저장: {saved['angles']}")
+                continue
+            if msg_type == "TEACH_LIST":
+                taught, missing, poses = _teach_list()
+                await ws.send(json.dumps({"type": "TEACH_STATE", "taught": taught,
+                                          "missing": missing, "poses": poses},
+                                         ensure_ascii=False))
+                continue
+            if msg_type == "TEACH_GOTO":
+                name = d.get("name")
+                with pick_lock:
+                    _es = run_flags["estop"]
+                e = (_teach_read_doc().get("poses") or {}).get(name)
+                pose = e.get("angles") if isinstance(e, dict) else None
+                if _es:
+                    await ws.send(json.dumps({"type": "TEACH_ERROR", "name": name, "message": "E-STOP 중"}, ensure_ascii=False))
+                elif BUSY_FLAG.exists():
+                    await ws.send(json.dumps({"type": "TEACH_ERROR", "name": name, "message": "잡기/이동 중"}, ensure_ascii=False))
+                elif not pose:
+                    await ws.send(json.dumps({"type": "TEACH_ERROR", "name": name, "message": "미티칭 자세"}, ensure_ascii=False))
+                else:
+                    p = {int(k): float(v) for k, v in pose.items()}
+                    request_motion([({1: p[1]}, "이동 M1"),                              # ★M1 먼저
+                                    ({m: p[m] for m in (2, 3, 4, 5, 6)}, "이동 M2~6")],  # 나머지 한번에 (동시이동 덜덜 방지)
+                                   "TEACH_GOTO %s" % name)
+                    await ws.send(json.dumps({"type": "TEACH_MOVED", "name": name}, ensure_ascii=False))
+                    print(f"[TEACH] 이동 → {name}")
+                continue
             if msg_type == "COMMAND":
                 cmd = d.get("command")
                 payload = d.get("payload") or {}
@@ -819,13 +1112,21 @@ async def ws_handler(ws):
                     print(f"[CMD] {cmd} 거부 (E-STOP 래치)")
                     continue
                 if cmd == "AUTO_START":
-                    request_motion([(SCAN_POSE, "스캔자세")], "START → 스캔자세")
-                    print("[CMD] AUTO_START → 스캔자세 이동")
+                    request_motion([(SCAN_POSE, "스캔자세")], "START → 스캔자세", speed=12.0, compensate=False)   # 천천히(서보가 따라가게, 툭툭 방지) + 보상 생략
+                    _start_auto()                       # 자동 워크플로우 루프(ENABLED=True일 때만 실동작)
+                    print("[CMD] AUTO_START → 스캔자세" + (" + 자동루프" if _auto_alive() else " (auto 비활성/단일PICK 운전)"))
                 elif cmd == "AUTO_STOP":
-                    request_motion([(SCAN_POSE, "스캔복귀"), (HOME_POSE, "원점180")],
-                                   "STOP → 스캔 후 원점")
-                    print("[CMD] AUTO_STOP → 스캔 후 원점 이동")
+                    _set_run(False)                     # 자동탐색 끄기(정지 후 detect가 계속 센터링 방지)
+                    with pick_lock:
+                        run_flags["stop_after_cycle"] = True   # 자동 루프 graceful 종료 신호
+                    if _auto_alive():
+                        print("[CMD] AUTO_STOP → 현재 사이클 끝나고 종료(graceful)")
+                    else:
+                        request_motion([(SCAN_POSE, "스캔복귀"), (HOME_POSE, "원점180")],
+                                       "STOP → 스캔 후 원점", compensate=False)
+                        print("[CMD] AUTO_STOP → 스캔 후 원점 이동")
                 elif cmd == "HALT":
+                    _set_run(False)                     # 자동탐색 끄기
                     # 즉시정지: 진행 중 이동을 선점하고 각 모터를 현재 실측각에 짧게 홀드(토크 유지).
                     with lock:
                         hold = {m: motors[m]["current"] for m in range(1, 7)
@@ -850,8 +1151,13 @@ async def ws_handler(ws):
                             targets[mid] = clamp_limit(mid, deg)
                     if targets:
                         sub = " ".join(f"M{m}={targets[m]:.1f}" for m in sorted(targets))
-                        request_motion([(targets, sub)], f"수동 {sub}",
-                                       min_dur=MANUAL_MIN_DURATION)
+                        if len(targets) == 6:    # ★전체 자세 이동([이동] 버튼) → 자동사이클과 동일 충돌방지 순서: M1 → M5·6 → M2·3·4 하강
+                            legs = [({1: targets[1]}, sub + " M1"),
+                                    ({m: targets[m] for m in (5, 6)}, sub + " M5·6(방향,들고)"),
+                                    ({m: targets[m] for m in (2, 3, 4)}, sub + " M2·3·4 하강")]
+                            request_motion(legs, f"수동 {sub}", min_dur=MANUAL_MIN_DURATION)
+                        else:                    # 조그(슬라이더 1~2축) → 한번에(즉시 반응)
+                            request_motion([(targets, sub)], f"수동 {sub}", min_dur=MANUAL_MIN_DURATION)
                         print(f"[CMD] MANUAL_MOVE → {sub}")
                     else:
                         print("[CMD] MANUAL_MOVE: 유효 타깃 없음")
@@ -877,29 +1183,35 @@ async def ws_handler(ws):
                     else:
                         print("[CMD] GRIPPER: 각도 없음")
                 elif cmd == "SWEEP":
-                    start_sweep()                       # M1 120↔240 등속 좌우 스윕(이미 구현)
-                    print("[CMD] SWEEP → 스윕 시작")
+                    _set_run(True)                      # detect가 run.flag 읽고 sweep+센터링(M1 직접 안 몲)
+                    print("[CMD] SWEEP → run.flag ON (detect 자동탐색)")
                 elif cmd == "SWEEP_STOP":
-                    m1 = stop_sweep()                   # 스윕 멈추고 현재 M1에서 정지
-                    print(f"[CMD] SWEEP_STOP → M1={m1:.1f}")
+                    _set_run(False)                     # 탐색 끄기
+                    request_motion([({1: SCAN_POSE[1]}, "스윕정지 M1복귀")], "SWEEP_STOP → 스캔M1", compensate=False)  # stop_sweep 포함 + M1 복귀
+                    print("[CMD] SWEEP_STOP → run.flag OFF, M1 스캔복귀")
+                elif cmd == "GRAB_LABEL":
+                    _label_last_grab(payload.get("success"))   # 수동 파지 성공/실패 라벨(pick 로직 무관)
                 elif cmd in ("PICK", "S", "VISION_SEND"):
                     res = handle_pick()
                     print(f"[CMD] PICK → {res}")
                 elif cmd == "ESTOP":
+                    _set_run(False)                     # 자동탐색 끄기
                     with pick_lock:
                         run_flags["estop"] = True
-                    request_motion([(SCAN_POSE, "E-STOP 스캔복귀"), (HOME_POSE, "E-STOP 원점")], "E-STOP 후퇴")
+                    request_motion([(SCAN_POSE, "E-STOP 스캔복귀"), (HOME_POSE, "E-STOP 원점")], "E-STOP 후퇴", compensate=False)
                     print("[CMD] ESTOP → 중단·스캔→원점·래치")
                 elif cmd == "ESTOP_RESET":
                     with pick_lock:
                         run_flags["estop"] = False
                     print("[CMD] ESTOP_RESET → 해제")
                 elif cmd == "END":
+                    _set_run(False)                     # 자동탐색 끄기(종료 후 책상틈 잡으러 가는 것 방지)
                     with pick_lock:
                         busy = pick_state["status"] == "BUSY"
                         run_flags["stop_after_cycle"] = True
                     if not busy:
-                        request_motion([(SCAN_POSE, "스캔복귀"), (HOME_POSE, "원점")], "END → 원점")
+                        request_motion([({1: SCAN_POSE[1]}, "M1 복귀"),               # ★M1 먼저 180 (틀어진 채 끌려가던 거 방지)
+                                        (SCAN_POSE, "스캔복귀"), (HOME_POSE, "원점")], "END → 원점", compensate=False)
                         with pick_lock:
                             run_flags["stop_after_cycle"] = False
                         print("[CMD] END → (유휴) 원점 복귀")
@@ -919,8 +1231,10 @@ async def main():
     threading.Thread(target=motion_worker, daemon=True).start()
     threading.Thread(target=gripper_worker, daemon=True).start()
     threading.Thread(target=ik5005_server, daemon=True).start()   # detect M1 스캔/홈/스윕 수신(ik_server 대체)
+    threading.Thread(target=safety_monitor, daemon=True).start()  # 온도→graceful종료 / 부하→즉시정지+홀드
     _set_busy(False)                      # 시작 시 잔여 깃발 제거(이전 크래시 대비)
     _set_cnc_busy(False)
+    _set_run(False)
     print(f"Sambo WS Bridge v4 — ws://0.0.0.0:{WS_PORT}, snapshot {SEND_HZ}Hz, "
           f"motion+manual+gripper+halt enabled")
     async with websockets.serve(ws_handler, WS_HOST, WS_PORT):
