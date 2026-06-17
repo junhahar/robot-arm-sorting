@@ -507,9 +507,13 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 .bottom-strip{grid-column:1;grid-row:3;align-self:stretch;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px}
 /* 자동운전: ToF(=그리퍼캠 폭) + 이벤트로그(=3D트윈 폭) 2칸, 가운데 티칭 박스 숨김 */
 .bottom-strip>.panel.life-panel{display:none}
-/* 수동시험: ToF + 티칭 + 이벤트로그 3칸 복원 */
-body.manual-mode .bottom-strip{grid-template-columns:minmax(180px,.55fr) minmax(590px,1.85fr) minmax(170px,.75fr)}
+/* 수동시험 하단: 티칭(=수동시험 패널 폭) + 이벤트로그(=3D트윈 폭) 2칸, ToF 제거 */
+body.manual-mode .bottom-strip{grid-template-columns:minmax(390px,.72fr) minmax(0,1.28fr)}
 body.manual-mode .bottom-strip>.life-panel{display:flex}
+body.manual-mode .bottom-strip>.panel.tof-panel{display:none}
+/* 수동시험 상단: 작업단계 + 우측 작업현황은 빈 박스(내용 숨김, 추후 채움) */
+body.manual-mode .step-chart .sc-box{display:none}
+body.manual-mode .work-panel>*{display:none}
 .right-panel{position:static;right:auto;top:auto;width:auto;height:auto;align-self:stretch;grid-column:2;grid-row:1/4;overflow:hidden;padding-bottom:0;display:flex;flex-direction:column;gap:7px;z-index:auto}
 .right-panel>.work-panel{flex:0 0 134px;height:134px;min-height:0;display:flex;flex-direction:column}
 .right-panel>.joint-panel,.right-panel>.motor-panel{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
