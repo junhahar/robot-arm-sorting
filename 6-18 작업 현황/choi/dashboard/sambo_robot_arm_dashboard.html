@@ -2308,10 +2308,10 @@ function getStlSafeAngleMap(T,r,field="current"){
   return fallback;
 }
 const WORKSTATIONS=[
-  {key:"BOLT",kind:"BIN",label:"볼트 통",en:"BOLT BIN",x:-2.55,z:-1.20,color:0x26b97a,accent:0x4ade80},
-  {key:"NUT",kind:"BIN",label:"너트 통",en:"NUT BIN",x:-1.55,z:-1.20,color:0x3478d4,accent:0x60a5fa},
-  {key:"CNC",kind:"CNC",label:"CNC",en:"MACHINE",x:1.55,z:-1.20,color:0x5b6470,accent:0xf7c948},
-  {key:"RACK",kind:"RACK",label:"적재함",en:"STOCK RACK",x:2.55,z:-1.20,color:0x345b70,accent:0x20d5e8}
+  {key:"BOLT",kind:"BIN",label:"볼트 통",en:"BOLT BIN",x:-2.35,z:-1.75,color:0x26b97a,accent:0x4ade80},
+  {key:"NUT",kind:"BIN",label:"너트 통",en:"NUT BIN",x:-2.35,z:-.65,color:0x3478d4,accent:0x60a5fa},
+  {key:"CNC",kind:"CNC",label:"CNC",en:"MACHINE",x:2.35,z:-1.75,color:0x5b6470,accent:0xf7c948},
+  {key:"RACK",kind:"RACK",label:"적재함",en:"STOCK RACK",x:2.35,z:-.65,color:0x345b70,accent:0x20d5e8}
 ];
 function makeSceneLabel(T,text,accent,subtext=""){
   const canvas=document.createElement("canvas"),ctx=canvas.getContext("2d");
@@ -2411,10 +2411,10 @@ async function loadActualStlRobot(T,r){
   r.dynamicCollisionObjects=[arm1,arm2,wristHouse,wristPlate,rollAssembly,j4Hub,j4Mark];
   r.staticKeepouts=[
     {label:"베이스 하우징",min:[-.62,.02,-.58],max:[.62,.44,.58]},
-    {label:"볼트 통 프레임",min:[-2.98,.00,-1.70],max:[-2.12,.58,-.70]},
-    {label:"너트 통 프레임",min:[-1.98,.00,-1.70],max:[-1.12,.58,-.70]},
-    {label:"CNC 프레임",min:[1.15,.00,-1.72],max:[1.95,.70,-.68]},
-    {label:"적재함 프레임",min:[2.15,.00,-1.72],max:[2.95,.62,-.68]}
+    {label:"볼트 통 프레임",min:[-2.78,.00,-2.25],max:[-1.92,.58,-1.25]},
+    {label:"너트 통 프레임",min:[-2.78,.00,-1.15],max:[-1.92,.58,-.15]},
+    {label:"CNC 프레임",min:[1.95,.00,-2.27],max:[2.75,.70,-1.23]},
+    {label:"적재함 프레임",min:[1.95,.00,-1.17],max:[2.75,.62,-.13]}
   ];
   r.groups=G;r.j4Hub=j4Hub;r.j4Mark=j4Mark;r.rollAssembly=rollAssembly;r.gripperMesh=animatedGripper;updateAnimatedGripper(r);r.ready=true;
 }
@@ -2466,10 +2466,10 @@ function armDir(yaw,pitch){return V(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch
 const COLLISION_LIMITS={
   floorY:-220,
   boxes:[
-    {label:"볼트 통 프레임",x:-250,z:90,halfX:46,halfZ:54,minY:0,maxY:72},
-    {label:"너트 통 프레임",x:-150,z:90,halfX:46,halfZ:54,minY:0,maxY:72},
-    {label:"CNC 프레임",x:155,z:90,halfX:52,halfZ:58,minY:0,maxY:84},
-    {label:"적재함 프레임",x:255,z:90,halfX:46,halfZ:54,minY:0,maxY:74},
+    {label:"볼트 통 프레임",x:-235,z:45,halfX:46,halfZ:34,minY:0,maxY:72},
+    {label:"너트 통 프레임",x:-235,z:125,halfX:46,halfZ:34,minY:0,maxY:72},
+    {label:"CNC 프레임",x:235,z:45,halfX:52,halfZ:38,minY:0,maxY:84},
+    {label:"적재함 프레임",x:235,z:125,halfX:46,halfZ:34,minY:0,maxY:74},
     {label:"작업대 전면 프레임",x:0,z:165,halfX:135,halfZ:32,minY:0,maxY:50}
   ]
 };
@@ -2524,7 +2524,7 @@ function project(p,W,H){
 function drawNative3D(){
   if(!$("robot3dCanvas"))return;const {x:ctx,w:W,h:H}=fitCanvas($("robot3dCanvas")),pose=fk(getVisualJointAngleMap(getCollisionSafeAngleMap("current")));
   const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#10233a");g.addColorStop(1,"#06101b");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-  drawGround(ctx,W,H);drawZone3D(ctx,W,H,V(0,1,170),70,"SCAN ZONE","#20d5e8");drawBox3D(ctx,W,H,V(-250,20,90),V(76,40,66),"#1e6c54","BOLT BIN");drawBox3D(ctx,W,H,V(-150,20,90),V(76,40,66),"#304f8d","NUT BIN");drawBox3D(ctx,W,H,V(155,24,90),V(84,48,70),"#4b5563","CNC");drawBox3D(ctx,W,H,V(255,18,90),V(78,36,66),"#24536b","RACK");
+  drawGround(ctx,W,H);drawZone3D(ctx,W,H,V(0,1,170),70,"SCAN ZONE","#20d5e8");drawBox3D(ctx,W,H,V(-235,20,45),V(76,40,66),"#1e6c54","BOLT BIN");drawBox3D(ctx,W,H,V(-235,20,125),V(76,40,66),"#304f8d","NUT BIN");drawBox3D(ctx,W,H,V(235,24,45),V(84,48,70),"#4b5563","CNC");drawBox3D(ctx,W,H,V(235,18,125),V(78,36,66),"#24536b","RACK");
   drawPart3D(ctx,W,H,V(-35,5,162),"볼트");drawPart3D(ctx,W,H,V(20,5,184),"너트");drawPart3D(ctx,W,H,V(48,5,150),"와셔");
   const pts=[pose.base,pose.shoulder,pose.elbow,pose.wrist,pose.end],colors=["#5b7892","#d9e9f5","#bcd0df","#83a0b6"];
   drawBox3D(ctx,W,H,V(0,19,0),V(88,38,88),"#18344e","BASE");
@@ -2565,7 +2565,7 @@ function drawTopDown(){
   ctx.fillStyle="#07121e";ctx.fillRect(0,0,W,H);ctx.strokeStyle="rgba(75,119,150,.28)";
   for(let r=50;r<=300;r+=50){ctx.beginPath();ctx.arc(cx,cy,r*s,0,Math.PI*2);ctx.stroke()}for(let a=0;a<360;a+=30){const t=a*Math.PI/180;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(t)*300*s,cy-Math.sin(t)*300*s);ctx.stroke()}
   const pos=p=>({x:cx+p.x*s,y:cy-p.z*s}),base=pos(V(0,0,0)),end=pos(V(pose.end.x,0,pose.end.z)),target=pos(V(35,0,175)),corrected=pos(V(35+state.vision.correction.dx_mm,0,175+state.vision.correction.dy_mm));
-  zone(0,170,64,"SCAN 영역","rgba(32,213,232,.15)","#20d5e8");zone(-250,75,42,"볼트 통","rgba(74,222,128,.14)","#4ade80");zone(-150,75,42,"너트 통","rgba(96,165,250,.14)","#60a5fa");zone(155,75,46,"CNC","rgba(247,201,72,.12)","#f7c948");zone(255,75,42,"적재함","rgba(32,213,232,.12)","#20d5e8");zone(0,-70,62,"위험 영역","rgba(255,91,91,.13)","#ff5b5b");
+  zone(0,170,64,"SCAN 영역","rgba(32,213,232,.15)","#20d5e8");zone(-235,45,42,"볼트 통","rgba(74,222,128,.14)","#4ade80");zone(-235,125,42,"너트 통","rgba(96,165,250,.14)","#60a5fa");zone(235,45,46,"CNC","rgba(247,201,72,.12)","#f7c948");zone(235,125,42,"적재함","rgba(32,213,232,.12)","#20d5e8");zone(0,-70,62,"위험 영역","rgba(255,91,91,.13)","#ff5b5b");
   ctx.lineCap="round";ctx.strokeStyle="#20d5e8";ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(base.x,base.y);ctx.lineTo(end.x,end.y);ctx.stroke();ctx.setLineDash([5,5]);ctx.strokeStyle="#4ade80";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(end.x,end.y);ctx.lineTo(target.x,target.y);ctx.stroke();ctx.setLineDash([]);
   mark(base,"BASE","#bcd0df");mark(end,"현재 팔 끝","#20d5e8");mark(target,"목표","#4ade80");mark(corrected,"보정","#f7c948");
   ctx.fillStyle="#83a0b6";ctx.font="10px Segoe UI";ctx.fillText("청록: 현재 · 초록: 목표 · 노랑: 보정 · 빨강: 제한",10,H-12);
