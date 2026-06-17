@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Robot Arm Dashboard</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+    background:#0a0e17;
+    color:#e2e8f0;
+    font-family:'Courier New', monospace;
+    height:100vh;
+    overflow:hidden;
+}
+
+/* ── Header ── */
+.header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:8px 16px;
+    background:#0f172a;
+    border-bottom:1px solid #1e3a5f;
+    height:44px;
+}
+.header-title { font-size:16px; font-weight:bold; color:#00d4ff; letter-spacing:3px; }
+
+.mode-badge {
+    padding:3px 14px;
+    border-radius:3px;
+    font-weight:bold;
+    font-size:12px;
+    letter-spacing:1px;
+}
+.mode-teaching { background:#0f2a0f; color:#4ade80; border:1px solid #4ade80; }
+.mode-running  { background:#0f1a2a; color:#00d4ff; border:1px solid #00d4ff; }
+
+.mode-toggle {
+    padding:5px 16px;
+    background:#1e3a5f;
+    color:#00d4ff;
+    border:1px solid #00d4ff;
+    border-radius:3px;
+    cursor:pointer;
+    font-family:'Courier New', monospace;
+    font-size:11px;
+    letter-spacing:1px;
+}
+.mode-toggle:hover { background:#00d4ff; color:#0a0e17; }
+
+/* ── Layout ── */
+.main {
+    display:flex;
+    height:calc(100vh - 44px);
+}
+
+.video-section {
+    flex:1;
+    display:flex;
+    gap:4px;
+    padding:8px;
+}
+
+.video-box {
+    flex:1;
+    background:#060a12;
+    border:1px solid #1e3a5f;
+    border-radius:4px;
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    min-height:0;
+}
+
+.video-label {
+    position:absolute;
+    top:8px; left:8px;
+    font-size:10px;
+    color:#475569;
+    letter-spacing:1px;
+    background:rgba(0,0,0,.7);
+    padding:2px 8px;
+    border-radius:2px;
+    z-index:10;
+}
+
+.video-placeholder { color:#1e3a5f; font-size:13px; }
+
+/* ── Right panel ── */
+.right-panel {
+    width:300px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    padding:8px 8px 8px 0;
+    overflow-y:auto;
+}
+
+.panel-card {
+    background:#111827;
+    border:1px solid #1e3a5f;
+    border-radius:4px;
+    padding:10px 12px;
+}
+
+.card-title {
+    font-size:9px;
+    color:#475569;
+    letter-spacing:2px;
+    margin-bottom:8px;
+    text-transform:uppercase;
+}
+
+/* ── E-STOP ── */
+.estop-btn {
+    width:100%;
+    padding:12px;
+    background:#7f1d1d;
+    color:#fca5a5;
+    border:2px solid #ef4444;
+    border-radius:4px;
+    font-size:18px;
+    font-weight:bold;
+    font-family:'Courier New', monospace;
+    cursor:pointer;
+    letter-spacing:4px;
+    transition:all .1s;
+}
+.estop-btn:hover { background:#ef4444; color:#fff; }
+.estop-btn:active { transform:scale(.97); }
+
+/* ── Joint bars ── */
+.joint-row {
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-bottom:5px;
+}
+.joint-label { font-size:10px; color:#64748b; width:22px; }
+.bar-bg {
+    flex:1;
+    height:6px;
+    background:#1e293b;
+    border-radius:2px;
+    overflow:hidden;
+}
+.bar-fill {
+    height:100%;
+    border-radius:2px;
+    transition:width .3s ease;
+}
+.bar-human { background:#4ade80; }
+.bar-robot { background:#00d4ff; }
+.joint-val { font-size:10px; color:#475569; width:38px; text-align:right; }
+
+/* ── Motor status ── */
+.motor-row {
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-bottom:7px;
+}
+.motor-id { font-size:10px; width:20px; }
+.motor-metrics { flex:1; display:flex; flex-direction:column; gap:3px; }
+.metric-row { display:flex; align-items:center; gap:5px; }
+.metric-icon { font-size:9px; width:12px; }
+.metric-bg { flex:1; height:5px; background:#1e293b; border-radius:2px; overflow:hidden; }
+.metric-fill { height:100%; border-radius:2px; transition:width .5s ease; }
+.bar-temp  { background:#f59e0b; }
+.bar-load  { background:#60a5fa; }
+.bar-warn  { background:#ef4444; }
+.metric-val { font-size:9px; color:#475569; width:34px; text-align:right; }
+
+/* ── Waypoints ── */
+.wp-track {
+    display:flex;
+    align-items:center;
+    overflow-x:auto;
+    padding:4px 0;
+    gap:0;
+}
+.wp-node { display:flex; flex-direction:column; align-items:center; gap:2px; }
+.wp-circle {
+    width:26px; height:26px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; font-weight:bold;
+    border:2px solid;
+}
+.wp-done    { background:#0f2a0f; border-color:#4ade80; color:#4ade80; }
+.wp-current { background:#0f1a2a; border-color:#00d4ff; color:#00d4ff; animation:pulse 1.5s infinite; }
+.wp-check   { background:#2a1a0a; border-color:#f59e0b; color:#f59e0b; }
+.wp-pending { background:#0a0e17; border-color:#1e3a5f; color:#1e3a5f; }
+@keyframes pulse {
+    0%,100% { box-shadow:0 0 0 0 rgba(0,212,255,.4); }
+    50%      { box-shadow:0 0 0 4px rgba(0,212,255,0); }
+}
+.wp-line { width:12px; height:2px; background:#1e3a5f; }
+.wp-line.done { background:#4ade80; }
+.wp-tag { font-size:8px; color:#475569; height:10px; }
+
+/* ── YOLO result ── */
+.yolo-result { display:flex; align-items:center; gap:10px; }
+.yolo-class  { font-size:20px; color:#10b981; font-weight:bold; }
+.yolo-conf-bg { flex:1; height:6px; background:#1e293b; border-radius:3px; overflow:hidden; }
+.yolo-conf-fill { height:100%; background:#10b981; border-radius:3px; transition:width .5s; }
+
+/* ── Event log ── */
+.event-log {
+    font-size:10px;
+    height:110px;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+}
+.log-entry { display:flex; gap:8px; padding:2px 0; border-bottom:1px solid #0f172a; }
+.log-time { color:#334155; min-width:52px; }
+.log-ok   { color:#4ade80; }
+.log-warn { color:#f59e0b; }
+.log-info { color:#00d4ff; }
+.log-err  { color:#ef4444; }
+.log-def  { color:#64748b; }
+
+/* ── REC indicator ── */
+.rec-indicator {
+    position:absolute;
+    top:8px; right:8px;
+    display:flex; align-items:center; gap:5px;
+    font-size:11px; color:#ef4444;
+    z-index:10;
+}
+.rec-dot {
+    width:8px; height:8px;
+    background:#ef4444;
+    border-radius:50%;
+    animation:blink 1s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+
+/* ── Skeleton canvas ── */
+.sk-canvas { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+
+/* ── YOLO bbox ── */
+.yolo-bbox {
+    position:absolute;
+    border:2px solid #10b981;
+    border-radius:2px;
+    pointer-events:none;
+    transition:all .3s ease;
+}
+.yolo-bbox-label {
+    position:absolute;
+    top:-18px; left:0;
+    background:#10b981;
+    color:#000;
+    font-size:9px;
+    padding:1px 5px;
+    white-space:nowrap;
+}
+
+/* ── Status dot ── */
+.sdot { width:7px; height:7px; border-radius:50%; display:inline-block; }
+.sdot-ok   { background:#4ade80; }
+.sdot-warn { background:#f59e0b; }
+.sdot-err  { background:#ef4444; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width:3px; height:3px; }
+::-webkit-scrollbar-track { background:#0a0e17; }
+::-webkit-scrollbar-thumb { background:#1e3a5f; border-radius:2px; }
+
+/* ── Camera video ── */
+.cam-video {
+    position:absolute;
+    top:0; left:0;
+    width:100%; height:100%;
+    object-fit:cover;
+    z-index:1;
+}
+.cam-off-msg {
+    position:absolute;
+    top:0; left:0;
+    width:100%; height:100%;
+    z-index:2;
+    overflow:hidden;
+}
+.cam-connect-btn {
+    padding:6px 16px;
+    background:#1e3a5f;
+    color:#00d4ff;
+    border:1px solid #00d4ff;
+    border-radius:3px;
+    cursor:pointer;
+    font-size:11px;
+    font-family:'Courier New', monospace;
+}
+.cam-connect-btn:hover { background:#00d4ff; color:#0a0e17; }
+
+/* camera select */
+.cam-select {
+    background:#0a0e17;
+    color:#94a3b8;
+    border:1px solid #1e3a5f;
+    border-radius:3px;
+    font-size:10px;
+    font-family:'Courier New', monospace;
+    padding:3px 6px;
+    width:100%;
+    margin-bottom:5px;
+    cursor:pointer;
+}
+.cam-select:focus { outline:none; border-color:#00d4ff; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<div class="header">
+    <div class="header-title">◈ ROBOT ARM CONTROL SYSTEM</div>
+    <div style="display:flex;align-items:center;gap:12px;">
+        <span id="clock" style="font-size:11px;color:#334155;"></span>
+        <div class="mode-badge mode-teaching" id="modeBadge">● TEACHING MODE</div>
+        <button class="mode-toggle" onclick="toggleMode()">MODE SWITCH</button>
+        <span class="sdot sdot-ok"></span>
+        <span style="font-size:10px;color:#334155;">CONNECTED</span>
+    </div>
+</div>
+
+<!-- ═══════════════════ MAIN ═══════════════════ -->
+<div class="main">
+
+    <!-- ── Teaching layout ── -->
+    <div class="video-section" id="teachingLayout" style="flex-direction:row;">
+        <!-- Human arm feed -->
+        <div class="video-box">
+            <span class="video-label" style="z-index:5;">HUMAN ARM — MediaPipe</span>
+            <div class="rec-indicator" style="z-index:5;"><div class="rec-dot"></div> REC <span id="recTimer">00:00:00</span></div>
+            <video id="videoHuman" class="cam-video" autoplay playsinline muted style="display:none;"></video>
+            <canvas class="sk-canvas" id="skCanvas" style="z-index:3;"></canvas>
+            <div class="cam-off-msg" id="offMsgHuman">
+                <canvas id="canvasHuman" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
+            </div>
+        </div>
+        <!-- Robot arm feed (teaching) -->
+        <div class="video-box">
+            <span class="video-label" style="z-index:5;">ROBOT ARM — Live</span>
+            <video id="videoRobotTeach" class="cam-video" autoplay playsinline muted style="display:none;"></video>
+            <div class="cam-off-msg" id="offMsgRobotT">
+                <canvas id="canvasRobotT" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Running layout ── -->
+    <div class="video-section" id="runningLayout" style="display:none; flex-direction:column;">
+        <div class="video-box" style="flex:1;">
+            <video id="videoRobotRun" class="cam-video" autoplay playsinline muted style="display:none;"></video>
+            <div class="yolo-bbox" id="yoloBbox" style="width:90px;height:65px;top:42%;left:40%;z-index:4;">
+                <div class="yolo-bbox-label" id="yoloBboxLabel">볼트 94%</div>
+            </div>
+            <div class="cam-off-msg" id="offMsgRobotR">
+                <canvas id="canvasRobotR" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════ RIGHT PANEL ═══════════════════ -->
+    <div class="right-panel">
+
+        <!-- ── 카메라 설정 ── -->
+        <div class="panel-card" id="cardCam">
+            <div class="card-title">카메라 설정</div>
+            <div style="font-size:9px;color:#475569;margin-bottom:3px;">HUMAN ARM 카메라</div>
+            <select class="cam-select" id="selHuman"></select>
+            <div style="font-size:9px;color:#475569;margin-bottom:3px;">ROBOT ARM 카메라</div>
+            <select class="cam-select" id="selRobot"></select>
+            <button onclick="connectCams()"
+                style="width:100%;padding:5px;background:#0f1a2a;color:#00d4ff;border:1px solid #00d4ff;border-radius:3px;cursor:pointer;font-size:11px;font-family:monospace;margin-top:2px;">
+                ▶ 연결 / 새로고침
+            </button>
+            <div id="camStatus" style="font-size:9px;color:#475569;margin-top:5px;text-align:center;">카메라 미연결</div>
+        </div>
+
+        <!-- E-STOP -->
+        <button class="estop-btn" onclick="eStop()">■  E-STOP</button>
+
+        <!-- ── Teaching: 관절 각도 비교 ── -->
+        <div class="panel-card" id="cardAngles">
+            <div class="card-title">관절 각도 비교</div>
+            <div style="display:flex;gap:12px;font-size:9px;color:#475569;margin-bottom:6px;">
+                <span><span style="display:inline-block;width:8px;height:8px;background:#4ade80;border-radius:50%;margin-right:3px;"></span>인간</span>
+                <span><span style="display:inline-block;width:8px;height:8px;background:#00d4ff;border-radius:50%;margin-right:3px;"></span>로봇</span>
+            </div>
+            <div id="jointBars"></div>
+        </div>
+
+        <!-- ── Teaching: 웨이포인트 녹화 ── -->
+        <div class="panel-card" id="cardTeachWP">
+            <div class="card-title">웨이포인트 녹화</div>
+            <div style="display:flex;gap:6px;margin-bottom:8px;">
+                <button onclick="addWP()"
+                    style="flex:1;padding:5px;background:#0f2a0f;color:#4ade80;border:1px solid #4ade80;border-radius:3px;cursor:pointer;font-size:11px;font-family:monospace;">
+                    + WP 추가
+                </button>
+                <button onclick="clearWPs()"
+                    style="padding:5px 10px;background:#1a0808;color:#ef4444;border:1px solid #ef4444;border-radius:3px;cursor:pointer;font-size:11px;font-family:monospace;">
+                    초기화
+                </button>
+            </div>
+            <div id="wpChips" style="display:flex;flex-wrap:wrap;gap:4px;font-size:10px;color:#475569;"></div>
+        </div>
+
+        <!-- ── Running: YOLO 결과 ── -->
+        <div class="panel-card" id="cardYolo" style="display:none;">
+            <div class="card-title">YOLO 감지 결과</div>
+            <div class="yolo-result" style="margin-bottom:8px;">
+                <div>
+                    <div class="yolo-class" id="yoloClass">볼트</div>
+                    <div style="font-size:10px;color:#475569;" id="yoloConfText">신뢰도 94%</div>
+                </div>
+                <div class="yolo-conf-bg"><div class="yolo-conf-fill" id="yoloConfBar" style="width:94%;"></div></div>
+            </div>
+            <div style="font-size:10px;color:#475569;">
+                위치 보정:
+                <span id="corrVal" style="color:#f59e0b;font-weight:bold;">ΔX +2.3cm  ΔY -0.8cm</span>
+            </div>
+        </div>
+
+        <!-- ── Running: 웨이포인트 진행 ── -->
+        <div class="panel-card" id="cardRunWP" style="display:none;">
+            <div class="card-title">웨이포인트 진행</div>
+            <div class="wp-track" id="wpTrack"></div>
+        </div>
+
+        <!-- ── 모터 상태 (공통) ── -->
+        <div class="panel-card">
+            <div class="card-title">모터 상태 (STS3215)</div>
+            <div id="motorRows"></div>
+        </div>
+
+        <!-- ── 이벤트 로그 (공통) ── -->
+        <div class="panel-card" style="flex:1;">
+            <div class="card-title">이벤트 로그</div>
+            <div class="event-log" id="eventLog"></div>
+        </div>
+
+    </div><!-- /right-panel -->
+</div><!-- /main -->
+
+<script>
+// ─────────────────────────────────────────────
+//  Realistic canvas renders
+// ─────────────────────────────────────────────
+let humanT = 0, robotT = 0;
+
+function fitCanvas(canvas) {
+    const p = canvas.parentElement;
+    canvas.width  = p.offsetWidth  || 640;
+    canvas.height = p.offsetHeight || 400;
+}
+
+/* ── Human arm (MediaPipe 스타일) ── */
+function drawHumanCanvas() {
+    const canvas = document.getElementById('canvasHuman');
+    if (!canvas || document.getElementById('offMsgHuman').style.display === 'none') return;
+    fitCanvas(canvas);
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    humanT += 0.018;
+
+    /* 배경 - 어두운 실내 */
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#0c1220'); bg.addColorStop(1, '#070c18');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    /* 비네팅 */
+    const vig = ctx.createRadialGradient(W/2,H/2,H*.15, W/2,H/2,H*.8);
+    vig.addColorStop(0,'rgba(0,0,0,0)'); vig.addColorStop(1,'rgba(0,0,0,.65)');
+    ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);
+
+    /* 인체 기준점 */
+    const cx = W*.46, headCY = H*.1, shoulderY = H*.26, hipY = H*.62;
+    const Ls = W*.09; // shoulder half-width
+
+    /* 몸통 실루엣 */
+    ctx.fillStyle = 'rgba(30,42,60,.75)';
+    ctx.beginPath();
+    ctx.ellipse(cx, headCY, W*.055, H*.075, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx-Ls, shoulderY); ctx.lineTo(cx+Ls, shoulderY);
+    ctx.lineTo(cx+Ls*.75, hipY);  ctx.lineTo(cx-Ls*.75, hipY); ctx.closePath(); ctx.fill();
+
+    /* 팔 관절 계산 */
+    const eAngle = Math.PI*.38 + Math.sin(humanT)*.22;
+    const wAngle = Math.PI*.28 + Math.sin(humanT*.75)*.28;
+    const rs  = { x:cx+Ls, y:shoulderY };
+    const ls  = { x:cx-Ls, y:shoulderY };
+    const lhip = { x:cx-Ls*.72, y:hipY };
+    const rhip = { x:cx+Ls*.72, y:hipY };
+    const neck = { x:cx, y:shoulderY-H*.025 };
+    const el  = { x:rs.x+Math.cos(eAngle)*H*.19, y:rs.y+Math.sin(eAngle)*H*.19 };
+    const wr  = { x:el.x+Math.cos(wAngle)*H*.17, y:el.y+Math.sin(wAngle)*H*.17 };
+    const tip = { x:wr.x+Math.cos(wAngle-.18)*H*.055, y:wr.y+Math.sin(wAngle-.18)*H*.055 };
+    const lk  = { x:cx-Ls*.85, y:hipY+H*.17 };
+    const rk  = { x:cx+Ls*.85, y:hipY+H*.17 };
+
+    /* 스켈레톤 연결선 */
+    const segs = [
+        [[ls,rs],false],[[neck,ls],false],[[neck,rs],false],
+        [[ls,lhip],false],[[rs,rhip],false],[[lhip,rhip],false],
+        [[lhip,lk],false],[[rhip,rk],false],
+        [[rs,el],true],[[el,wr],true],[[wr,tip],true],
+    ];
+    ctx.lineCap = 'round';
+    segs.forEach(([[a,b], arm]) => {
+        ctx.shadowBlur  = arm ? 6 : 0;
+        ctx.shadowColor = '#4ade80';
+        ctx.strokeStyle = arm ? 'rgba(74,222,128,.9)' : 'rgba(255,255,255,.28)';
+        ctx.lineWidth   = arm ? W*.007 : W*.005;
+        ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    });
+    ctx.shadowBlur = 0;
+
+    /* 관절 점 */
+    const pts = [
+        [ls,4,false],[rs,5,true],[neck,3,false],[lhip,4,false],[rhip,4,false],
+        [el,6,true],[wr,6,true],[tip,5,true],[lk,4,false],[rk,4,false],
+    ];
+    pts.forEach(([p,r,arm]) => {
+        ctx.shadowBlur  = arm ? 12 : 5;
+        ctx.shadowColor = arm ? '#4ade80' : '#00d4ff';
+        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI*2);
+        ctx.fillStyle = arm ? '#4ade80' : '#e2e8f0'; ctx.fill();
+        ctx.shadowBlur = 0;
+    });
+
+    /* 각도 레이블 */
+    const ea = (46+Math.sin(humanT)*14).toFixed(1);
+    const wa = (79+Math.sin(humanT*.7)*19).toFixed(1);
+    ctx.font = `${W*.023}px 'Courier New'`; ctx.fillStyle = 'rgba(74,222,128,.85)';
+    ctx.fillText(`${ea}°`, el.x+8, el.y-6);
+    ctx.fillText(`${wa}°`, wr.x+8, wr.y-6);
+
+    /* 신뢰도 바 (우측) */
+    const joints = ['shoulder','elbow','wrist','hip'];
+    const confs  = [.98,.95,.92,.97];
+    ctx.font = `${W*.017}px 'Courier New'`;
+    joints.forEach((name,i) => {
+        const bx = W*.82, by = H*.3+i*H*.06, bw = W*.14, bh = H*.018;
+        ctx.fillStyle = 'rgba(255,255,255,.12)';
+        ctx.fillRect(bx, by, bw, bh);
+        ctx.fillStyle = '#4ade80';
+        ctx.fillRect(bx, by, bw*confs[i], bh);
+        ctx.fillStyle = 'rgba(255,255,255,.5)';
+        ctx.fillText(name, bx, by-3);
+        ctx.textAlign = 'right';
+        ctx.fillText(`${(confs[i]*100).toFixed(0)}%`, bx+bw, by-3);
+        ctx.textAlign = 'left';
+    });
+
+    /* 사람 감지 박스 */
+    ctx.strokeStyle = 'rgba(0,212,255,.22)'; ctx.lineWidth = 1;
+    ctx.setLineDash([5,5]);
+    ctx.strokeRect(cx-W*.2, H*.04, W*.4, H*.72);
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#00d4ff'; ctx.font = `${W*.019}px 'Courier New'`;
+    ctx.fillText('PERSON  0.97', cx-W*.2+4, H*.04+14);
+
+    /* HUD */
+    const fps = 27+Math.floor(Math.random()*4);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(74,222,128,.75)';
+    ctx.font = `${W*.022}px 'Courier New'`;
+    ctx.fillText(`Human Pose  |  ${fps} FPS`, W-8, 48);
+    ctx.fillStyle = 'rgba(150,180,220,.5)';
+    ctx.font = `${W*.018}px 'Courier New'`;
+    ctx.fillText('BODY_25  landmarks: 33', W-8, 63);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(255,255,255,.22)';
+    ctx.fillText(new Date().toTimeString().slice(0,8)+' CAM-0', 8, H-8);
+}
+
+/* ── 공용 파츠 드로어 ── */
+function hexShape(ctx, cx, cy, r, fill, stroke, holeR) {
+    ctx.beginPath();
+    for(let i=0;i<6;i++){ const a=Math.PI/3*i-Math.PI/6; i===0?ctx.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a)):ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a)); }
+    ctx.closePath(); ctx.fillStyle=fill; ctx.fill();
+    ctx.strokeStyle=stroke; ctx.lineWidth=1.2; ctx.stroke();
+    if(holeR){ ctx.beginPath(); ctx.arc(cx,cy,holeR,0,Math.PI*2); ctx.fillStyle='#080c14'; ctx.fill(); }
+}
+
+/* ── Teaching 모드: 고정 외부 카메라 (우측 45°, 위 30°) ── */
+function drawRobotCanvas(canvasId, showYolo) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    if (showYolo) { drawGripperCanvas(canvasId); return; }
+
+    fitCanvas(canvas);
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const t = robotT;
+
+    /* ── 배경: 어두운 산업용 공간 ── */
+    ctx.fillStyle = '#0b0f18'; ctx.fillRect(0,0,W,H);
+
+    /* 벽 (뒤쪽) */
+    const wallG = ctx.createLinearGradient(0,0,0,H*.65);
+    wallG.addColorStop(0,'#10151e'); wallG.addColorStop(1,'#161c28');
+    ctx.fillStyle = wallG; ctx.fillRect(0,0,W,H*.65);
+
+    /* 바닥 (원근감 있는 격자) */
+    const floorG = ctx.createLinearGradient(0,H*.62,0,H);
+    floorG.addColorStop(0,'#1c2535'); floorG.addColorStop(1,'#141a25');
+    ctx.fillStyle = floorG; ctx.fillRect(0,H*.62,W,H*.38);
+
+    /* 바닥 원근 격자 */
+    const vp = {x:W*.48, y:H*.62};
+    ctx.strokeStyle='rgba(40,70,120,.25)'; ctx.lineWidth=.6;
+    for(let i=-8;i<=8;i++){
+        ctx.beginPath(); ctx.moveTo(vp.x+i*W*.09,vp.y); ctx.lineTo(vp.x+i*W*.9,H); ctx.stroke();
+    }
+    for(let j=0;j<=5;j++){
+        const fy=vp.y+j*(H-vp.y)/5, fx=W*.5*(j/5);
+        ctx.beginPath(); ctx.moveTo(fx,fy); ctx.lineTo(W-fx,fy); ctx.stroke();
+    }
+
+    /* 작업대 상판 */
+    ctx.fillStyle='rgba(28,38,55,.9)';
+    ctx.beginPath();
+    ctx.moveTo(W*.08,H*.64); ctx.lineTo(W*.92,H*.64); ctx.lineTo(W*.85,H*.72); ctx.lineTo(W*.15,H*.72);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(50,80,130,.5)'; ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(W*.08,H*.64); ctx.lineTo(W*.92,H*.64);
+    ctx.moveTo(W*.08,H*.64); ctx.lineTo(W*.15,H*.72);
+    ctx.moveTo(W*.92,H*.64); ctx.lineTo(W*.85,H*.72);
+    ctx.stroke();
+    /* 상판 앞면 */
+    const tabFG = ctx.createLinearGradient(0,H*.64,0,H*.72);
+    tabFG.addColorStop(0,'#1e2d45'); tabFG.addColorStop(1,'#12192a');
+    ctx.fillStyle=tabFG;
+    ctx.beginPath(); ctx.moveTo(W*.15,H*.72); ctx.lineTo(W*.85,H*.72); ctx.lineTo(W*.85,H*.79); ctx.lineTo(W*.15,H*.79); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(40,65,110,.5)'; ctx.stroke();
+
+    /* ── 3D 투영 함수 ── */
+    /* 카메라: 우측 45도, 위로 30도 */
+    const azi = -Math.PI*0.22;    /* 오른쪽 (음수 = 오른쪽 방향으로 회전) */
+    const ele =  Math.PI*0.20;    /* 위쪽 */
+    const fov = Math.min(W,H)*0.52;
+    const camZ = 2.8;
+
+    function p3(wx, wy, wz) {
+        const ca=Math.cos(azi),sa=Math.sin(azi);
+        const rx = wx*ca - wz*sa;
+        const ry = wy;
+        const rz = wx*sa + wz*ca;
+        const ce=Math.cos(ele),se=Math.sin(ele);
+        const ry2 = ry*ce - rz*se;
+        const rz2 = ry*se + rz*ce;
+        const d = rz2 + camZ;
+        const f = fov / Math.max(d, 0.3);
+        return { x:W*.44+rx*f, y:H*.66-ry2*f, f };
+    }
+
+    /* ── 순기구학 (FK) ── */
+    const j0 =  Math.sin(t*.38)*.18;
+    const j1 =  1.08 + Math.sin(t*.28)*.08;
+    const j2 = -1.55 + Math.sin(t*.22)*.07;
+    const j3 =  0.62 + Math.sin(t*.31)*.06;
+    const j4 =  Math.sin(t*.46)*.12;
+
+    const L0=0.13, L1=0.38, L2=0.30, L3=0.18, L4=0.11;
+    const c0=Math.cos(j0), s0=Math.sin(j0);
+
+    /* 방향 벡터: 베이스 회전 후의 수직 평면 내에서 */
+    const dir = a => [s0*Math.sin(a), Math.cos(a), c0*Math.sin(a)];
+
+    const jp0=[0,0,0];
+    const jp1=[0,L0,0];
+    const d1=dir(j1);
+    const jp2=[jp1[0]+d1[0]*L1, jp1[1]+d1[1]*L1, jp1[2]+d1[2]*L1];
+    const d2=dir(j1+j2);
+    const jp3=[jp2[0]+d2[0]*L2, jp2[1]+d2[1]*L2, jp2[2]+d2[2]*L2];
+    const d3=dir(j1+j2+j3);
+    const jp4=[jp3[0]+d3[0]*L3, jp3[1]+d3[1]*L3, jp3[2]+d3[2]*L3];
+    const d4=dir(j1+j2+j3+j4);
+    const jp5=[jp4[0]+d4[0]*L4, jp4[1]+d4[1]*L4, jp4[2]+d4[2]*L4];
+
+    /* 그리퍼 손가락 (팔 평면 법선 방향) */
+    const gn=[-c0,0,s0];
+    const go=0.032+Math.abs(Math.sin(t*.5))*.012;
+    const gl=0.058;
+    const g1s=[jp5[0]+gn[0]*go, jp5[1]+gn[1]*go, jp5[2]+gn[2]*go];
+    const g2s=[jp5[0]-gn[0]*go, jp5[1]-gn[1]*go, jp5[2]-gn[2]*go];
+    const g1e=[g1s[0]+d4[0]*gl, g1s[1]+d4[1]*gl, g1s[2]+d4[2]*gl];
+    const g2e=[g2s[0]+d4[0]*gl, g2s[1]+d4[1]*gl, g2s[2]+d4[2]*gl];
+
+    /* 투영 */
+    const [sp0,sp1,sp2,sp3,sp4,sp5] = [jp0,jp1,jp2,jp3,jp4,jp5].map(p=>p3(p[0],p[1],p[2]));
+    const sg1s=p3(g1s[0],g1s[1],g1s[2]), sg1e=p3(g1e[0],g1e[1],g1e[2]);
+    const sg2s=p3(g2s[0],g2s[1],g2s[2]), sg2e=p3(g2e[0],g2e[1],g2e[2]);
+
+    /* ── 그림자 (바닥 투영) ── */
+    const shPts = [jp1,jp2,jp3,jp4,jp5].map(p=>p3(p[0],0,p[2]));
+    ctx.strokeStyle='rgba(0,0,0,.4)'; ctx.lineWidth=6; ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath(); ctx.moveTo(shPts[0].x,shPts[0].y);
+    shPts.slice(1).forEach(p=>ctx.lineTo(p.x,p.y)); ctx.stroke();
+
+    /* ── 링크 드로어 (3D 원통 효과) ── */
+    function drawLink(pa, pb, radius, colLight, colDark) {
+        const ang = Math.atan2(pb.y-pa.y, pb.x-pa.x) + Math.PI/2;
+        const avgF = (pa.f+pb.f)*.5;
+        const hw = avgF * radius;
+        const nx=Math.cos(ang)*hw, ny=Math.sin(ang)*hw;
+        const lx=pa.x*.5+pb.x*.5, ly=pa.y*.5+pb.y*.5;
+        const g = ctx.createLinearGradient(lx-nx*1.5,ly-ny*1.5,lx+nx*1.5,ly+ny*1.5);
+        g.addColorStop(0,   colLight);
+        g.addColorStop(0.28,colLight);
+        g.addColorStop(0.65,colDark);
+        g.addColorStop(1,   '#0a0e18');
+        ctx.beginPath();
+        ctx.moveTo(pa.x-nx,pa.y-ny); ctx.lineTo(pb.x-nx,pb.y-ny);
+        ctx.lineTo(pb.x+nx,pb.y+ny); ctx.lineTo(pa.x+nx,pa.y+ny);
+        ctx.closePath(); ctx.fillStyle=g; ctx.fill();
+        ctx.strokeStyle='rgba(0,0,0,.55)'; ctx.lineWidth=.8; ctx.stroke();
+    }
+
+    /* ── 관절 드로어 (구 효과) ── */
+    function drawJoint(p, r, colA, colB) {
+        const rr=p.f*r;
+        const g=ctx.createRadialGradient(p.x-rr*.35,p.y-rr*.35,rr*.05,p.x,p.y,rr);
+        g.addColorStop(0,colA); g.addColorStop(.55,colB); g.addColorStop(1,'#060a12');
+        ctx.beginPath(); ctx.arc(p.x,p.y,rr,0,Math.PI*2);
+        ctx.fillStyle=g; ctx.fill();
+        ctx.strokeStyle='rgba(0,0,0,.6)'; ctx.lineWidth=1; ctx.stroke();
+        /* 하이라이트 */
+        ctx.beginPath(); ctx.arc(p.x-rr*.28,p.y-rr*.3,rr*.22,0,Math.PI*2);
+        ctx.fillStyle='rgba(255,255,255,.18)'; ctx.fill();
+    }
+
+    /* ── 베이스 ── */
+    /* 마운팅 플레이트 (바닥) */
+    const bBot=p3(0,-.02,0), bTop=p3(0,L0,0);
+    const bR=bTop.f*.1;
+    ctx.fillStyle='#101820'; ctx.strokeStyle='#1e3050'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.ellipse(bBot.x,bBot.y+3,bR*1.4,bR*.42,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+
+    /* 베이스 컬럼 */
+    const bGrad=ctx.createLinearGradient(bTop.x-bR*1.2,bTop.y,bTop.x+bR*.6,bTop.y);
+    bGrad.addColorStop(0,'#2a4265'); bGrad.addColorStop(.38,'#3a5a85'); bGrad.addColorStop(.7,'#1e3255'); bGrad.addColorStop(1,'#101828');
+    ctx.fillStyle=bGrad;
+    ctx.beginPath();
+    ctx.moveTo(bTop.x-bR,bTop.y); ctx.lineTo(bBot.x-bR*1.3,bBot.y+3);
+    ctx.ellipse(bBot.x,bBot.y+3,bR*1.4,bR*.42,0,Math.PI,0,true);
+    ctx.lineTo(bTop.x+bR*.5,bTop.y);
+    ctx.ellipse(bTop.x,bTop.y,bR,bR*.32,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,.5)'; ctx.lineWidth=.8; ctx.stroke();
+    /* 베이스 상단 */
+    ctx.fillStyle='#324a6e'; ctx.beginPath();
+    ctx.ellipse(bTop.x,bTop.y,bR,bR*.32,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.stroke();
+
+    /* ── 링크 (뒤→앞 순서로 그리기) ── */
+    /* segments sorted rough back-to-front */
+    drawLink(sp1,sp2, 0.042, '#3a5a88','#18304a');   /* 어퍼암 */
+    drawLink(sp2,sp3, 0.033, '#2e5272','#163040');   /* 포어암 */
+    drawLink(sp3,sp4, 0.026, '#245065','#103038');   /* 리스트1 */
+    drawLink(sp4,sp5, 0.019, '#1e4858','#0c2832');   /* 리스트2 */
+
+    /* ── 그리퍼 ── */
+    const gpW=sp5.f*0.018;
+    ctx.lineCap='round'; ctx.lineWidth=gpW;
+    ctx.shadowBlur=10; ctx.shadowColor='#4ade80';
+    ctx.strokeStyle='#4ade80';
+    ctx.beginPath(); ctx.moveTo(sg1s.x,sg1s.y); ctx.lineTo(sg1e.x,sg1e.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sg2s.x,sg2s.y); ctx.lineTo(sg2e.x,sg2e.y); ctx.stroke();
+    /* 그리퍼 팁 (살짝 안으로 굽음) */
+    ctx.lineWidth=gpW*.7;
+    const tipOff=sg1e.f*0.022;
+    const tipAng=Math.atan2(sg1e.y-sg1s.y,sg1e.x-sg1s.x);
+    ctx.beginPath();
+    ctx.moveTo(sg1e.x,sg1e.y);
+    ctx.lineTo(sg1e.x+Math.cos(tipAng+.45)*tipOff, sg1e.y+Math.sin(tipAng+.45)*tipOff);
+    ctx.moveTo(sg2e.x,sg2e.y);
+    ctx.lineTo(sg2e.x+Math.cos(tipAng-.45)*tipOff, sg2e.y+Math.sin(tipAng-.45)*tipOff);
+    ctx.stroke();
+    ctx.shadowBlur=0;
+
+    /* ── 관절 (어퍼암부터 그려서 앞 관절이 위에 오도록) ── */
+    drawJoint(sp1, 0.072,'#4870aa','#243860');  /* 숄더 */
+    drawJoint(sp2, 0.060,'#3a6898','#1e3850');  /* 엘보 */
+    drawJoint(sp3, 0.048,'#2e5880','#163040');  /* 리스트1 */
+    drawJoint(sp4, 0.036,'#285070','#102830');  /* 리스트2 */
+    drawJoint(sp5, 0.028,'#4ade80','#1a6a3a');  /* EE */
+
+    /* ── 테이블 위 볼트/너트 ── */
+    const parts3d=[
+        {t:'nut', wx:-.22,wz:.12},{t:'bolt',wx:.18,wz:.08,ang:.4},
+        {t:'nut', wx: .28,wz:.20},{t:'bolt',wx:-.10,wz:.22,ang:-.6},
+    ];
+    parts3d.forEach(pt=>{
+        const pp=p3(pt.wx,L0-.02,pt.wz);
+        const pr=pp.f*0.025;
+        if(pt.t==='nut'){
+            hexShape(ctx,pp.x,pp.y,pr,'#6a7888','#8aa0aa',pr*.38);
+        } else {
+            ctx.save(); ctx.translate(pp.x,pp.y); ctx.rotate(pt.ang);
+            hexShape(ctx,0,0,pr,'#7a8898','#a0b2be',0);
+            ctx.strokeStyle='rgba(30,40,50,.9)'; ctx.lineWidth=pr*.3;
+            ctx.beginPath(); ctx.moveTo(-pr*.6,0); ctx.lineTo(pr*.6,0); ctx.stroke();
+            ctx.restore();
+        }
+    });
+
+    /* ── 비네팅 ── */
+    const vig=ctx.createRadialGradient(W*.5,H*.5,H*.15,W*.5,H*.5,H*.8);
+    vig.addColorStop(0,'rgba(0,0,0,0)'); vig.addColorStop(1,'rgba(0,0,0,.6)');
+    ctx.fillStyle=vig; ctx.fillRect(0,0,W,H);
+
+    /* ── HUD ── */
+    const fps=28+Math.floor(Math.random()*4);
+    ctx.textAlign='right';
+    ctx.fillStyle='rgba(0,212,255,.82)'; ctx.font=`bold ${W*.024}px 'Courier New'`;
+    ctx.fillText('TEACH CAM', W-8, 18);
+    ctx.fillStyle='rgba(100,150,200,.5)'; ctx.font=`${W*.016}px 'Courier New'`;
+    ctx.fillText(`${fps} FPS  |  RIGHT 45°  UP 30°`, W-8, 33);
+    ctx.textAlign='left';
+
+    /* 관절 각도 좌측 */
+    ctx.fillStyle='rgba(74,222,128,.72)'; ctx.font=`${W*.016}px 'Courier New'`;
+    [['J1',j0],['J2',j1],['J3',j2],['J4',j3],['J5',j4]].forEach(([n,a],i)=>{
+        ctx.fillText(`${n}: ${(a*180/Math.PI).toFixed(1)}°`, 10, 20+i*H*.046);
+    });
+
+    /* EE 위치 */
+    const ex=(jp5[0]*300+312+Math.sin(t)*2).toFixed(1);
+    const ey=(jp5[1]*300+40+Math.cos(t*.7)*1.5).toFixed(1);
+    const ez=(jp5[2]*300+100+Math.sin(t*.5)*2).toFixed(1);
+    ctx.fillStyle='rgba(74,222,128,.65)'; ctx.font=`${W*.016}px 'Courier New'`;
+    ctx.fillText(`EE  X:${ex}  Y:${ey}  Z:${ez} mm`, 8, H-8);
+    ctx.fillStyle='rgba(255,255,255,.18)';
+    ctx.fillText(new Date().toTimeString().slice(0,8)+' CAM-F', W*.44, H-8);
+}
+
+/* ── Running 모드: 그리퍼 Eye-in-Hand 뷰 ── */
+function drawGripperCanvas(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    fitCanvas(canvas);
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+
+    /* 카메라 흔들림 (팔 움직임 시뮬레이션) */
+    const shake = { x: Math.sin(robotT*1.3)*.6, y: Math.cos(robotT*.9)*.5 };
+
+    /* ── 작업 표면 (가까이서 내려다보는 뷰) ── */
+    /* 금속 플레이트 배경 */
+    const surfGrad = ctx.createLinearGradient(0,0,W,H);
+    surfGrad.addColorStop(0,'#3a3f48'); surfGrad.addColorStop(.5,'#4a505a'); surfGrad.addColorStop(1,'#383d46');
+    ctx.fillStyle = surfGrad; ctx.fillRect(0,0,W,H);
+
+    /* 표면 스크래치 / 질감 */
+    ctx.save();
+    ctx.globalAlpha = .06;
+    for(let i=0;i<18;i++){
+        const lx=Math.random()*W, ly=Math.random()*H;
+        ctx.strokeStyle='#fff'; ctx.lineWidth=.5;
+        ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx+Math.random()*60-30,ly+Math.random()*8-4); ctx.stroke();
+    }
+    ctx.restore();
+
+    /* 작업 영역 마킹 (노란 테두리선) */
+    ctx.strokeStyle='rgba(245,158,11,.35)'; ctx.lineWidth=2; ctx.setLineDash([8,6]);
+    ctx.strokeRect(W*.12+shake.x, H*.1+shake.y, W*.76, H*.8); ctx.setLineDash([]);
+    ctx.fillStyle='rgba(245,158,11,.25)'; ctx.font=`bold ${W*.016}px 'Courier New'`;
+    ctx.fillText('WORK ZONE', W*.13+shake.x, H*.1+shake.y-4);
+
+    /* ── 볼트/너트 (클로즈업, 위에서 내려다보는 시점) ── */
+    /* 큰 너트 #1 (목표 물체) */
+    const nut1 = { x: W*.42+shake.x, y: H*.44+shake.y };
+    hexShape(ctx, nut1.x, nut1.y, W*.085, '#7a8898', '#a0b0bc', W*.033);
+    /* 나사산 내부 */
+    ctx.strokeStyle='rgba(60,70,80,.8)'; ctx.lineWidth=.8;
+    [.5,.65,.8].forEach(r=>{ ctx.beginPath(); ctx.arc(nut1.x,nut1.y,W*.033*r,0,Math.PI*2); ctx.stroke(); });
+    /* 하이라이트 */
+    const hl1=ctx.createRadialGradient(nut1.x-W*.02,nut1.y-W*.02,1,nut1.x,nut1.y,W*.085);
+    hl1.addColorStop(0,'rgba(255,255,255,.18)'); hl1.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.beginPath();
+    for(let i=0;i<6;i++){const a=Math.PI/3*i-Math.PI/6;i===0?ctx.moveTo(nut1.x+W*.085*Math.cos(a),nut1.y+W*.085*Math.sin(a)):ctx.lineTo(nut1.x+W*.085*Math.cos(a),nut1.y+W*.085*Math.sin(a));}
+    ctx.closePath(); ctx.fillStyle=hl1; ctx.fill();
+
+    /* 볼트 #1 (육각 헤드, 가까이서 본 모습) */
+    const bolt1 = { x: W*.72+shake.x, y: H*.35+shake.y, ang: .4 };
+    ctx.save(); ctx.translate(bolt1.x,bolt1.y); ctx.rotate(bolt1.ang);
+    hexShape(ctx, 0, 0, W*.065, '#8090a4', '#aabbc8', 0);
+    /* 볼트 헤드 홈 (슬롯) */
+    ctx.strokeStyle='rgba(40,50,60,.9)'; ctx.lineWidth=W*.012;
+    ctx.beginPath(); ctx.moveTo(-W*.04,0); ctx.lineTo(W*.04,0); ctx.stroke();
+    /* 하이라이트 */
+    const hl2=ctx.createRadialGradient(-W*.015,-W*.015,1,0,0,W*.065);
+    hl2.addColorStop(0,'rgba(255,255,255,.2)'); hl2.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.beginPath();
+    for(let i=0;i<6;i++){const a=Math.PI/3*i;i===0?ctx.moveTo(W*.065*Math.cos(a),W*.065*Math.sin(a)):ctx.lineTo(W*.065*Math.cos(a),W*.065*Math.sin(a));}
+    ctx.closePath(); ctx.fillStyle=hl2; ctx.fill();
+    ctx.restore();
+
+    /* 너트 #2 (작은, 오른쪽 아래) */
+    const nut2 = { x: W*.68+shake.x, y: H*.65+shake.y };
+    hexShape(ctx, nut2.x, nut2.y, W*.055, '#6a7888', '#90a0ac', W*.022);
+
+    /* 볼트 #2 (왼쪽 아래) */
+    const bolt2 = { x: W*.24+shake.x, y: H*.68+shake.y, ang: -.6 };
+    ctx.save(); ctx.translate(bolt2.x,bolt2.y); ctx.rotate(bolt2.ang);
+    hexShape(ctx, 0, 0, W*.048, '#788898', '#a0b0be', 0);
+    ctx.strokeStyle='rgba(40,50,60,.9)'; ctx.lineWidth=W*.009;
+    ctx.beginPath(); ctx.moveTo(-W*.03,0); ctx.lineTo(W*.03,0); ctx.stroke();
+    ctx.restore();
+
+    /* ── YOLO 바운딩 박스 ── */
+    const yoloBoxes = [
+        { obj: nut1,  hw: W*.10, hh: H*.13, label: '너트', conf: .93, col: '#10b981', dist: 48.2 },
+        { obj: bolt1, hw: W*.08, hh: H*.11, label: '볼트', conf: .91, col: '#f59e0b', dist: 62.7 },
+        { obj: nut2,  hw: W*.07, hh: H*.10, label: '너트', conf: .87, col: '#10b981', dist: 95.1 },
+        { obj: bolt2, hw: W*.06, hh: H*.09, label: '볼트', conf: .85, col: '#f59e0b', dist:112.4 },
+    ];
+    ctx.font=`bold ${W*.02}px 'Courier New'`;
+    yoloBoxes.forEach(b=>{
+        const bx=b.obj.x-b.hw, by_=b.obj.y-b.hh, bw=b.hw*2, bh=b.hh*2;
+        ctx.shadowBlur=6; ctx.shadowColor=b.col; ctx.strokeStyle=b.col; ctx.lineWidth=1.8;
+        ctx.strokeRect(bx,by_,bw,bh); ctx.shadowBlur=0;
+        /* 모서리 강조 */
+        const cs=W*.018; ctx.lineWidth=3;
+        [[bx,by_],[bx+bw,by_],[bx,by_+bh],[bx+bw,by_+bh]].forEach(([x,y],i)=>{
+            ctx.beginPath();
+            ctx.moveTo(x+(i%2===0?cs:-cs),y); ctx.lineTo(x,y); ctx.lineTo(x,y+(i<2?cs:-cs)); ctx.stroke();
+        });
+        /* 라벨 */
+        const lbl=`${b.label}  ${(b.conf*100).toFixed(0)}%`;
+        const lw=ctx.measureText(lbl).width+10;
+        ctx.fillStyle=b.col; ctx.fillRect(bx,by_-H*.036,lw,H*.036);
+        ctx.fillStyle='#000'; ctx.fillText(lbl,bx+4,by_-H*.009);
+        /* 거리 */
+        ctx.fillStyle=b.col; ctx.font=`${W*.016}px 'Courier New'`;
+        ctx.fillText(`d: ${b.dist} mm`,bx+2,by_+bh+H*.025);
+        ctx.font=`bold ${W*.02}px 'Courier New'`;
+    });
+
+    /* ── 그리퍼 핑거 (화면 하단 좌우) ── */
+    ctx.fillStyle='#1a2030';
+    /* 왼쪽 핑거 */
+    ctx.beginPath(); ctx.moveTo(0,H*.82); ctx.lineTo(W*.16,H*.88); ctx.lineTo(W*.16,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#3a5070'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(0,H*.82); ctx.lineTo(W*.16,H*.88); ctx.lineTo(W*.16,H); ctx.stroke();
+    /* 오른쪽 핑거 */
+    ctx.fillStyle='#1a2030';
+    ctx.beginPath(); ctx.moveTo(W,H*.82); ctx.lineTo(W*.84,H*.88); ctx.lineTo(W*.84,H); ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#3a5070'; ctx.beginPath(); ctx.moveTo(W,H*.82); ctx.lineTo(W*.84,H*.88); ctx.lineTo(W*.84,H); ctx.stroke();
+    /* 핑거 반짝임 */
+    ctx.strokeStyle='rgba(0,212,255,.2)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(W*.03,H*.84); ctx.lineTo(W*.14,H*.89); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W*.97,H*.84); ctx.lineTo(W*.86,H*.89); ctx.stroke();
+
+    /* ── 중앙 조준 레티클 ── */
+    const rx=W*.5, ry=H*.5;
+    ctx.strokeStyle='rgba(74,222,128,.7)'; ctx.lineWidth=1.5;
+    /* 외부 원 */
+    ctx.beginPath(); ctx.arc(rx,ry,W*.04,0,Math.PI*2); ctx.stroke();
+    /* 십자선 */
+    ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(rx-W*.07,ry); ctx.lineTo(rx-W*.05,ry);
+    ctx.moveTo(rx+W*.05,ry); ctx.lineTo(rx+W*.07,ry);
+    ctx.moveTo(rx,ry-W*.07); ctx.lineTo(rx,ry-W*.05);
+    ctx.moveTo(rx,ry+W*.05); ctx.lineTo(rx,ry+W*.07);
+    ctx.stroke(); ctx.setLineDash([]);
+    /* 내부 점 */
+    ctx.shadowBlur=8; ctx.shadowColor='#4ade80';
+    ctx.beginPath(); ctx.arc(rx,ry,3,0,Math.PI*2); ctx.fillStyle='#4ade80'; ctx.fill(); ctx.shadowBlur=0;
+
+    /* ── 비네팅 (렌즈 효과) ── */
+    const vig=ctx.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,H*.75);
+    vig.addColorStop(0,'rgba(0,0,0,0)'); vig.addColorStop(1,'rgba(0,0,0,.5)');
+    ctx.fillStyle=vig; ctx.fillRect(0,0,W,H);
+
+    /* ── HUD ── */
+    const fps3=29+Math.floor(Math.random()*4);
+    const dist=(48.2+Math.sin(robotT)*1.8).toFixed(1);
+    ctx.textAlign='right';
+    ctx.fillStyle='rgba(74,222,128,.85)'; ctx.font=`bold ${W*.024}px 'Courier New'`;
+    ctx.fillText('GRIPPER CAM', W-8, 18);
+    ctx.fillStyle='rgba(100,180,150,.55)'; ctx.font=`${W*.017}px 'Courier New'`;
+    ctx.fillText(`${fps3} FPS  |  EYE-IN-HAND`, W-8, 34);
+    ctx.textAlign='left';
+    /* 거리 센서값 */
+    ctx.fillStyle='rgba(0,212,255,.8)'; ctx.font=`bold ${W*.022}px 'Courier New'`;
+    ctx.fillText(`DIST: ${dist} mm`, 10, 22);
+    ctx.fillStyle='rgba(100,160,200,.55)'; ctx.font=`${W*.016}px 'Courier New'`;
+    ctx.fillText('DEPTH SENSOR', 10, 37);
+    /* 타임스탬프 */
+    ctx.fillStyle='rgba(255,255,255,.2)'; ctx.font=`${W*.016}px 'Courier New'`;
+    ctx.fillText(new Date().toTimeString().slice(0,8), W*.42, H-8);
+    /* 포지션 보정 상태 */
+    const dx=(Math.sin(robotT)*2.1).toFixed(1), dy=(Math.cos(robotT*.8)*1.8).toFixed(1);
+    ctx.fillStyle='rgba(245,158,11,.75)'; ctx.font=`${W*.018}px 'Courier New'`;
+    ctx.fillText(`CORR  ΔX:${dx>0?'+':''}${dx}  ΔY:${dy>0?'+':''}${dy} cm`, W*.28, H-8);
+}
+
+// ─────────────────────────────────────────────
+//  Camera management
+// ─────────────────────────────────────────────
+let camStreams = { human: null, robot: null };
+
+async function initCamList() {
+    try {
+        // 권한 요청 후 즉시 스트림 중지 (카메라 점유 해제)
+        const perm = await navigator.mediaDevices.getUserMedia({ video: true });
+        perm.getTracks().forEach(t => t.stop());
+    } catch(e) { /* 권한 거부 or 카메라 없음 */ }
+
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d => d.kind === 'videoinput');
+
+    ['selHuman','selRobot'].forEach(id => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = '<option value="">-- 선택 안 함 --</option>';
+        cams.forEach((cam, i) => {
+            const opt = document.createElement('option');
+            opt.value = cam.deviceId;
+            opt.textContent = cam.label || `카메라 ${i+1}`;
+            sel.appendChild(opt);
+        });
+    });
+
+    // 카메라 자동 선택
+    if (cams.length === 1) {
+        document.getElementById('selHuman').value = cams[0].deviceId;
+        document.getElementById('selRobot').value = cams[0].deviceId;
+    } else if (cams.length >= 2) {
+        document.getElementById('selHuman').value = cams[0].deviceId;
+        document.getElementById('selRobot').value = cams[1].deviceId;
+    }
+
+    document.getElementById('camStatus').textContent =
+        cams.length > 0 ? `카메라 ${cams.length}개 감지됨` : '카메라 없음';
+}
+
+async function connectCams() {
+    const humanId = document.getElementById('selHuman').value;
+    const robotId = document.getElementById('selRobot').value;
+
+    // 기존 스트림 정리
+    Object.values(camStreams).forEach(s => s && s.getTracks().forEach(t => t.stop()));
+    camStreams = { human: null, robot: null };
+
+    async function startStream(deviceId, videoEl, offMsgIds) {
+        if (!deviceId) return null;
+        try {
+            // exact 대신 ideal 사용 → 엄격하지 않아 연결 실패 줄어듦
+            const constraint = { video: { deviceId: { ideal: deviceId } } };
+            const stream = await navigator.mediaDevices.getUserMedia(constraint);
+            videoEl.srcObject = stream;
+            videoEl.style.display = 'block';
+            offMsgIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            return stream;
+        } catch(e) {
+            addLog('카메라 연결 실패: ' + e.message, 'err');
+            return null;
+        }
+    }
+
+    camStreams.human = await startStream(
+        humanId,
+        document.getElementById('videoHuman'),
+        ['offMsgHuman']
+    );
+
+    // 로봇 카메라는 teaching/running 두 video 요소에 동일 스트림 연결
+    const robotStream = await startStream(
+        robotId,
+        document.getElementById('videoRobotTeach'),
+        ['offMsgRobotT']
+    );
+    if (robotStream) {
+        const videoRR = document.getElementById('videoRobotRun');
+        videoRR.srcObject = robotStream;
+        videoRR.style.display = 'block';
+        const offR = document.getElementById('offMsgRobotR');
+        if (offR) offR.style.display = 'none';
+    }
+    camStreams.robot = robotStream;
+
+    const selected  = [humanId, robotId].filter(Boolean).length;
+    const connected = [humanId && camStreams.human, robotId && camStreams.robot].filter(Boolean).length;
+
+    let statusMsg;
+    if (selected === 0)          statusMsg = '카메라 선택 안 됨';
+    else if (connected === 0)    statusMsg = '연결 실패 — 브라우저 카메라 권한 확인';
+    else if (connected < selected) statusMsg = `${connected}/${selected}개 연결됨 (일부 실패)`;
+    else                          statusMsg = `${connected}개 카메라 스트리밍 중 ●`;
+
+    document.getElementById('camStatus').textContent = statusMsg;
+    document.getElementById('camStatus').style.color =
+        connected > 0 ? '#4ade80' : '#ef4444';
+
+    if (connected > 0) addLog(`카메라 ${connected}개 연결됨`, 'ok');
+    else if (selected > 0) addLog('카메라 연결 실패 — 권한/사용 중 확인', 'err');
+}
+
+// 페이지 로드 시 카메라 목록 자동 로드
+window.addEventListener('load', () => { initCamList().catch(console.error); });
+
+// ─────────────────────────────────────────────
+//  State
+// ─────────────────────────────────────────────
+let isTeaching = true;
+let recSec = 0;
+let recTimer = null;
+let wpCount = 0;
+
+const joints = [
+    { id:'J1', human:45, robot:43 },
+    { id:'J2', human:90, robot:88 },
+    { id:'J3', human:30, robot:31 },
+    { id:'J4', human:60, robot:58 },
+    { id:'J5', human:15, robot:16 },
+    { id:'J6', human:75, robot:74 },
+];
+
+const motors = [
+    { id:'J1', temp:41, load:72 },
+    { id:'J2', temp:38, load:31 },
+    { id:'J3', temp:43, load:89 },
+    { id:'J4', temp:36, load:45 },
+    { id:'J5', temp:39, load:60 },
+    { id:'J6', temp:37, load:28 },
+];
+
+const wpDef = [
+    {n:1,state:'done'},{n:2,state:'done'},{n:3,state:'done'},
+    {n:4,state:'current'},
+    {n:'CP',state:'check'},
+    {n:5,state:'pending'},{n:6,state:'pending'},{n:7,state:'pending'},
+];
+
+// ─────────────────────────────────────────────
+//  Clock
+// ─────────────────────────────────────────────
+function updateClock() {
+    document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8);
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ─────────────────────────────────────────────
+//  REC timer
+// ─────────────────────────────────────────────
+function startRec() {
+    recSec = 0;
+    clearInterval(recTimer);
+    recTimer = setInterval(() => {
+        recSec++;
+        const h = String(Math.floor(recSec/3600)).padStart(2,'0');
+        const m = String(Math.floor(recSec%3600/60)).padStart(2,'0');
+        const s = String(recSec%60).padStart(2,'0');
+        document.getElementById('recTimer').textContent = `${h}:${m}:${s}`;
+    }, 1000);
+}
+startRec();
+
+// ─────────────────────────────────────────────
+//  Mode toggle
+// ─────────────────────────────────────────────
+function toggleMode() {
+    isTeaching = !isTeaching;
+
+    document.getElementById('modeBadge').textContent = isTeaching ? '● TEACHING MODE' : '● RUNNING MODE';
+    document.getElementById('modeBadge').className = 'mode-badge ' + (isTeaching ? 'mode-teaching' : 'mode-running');
+
+    document.getElementById('teachingLayout').style.display = isTeaching ? 'flex' : 'none';
+    document.getElementById('runningLayout').style.display  = isTeaching ? 'none' : 'flex';
+
+    document.getElementById('cardAngles').style.display   = isTeaching ? 'block' : 'none';
+    document.getElementById('cardTeachWP').style.display  = isTeaching ? 'block' : 'none';
+    document.getElementById('cardYolo').style.display     = isTeaching ? 'none'  : 'block';
+    document.getElementById('cardRunWP').style.display    = isTeaching ? 'none'  : 'block';
+
+    if (isTeaching) startRec();
+    addLog('모드 전환: ' + (isTeaching ? 'TEACHING' : 'RUNNING'), 'info');
+}
+
+// ─────────────────────────────────────────────
+//  E-STOP
+// ─────────────────────────────────────────────
+function eStop() {
+    addLog('⚠ E-STOP 발동 — 전체 모터 정지', 'err');
+}
+
+// ─────────────────────────────────────────────
+//  Joint bars
+// ─────────────────────────────────────────────
+function renderJoints() {
+    document.getElementById('jointBars').innerHTML = joints.map(j => {
+        const hp = (j.human / 180 * 100).toFixed(1);
+        const rp = (j.robot / 180 * 100).toFixed(1);
+        const diff = Math.abs(j.human - j.robot).toFixed(1);
+        const diffColor = diff > 10 ? '#ef4444' : '#475569';
+        return `
+        <div class="joint-row">
+            <span class="joint-label">${j.id}</span>
+            <div style="flex:1;display:flex;flex-direction:column;gap:2px;">
+                <div class="bar-bg"><div class="bar-fill bar-human" style="width:${hp}%"></div></div>
+                <div class="bar-bg"><div class="bar-fill bar-robot" style="width:${rp}%"></div></div>
+            </div>
+            <span class="joint-val">${j.human.toFixed(1)}°</span>
+            <span style="font-size:9px;width:28px;text-align:right;color:${diffColor};">Δ${diff}°</span>
+        </div>`;
+    }).join('');
+}
+
+// ─────────────────────────────────────────────
+//  Motor status
+// ─────────────────────────────────────────────
+function renderMotors() {
+    document.getElementById('motorRows').innerHTML = motors.map(m => {
+        const tp = Math.min(m.temp / 80 * 100, 100);
+        const lp = Math.min(m.load, 100);
+        const tw = m.temp > 60;
+        const lw = m.load > 80;
+        const idColor = (tw || lw) ? '#ef4444' : '#64748b';
+        return `
+        <div class="motor-row">
+            <span class="motor-id" style="color:${idColor};">${m.id}</span>
+            <div class="motor-metrics">
+                <div class="metric-row">
+                    <span class="metric-icon" style="color:#f59e0b;">T</span>
+                    <div class="metric-bg">
+                        <div class="metric-fill bar-temp" style="width:${tp}%;background:${tw?'#ef4444':'#f59e0b'};"></div>
+                    </div>
+                    <span class="metric-val" style="color:${tw?'#ef4444':'#475569'};">${m.temp.toFixed(1)}°C</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-icon" style="color:#60a5fa;">L</span>
+                    <div class="metric-bg">
+                        <div class="metric-fill" style="width:${lp}%;background:${lw?'#ef4444':'#60a5fa'};"></div>
+                    </div>
+                    <span class="metric-val" style="color:${lw?'#ef4444':'#475569'};">${m.load.toFixed(0)}%</span>
+                </div>
+            </div>
+            <span style="font-size:12px;margin-left:4px;width:14px;">${(lw||tw)?'⚠':''}</span>
+        </div>`;
+    }).join('');
+}
+
+// ─────────────────────────────────────────────
+//  Waypoint track (running)
+// ─────────────────────────────────────────────
+function renderWPTrack() {
+    document.getElementById('wpTrack').innerHTML = wpDef.map((wp, i) => {
+        const cls = { done:'wp-done', current:'wp-current', check:'wp-check', pending:'wp-pending' }[wp.state];
+        const line = i < wpDef.length - 1
+            ? `<div class="wp-line ${wp.state==='done'?'done':''}"></div>` : '';
+        return `
+        <div class="wp-node">
+            <div class="wp-circle ${cls}">${wp.n}</div>
+            <div class="wp-tag">${wp.state==='check'?'CHECK':''}</div>
+        </div>${line}`;
+    }).join('');
+}
+renderWPTrack();
+
+// ─────────────────────────────────────────────
+//  Teaching waypoints
+// ─────────────────────────────────────────────
+function renderWPChips() {
+    const el = document.getElementById('wpChips');
+    if (wpCount === 0) {
+        el.innerHTML = '<span style="color:#1e3a5f;">웨이포인트 없음</span>';
+        return;
+    }
+    el.innerHTML = Array.from({length:wpCount}, (_,i) =>
+        `<span style="padding:2px 7px;background:#0a0e17;border:1px solid #1e3a5f;border-radius:2px;color:#475569;">WP${i+1}</span>`
+    ).join('');
+}
+renderWPChips();
+
+function addWP() {
+    wpCount++;
+    renderWPChips();
+    addLog(`WP${wpCount} 저장됨`, 'ok');
+}
+
+function clearWPs() {
+    wpCount = 0;
+    renderWPChips();
+    addLog('웨이포인트 초기화', 'warn');
+}
+
+// ─────────────────────────────────────────────
+//  Event log
+// ─────────────────────────────────────────────
+function addLog(msg, type='def') {
+    const el = document.getElementById('eventLog');
+    const t = new Date().toTimeString().slice(0,8);
+    const row = document.createElement('div');
+    row.className = 'log-entry';
+    row.innerHTML = `<span class="log-time">${t}</span><span class="log-${type}">${msg}</span>`;
+    el.appendChild(row);
+    el.scrollTop = el.scrollHeight;
+}
+
+// Init logs
+addLog('시스템 초기화 완료', 'ok');
+addLog('카메라 연결됨', 'ok');
+addLog('MediaPipe 로드 완료', 'info');
+addLog('STS3215 ×6 연결됨', 'ok');
+
+// skCanvas는 canvasHuman 뒤에 숨겨진 상태로 유지 (카메라 연결 시 활용 여지)
+
+
+// ─────────────────────────────────────────────
+//  Simulation: randomise sensor data
+// ─────────────────────────────────────────────
+function noise(v, range, min, max) {
+    return Math.max(min, Math.min(max, v + (Math.random()-.5)*range));
+}
+
+function simulateData() {
+    // joints
+    joints.forEach(j => {
+        j.human = noise(j.human, 6, 0, 180);
+        j.robot = noise(j.human, 3, 0, 180);
+    });
+
+    // motors
+    motors.forEach(m => {
+        m.temp = noise(m.temp, .8, 28, 80);
+        m.load = noise(m.load, 5, 0, 100);
+    });
+
+    // YOLO conf
+    const conf = 85 + Math.floor(Math.random()*13);
+    document.getElementById('yoloConfText').textContent = `신뢰도 ${conf}%`;
+    document.getElementById('yoloConfBar').style.width  = conf + '%';
+
+    // YOLO bbox jitter
+    const bbox = document.getElementById('yoloBbox');
+    const bx = 38 + (Math.random()-.5)*2;
+    const by = 40 + (Math.random()-.5)*2;
+    bbox.style.left = bx + '%';
+    bbox.style.top  = by + '%';
+    document.getElementById('yoloBboxLabel').textContent = `볼트 ${conf}%`;
+
+    // correction values
+    const dx = ((Math.random()-.5)*6).toFixed(1);
+    const dy = ((Math.random()-.5)*6).toFixed(1);
+    document.getElementById('corrVal').textContent =
+        `ΔX ${dx>0?'+':''}${dx}cm  ΔY ${dy>0?'+':''}${dy}cm`;
+
+    renderJoints();
+    renderMotors();
+}
+
+// ─────────────────────────────────────────────
+//  Periodic log simulation
+// ─────────────────────────────────────────────
+const logPool = [
+    ['WP5 체크포인트 진입',       'info'],
+    ['볼트 감지 — 신뢰도 91%',    'ok'  ],
+    ['위치 보정 ΔX+1.8cm 적용',   'warn'],
+    ['파지 완료',                  'ok'  ],
+    ['WP6 복귀 이동',             'info'],
+    ['J3 부하 87% — 주의',        'warn'],
+    ['너트 감지 — 신뢰도 88%',    'ok'  ],
+    ['WP7 도달',                  'info'],
+];
+let logIdx = 0;
+setInterval(() => {
+    const [msg, type] = logPool[logIdx++ % logPool.length];
+    addLog(msg, type);
+}, 3500);
+
+// ─────────────────────────────────────────────
+//  Main loop
+// ─────────────────────────────────────────────
+function loop() {
+    robotT += 0.008;
+    drawHumanCanvas();
+    drawRobotCanvas('canvasRobotT', false);
+    drawRobotCanvas('canvasRobotR', true);
+    simulateData();
+}
+setInterval(loop, 120);
+
+// Initial render
+renderJoints();
+renderMotors();
+</script>
+</body>
+</html>

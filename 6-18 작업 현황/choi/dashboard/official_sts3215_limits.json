@@ -1,0 +1,56 @@
+{
+  "schema": "sambo_sts3215_official_limits_v1",
+  "model": "STS3215 / ST3215 serial bus servo",
+  "purpose": "Manufacturer-level guardrails used with robot-specific normal baseline data.",
+  "sourceNotes": [
+    "Operating temperature -20 to 60 C is treated as the recommended normal range.",
+    "Maximum temperature register default is treated as 70 C; verify each servo EEPROM for final calibration.",
+    "Current feedback unit is approximately 6.5 mA per LSB.",
+    "Load feedback is an estimated duty/load percentage, so temperature and current are weighted higher.",
+    "Protection Time EEPROM value is not treated as a confirmed dashboard constant; read the actual servo register before presenting it as an official value."
+  ],
+  "temperature": {
+    "recommendedMinC": -20,
+    "recommendedMaxC": 60,
+    "warningC": 60,
+    "softReduceC": 65,
+    "protectionC": 70
+  },
+  "current": {
+    "idleMa": 30,
+    "noLoadMa": 200,
+    "warningMa": 2000,
+    "stallMa": 2700,
+    "unitMaPerLsb": 6.5
+  },
+  "load": {
+    "recommendedMaxPercent": 60,
+    "overloadPercent": 80
+  },
+  "protection": {
+    "maxTemperatureRegister": 13,
+    "protectionCurrentRegister": 28,
+    "protectionTorqueRegister": 34,
+    "protectionTimeRegister": 35,
+    "overloadTorqueRegister": 36,
+    "defaultMaxTemperatureC": 70,
+    "defaultProtectionCurrentLsb": 500,
+    "defaultProtectionCurrentMa": 3250,
+    "defaultOverloadTorquePercent": 80,
+    "defaultProtectionTorquePercent": 20,
+    "defaultProtectionTimeUnitMs": 10,
+    "defaultProtectionTimeValue": 200,
+    "eepromProtectionTimeMs": null,
+    "eepromProtectionTimeRegisterNeedsRead": true,
+    "dashboardOverloadSustainMs": 200,
+    "dashboardOverloadSustainNote": "Dashboard conservative rule: if high load is sustained for 200 ms, show a check/cooling warning. This is not a confirmed EEPROM default."
+  },
+  "dashboardPolicy": {
+    "safetyFirst": true,
+    "officialUsageIsPrimary": true,
+    "fatigueAdjustedUsageIsReference": true,
+    "temperatureAndCurrentPriority": "high",
+    "loadPriority": "medium",
+    "protectionTimePolicy": "do_not_claim_eeprom_default_until_register_read"
+  }
+}

@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+.venv/
+sambo_vision_state.json

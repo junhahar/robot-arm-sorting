@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robot Arm Control System</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Oxanium:wght@300;400;500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#080c14;--bg2:#0d1220;--card:#101828;--border:#1a2844;
+--cyan:#00d4ff;--green:#4ade80;--amber:#f59e0b;--red:#ef4444;
+--txt:#c8d6e5;--txt2:#5a6d84;--txt3:#2d3d52;
+--glow:0 0 12px rgba(0,212,255,.12);
+}
+body{background:var(--bg);color:var(--txt);font-family:'JetBrains Mono',monospace;height:100vh;overflow:hidden}
+
+/* ── Header ── */
+.hdr{display:flex;align-items:center;justify-content:space-between;height:42px;padding:0 14px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.hdr-left{display:flex;align-items:center;gap:14px}
+.hdr-title{font-family:'Oxanium',sans-serif;font-size:15px;font-weight:700;color:var(--cyan);letter-spacing:2.5px;text-transform:uppercase}
+.hdr-sub{font-size:10px;color:var(--txt3);letter-spacing:1px}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.mode-badge{padding:3px 12px;border-radius:3px;font-size:10px;font-weight:600;letter-spacing:1.5px}
+.mode-teach{background:rgba(74,222,128,.08);color:var(--green);border:1px solid rgba(74,222,128,.3)}
+.mode-run{background:rgba(0,212,255,.08);color:var(--cyan);border:1px solid rgba(0,212,255,.3)}
+.mode-btn{padding:4px 12px;background:var(--card);color:var(--txt2);border:1px solid var(--border);border-radius:3px;cursor:pointer;font-family:inherit;font-size:9px;letter-spacing:1px;transition:.2s}
+.mode-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.estop{padding:4px 14px;background:#3b0f0f;color:#fca5a5;border:2px solid var(--red);border-radius:3px;cursor:pointer;font-family:'Oxanium',sans-serif;font-size:12px;font-weight:700;letter-spacing:3px;transition:.1s}
+.estop:hover{background:var(--red);color:#fff}
+.estop:active{transform:scale(.96)}
+.clock{font-size:10px;color:var(--txt3);letter-spacing:1px}
+.ws-dot{width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red);transition:.3s}
+.ws-dot.on{background:var(--green);box-shadow:0 0 6px var(--green)}
+
+/* ── Layout ── */
+.main{display:grid;grid-template-columns:1fr 260px 280px;grid-template-rows:60% 40%;height:calc(100vh - 42px);gap:3px;padding:3px}
+
+/* ── 3D View ── */
+.view3d{grid-column:1;grid-row:1;background:var(--bg2);border:1px solid var(--border);border-radius:4px;position:relative;overflow:hidden}
+.view3d canvas{display:block}
+.view-label{position:absolute;top:6px;left:8px;font-size:9px;color:var(--txt3);letter-spacing:1.5px;background:rgba(0,0,0,.5);padding:2px 8px;border-radius:2px;z-index:5;text-transform:uppercase}
+.twin-badge{position:absolute;top:6px;right:8px;font-family:'Oxanium',sans-serif;font-size:10px;font-weight:700;color:var(--cyan);letter-spacing:2px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.3);padding:2px 10px;border-radius:3px;z-index:5;animation:twinPulse 2s infinite}
+@keyframes twinPulse{0%,100%{box-shadow:0 0 4px rgba(0,212,255,.15)}50%{box-shadow:0 0 12px rgba(0,212,255,.35)}}
+.src-badge{position:absolute;top:28px;right:8px;font-size:8px;color:var(--txt3);letter-spacing:1px;background:rgba(0,0,0,.5);padding:2px 8px;border-radius:2px;z-index:5}
+
+/* ── Top-down ── */
+.topdown{grid-column:1;grid-row:2;background:var(--bg2);border:1px solid var(--border);border-radius:4px;position:relative;overflow:hidden}
+.topdown canvas{width:100%;height:100%}
+
+/* ── Cameras ── */
+.cam-col{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;gap:3px}
+.cam-box{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:4px;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:0}
+.cam-box video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1}
+.cam-placeholder{color:var(--txt3);font-size:11px;text-align:center;z-index:0}
+.cam-ctrl{position:absolute;bottom:0;left:0;right:0;padding:4px 6px;background:rgba(8,12,20,.85);z-index:10;display:flex;gap:4px;align-items:center}
+.cam-sel{flex:1;background:var(--bg);color:var(--txt2);border:1px solid var(--border);border-radius:2px;font-family:inherit;font-size:9px;padding:2px 4px}
+.cam-btn{padding:2px 8px;background:var(--card);color:var(--cyan);border:1px solid var(--border);border-radius:2px;cursor:pointer;font-family:inherit;font-size:9px}
+.cam-btn:hover{border-color:var(--cyan)}
+
+/* ── Right Panel ── */
+.rpanel{grid-column:3;grid-row:1/3;display:flex;flex-direction:column;gap:3px;overflow-y:auto}
+.card{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:8px 10px}
+.card-t{font-family:'Oxanium',sans-serif;font-size:9px;color:var(--txt3);letter-spacing:2px;margin-bottom:6px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.card-t::before{content:'';width:3px;height:10px;background:var(--cyan);border-radius:1px}
+
+/* Joint angle bars */
+.jrow{display:flex;align-items:center;gap:5px;margin-bottom:4px}
+.jrow .jl{width:20px;font-size:10px;font-weight:600;color:var(--cyan)}
+.jrow .bar-wrap{flex:1;height:5px;background:var(--bg);border-radius:2px;overflow:hidden;position:relative}
+.jrow .bar-fill{height:100%;border-radius:2px;transition:width .15s}
+.jrow .jv{width:42px;text-align:right;font-size:10px;color:var(--txt2)}
+.bar-green{background:linear-gradient(90deg,#1a6b3a,var(--green))}
+.bar-cyan{background:linear-gradient(90deg,#0a4a6a,var(--cyan))}
+.bar-amber{background:linear-gradient(90deg,#5a3a0a,var(--amber))}
+.bar-red{background:linear-gradient(90deg,#5a0a0a,var(--red))}
+
+/* MPU grid */
+.mpu-grid{display:grid;grid-template-columns:28px 1fr 1fr 1fr;gap:2px 4px;font-size:9px}
+.mpu-grid .mpu-hdr{color:var(--txt3);text-align:center;font-weight:500}
+.mpu-grid .mpu-id{color:var(--cyan);font-weight:600;padding:2px 0}
+.mpu-grid .mpu-v{color:var(--txt2);text-align:center;padding:2px 4px;background:var(--bg);border-radius:2px;font-variant-numeric:tabular-nums}
+
+/* Gripper */
+.grip-row{display:flex;align-items:center;gap:8px}
+.grip-btn{flex:1;padding:6px;border:none;border-radius:3px;cursor:pointer;font-family:inherit;font-size:11px;font-weight:600;transition:.2s;letter-spacing:1px}
+.grip-open{background:rgba(74,222,128,.1);color:var(--green);border:1px solid rgba(74,222,128,.3)}
+.grip-close{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.grip-btn:hover{filter:brightness(1.3)}
+.grip-status{font-size:10px;color:var(--txt2)}
+
+/* Waypoint track */
+.wp-track{display:flex;align-items:center;overflow-x:auto;padding:4px 0;gap:0}
+.wp-node{display:flex;flex-direction:column;align-items:center;gap:2px}
+.wp-c{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;border:2px solid}
+.wp-done{background:rgba(74,222,128,.08);border-color:var(--green);color:var(--green)}
+.wp-cur{background:rgba(0,212,255,.08);border-color:var(--cyan);color:var(--cyan);animation:wpulse 1.5s infinite}
+@keyframes wpulse{0%,100%{box-shadow:0 0 0 0 rgba(0,212,255,.3)}50%{box-shadow:0 0 0 4px rgba(0,212,255,0)}}
+.wp-cp{background:rgba(245,158,11,.08);border-color:var(--amber);color:var(--amber)}
+.wp-pend{background:transparent;border-color:var(--txt3);color:var(--txt3)}
+.wp-line{width:10px;height:2px;background:var(--txt3)}
+.wp-line.done{background:var(--green)}
+.wp-tag{font-size:7px;color:var(--txt3);height:9px}
+
+/* Motor status */
+.mrow{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.mrow .mid{font-size:9px;width:18px;color:var(--txt2);font-weight:500}
+.mrow .mcols{flex:1;display:flex;flex-direction:column;gap:2px}
+.mrow .mcol{display:flex;align-items:center;gap:4px}
+.mrow .micon{font-size:8px;width:10px}
+.mrow .mbar{flex:1;height:4px;background:var(--bg);border-radius:2px;overflow:hidden}
+.mrow .mfill{height:100%;border-radius:2px;transition:width .4s}
+.mrow .mval{font-size:8px;color:var(--txt3);width:32px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* Event log */
+.elog{font-size:9px;max-height:140px;overflow-y:auto;display:flex;flex-direction:column}
+.elog-row{display:flex;gap:6px;padding:2px 0;border-bottom:1px solid rgba(26,40,68,.3)}
+.elog-t{color:var(--txt3);min-width:46px;font-variant-numeric:tabular-nums}
+.elog-ok{color:var(--green)}.elog-warn{color:var(--amber)}.elog-info{color:var(--cyan)}.elog-err{color:var(--red)}.elog-def{color:var(--txt2)}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- ════ HEADER ════ -->
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-title">&#9632; Robot Arm Control</div>
+    <div class="hdr-sub">Cults3D MK1 &middot; STS3215 &times;5 &middot; MPU Teaching</div>
+  </div>
+  <div class="hdr-right">
+    <span class="clock" id="clock"></span>
+    <div class="ws-dot" id="wsDot"></div>
+    <span style="font-size:9px;color:var(--txt3)" id="wsLabel">WS 대기</span>
+    <div class="mode-badge mode-teach" id="modeBadge">TEACHING</div>
+    <button class="mode-btn" onclick="toggleMode()">MODE</button>
+    <button class="estop" onclick="eStop()">E-STOP</button>
+  </div>
+</div>
+
+<!-- ════ MAIN ════ -->
+<div class="main">
+
+  <!-- 3D View -->
+  <div class="view3d" id="view3d">
+    <span class="view-label" id="lbl3d">3D Simulation</span>
+    <span class="twin-badge" id="twinBadge" style="display:none">DIGITAL TWIN</span>
+    <span class="src-badge" id="srcBadge" style="display:none">SRC: —</span>
+  </div>
+
+  <!-- Top-down -->
+  <div class="topdown">
+    <span class="view-label" id="lblTd">Top-Down View</span>
+    <canvas id="tdCanvas"></canvas>
+  </div>
+
+  <!-- Camera column (teaching only) -->
+  <div class="cam-col" id="camCol">
+    <div class="cam-box" id="camBox1">
+      <span class="view-label">CAM 1 &mdash; Human Arm</span>
+      <div class="cam-placeholder" id="ph1">카메라 미연결<br><span style="font-size:9px">아래에서 선택</span></div>
+      <video id="vid1" autoplay playsinline muted style="display:none"></video>
+      <div class="cam-ctrl">
+        <select class="cam-sel" id="sel1"></select>
+        <button class="cam-btn" onclick="startCam(1)">▶</button>
+      </div>
+    </div>
+    <div class="cam-box" id="camBox2">
+      <span class="view-label">CAM 2 &mdash; Workspace</span>
+      <div class="cam-placeholder" id="ph2">카메라 미연결<br><span style="font-size:9px">아래에서 선택</span></div>
+      <video id="vid2" autoplay playsinline muted style="display:none"></video>
+      <div class="cam-ctrl">
+        <select class="cam-sel" id="sel2"></select>
+        <button class="cam-btn" onclick="startCam(2)">▶</button>
+      </div>
+    </div>
+    <!-- YOLO cam (running mode only) -->
+    <div class="cam-box" id="yoloCamBox" style="display:none;aspect-ratio:1;flex:none;width:100%">
+      <span class="view-label">Gripper Cam &mdash; YOLO Detection</span>
+      <canvas id="yoloCanvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="rpanel">
+
+    <!-- Joint Angles -->
+    <div class="card">
+      <div class="card-t">Joint Angles</div>
+      <div id="jointBars"></div>
+    </div>
+
+    <!-- MPU Raw -->
+    <div class="card">
+      <div class="card-t">MPU Sensor Data</div>
+      <div class="mpu-grid">
+        <div></div><div class="mpu-hdr">Yaw</div><div class="mpu-hdr">Pitch</div><div class="mpu-hdr">Roll</div>
+        <div class="mpu-id">#1</div><div class="mpu-v" id="m0">0.0</div><div class="mpu-v" id="m1">0.0</div><div class="mpu-v" id="m2">0.0</div>
+        <div class="mpu-id">#2</div><div class="mpu-v" id="m3">0.0</div><div class="mpu-v" id="m4">0.0</div><div class="mpu-v" id="m5">0.0</div>
+        <div class="mpu-id">#3</div><div class="mpu-v" id="m6">0.0</div><div class="mpu-v" id="m7">0.0</div><div class="mpu-v" id="m8">0.0</div>
+      </div>
+    </div>
+
+    <!-- Gripper -->
+    <div class="card">
+      <div class="card-t">Gripper</div>
+      <div class="grip-row">
+        <button class="grip-btn grip-open" id="gripBtn" onclick="toggleGrip()">OPEN</button>
+        <span class="grip-status" id="gripSt">SG90 &middot; 90&deg;</span>
+      </div>
+    </div>
+
+    <!-- YOLO Result (running only) -->
+    <div class="card" id="cardYolo" style="display:none">
+      <div class="card-t">YOLO Detection</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="font-size:18px;font-weight:700;color:var(--green)" id="yoloClass">—</span>
+        <div style="flex:1">
+          <div style="height:5px;background:var(--bg);border-radius:2px;overflow:hidden"><div class="bar-fill bar-green" id="yoloConfBar" style="width:0%"></div></div>
+          <div style="font-size:8px;color:var(--txt3);margin-top:2px" id="yoloConfTxt">대기중</div>
+        </div>
+      </div>
+      <div style="font-size:9px;color:var(--txt2)">위치 보정: <span id="corrVal" style="color:var(--amber);font-weight:600">—</span></div>
+    </div>
+
+    <!-- Waypoints -->
+    <div class="card">
+      <div class="card-t">Waypoint Progress</div>
+      <div class="wp-track" id="wpTrack"></div>
+    </div>
+
+    <!-- Motor Status -->
+    <div class="card">
+      <div class="card-t">Motor Status (STS3215)</div>
+      <div id="motorRows"></div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column">
+      <div class="card-t">Event Log</div>
+      <div class="elog" id="elog"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════ THREE.JS ════ -->
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import*as THREE from'three';
+import{OrbitControls}from'three/addons/controls/OrbitControls.js';
+
+// ════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════
+const HOME={J1:90,J2:120,J3:150,J4:80,J5:90};
+const LIMITS={J1:[0,270],J2:[0,270],J3:[0,270],J4:[-90,270],J5:[0,270]};
+const state={
+  angles:{...HOME},grip:true,mpu:new Float64Array(9),
+  wsConnected:false,isTeaching:true,wpList:[],trail:[],dataSource:'—',motors:[
+    {id:'J1',temp:38,load:45},{id:'J2',temp:41,load:72},{id:'J3',temp:43,load:89},
+    {id:'J4',temp:36,load:30},{id:'J5',temp:39,load:55}
+  ]
+};
+window._state=state; // expose for inline scripts
+
+// ════════════════════════════════════════════
+//  THREE.JS SCENE
+// ════════════════════════════════════════════
+const container=document.getElementById('view3d');
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0a0e17);
+scene.fog=new THREE.FogExp2(0x0a0e17,0.0005);
+
+const camera=new THREE.PerspectiveCamera(40,1,1,3000);
+camera.position.set(300,350,500);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.1;
+container.appendChild(renderer.domElement);
+
+const orbit=new OrbitControls(camera,renderer.domElement);
+orbit.target.set(0,180,0);
+orbit.enableDamping=true;orbit.dampingFactor=0.07;
+orbit.minDistance=150;orbit.maxDistance=1200;
+orbit.update();
+
+// Lighting
+scene.add(new THREE.AmbientLight(0x303050,0.5));
+const sun=new THREE.DirectionalLight(0xffffff,1.2);
+sun.position.set(250,500,300);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+const sd=400;
+sun.shadow.camera.left=-sd;sun.shadow.camera.right=sd;
+sun.shadow.camera.top=sd+200;sun.shadow.camera.bottom=-sd;
+sun.shadow.camera.near=10;sun.shadow.camera.far=1200;
+scene.add(sun);
+const fill=new THREE.DirectionalLight(0x6688cc,0.35);
+fill.position.set(-200,200,-150);scene.add(fill);
+scene.add(new THREE.HemisphereLight(0x334488,0x111122,0.35));
+
+// Ground
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000),new THREE.MeshStandardMaterial({color:0x0e1225,roughness:0.9}));
+ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+scene.add(new THREE.GridHelper(1200,30,0x1a2540,0x141c30));
+
+// Materials
+const M={
+  body:new THREE.MeshStandardMaterial({color:0xf0f0f0,roughness:0.3,metalness:0.05}),
+  servo:new THREE.MeshStandardMaterial({color:0x2a2a2a,roughness:0.55,metalness:0.2}),
+  hub:new THREE.MeshStandardMaterial({color:0x606060,roughness:0.35,metalness:0.4}),
+  accent:new THREE.MeshStandardMaterial({color:0xffaa00,roughness:0.3,metalness:0.3,emissive:0x442200,emissiveIntensity:0.1}),
+  grip:new THREE.MeshStandardMaterial({color:0xcc2222,roughness:0.4,metalness:0.1,emissive:0x330000,emissiveIntensity:0.1}),
+  edge:new THREE.MeshStandardMaterial({color:0x505050,roughness:0.45,metalness:0.2}),
+};
+function bx(w,h,d,m){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.castShadow=true;return o}
+function cy(r,h,m,s=24){const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,s),m);o.castShadow=true;return o}
+function armPlate(w,len,d){
+  const g=new THREE.Group();
+  const b=bx(w,len-d,d,M.body);b.position.y=len/2;g.add(b);
+  const c1=cy(d/2,w,M.body,16);c1.rotation.z=Math.PI/2;c1.position.y=d/2;g.add(c1);
+  const c2=cy(d/2,w,M.body,16);c2.rotation.z=Math.PI/2;c2.position.y=len-d/2;g.add(c2);
+  return g;
+}
+function jointHub(r,thick){
+  const g=new THREE.Group();
+  const o=cy(r,thick,M.hub,24);o.rotation.z=Math.PI/2;g.add(o);
+  const c=cy(r*.3,thick+1,M.accent,12);c.rotation.z=Math.PI/2;g.add(c);
+  return g;
+}
+
+// ── Robot Model ──
+const L1=45,L2=245,L3=212;
+const robot=new THREE.Group();scene.add(robot);
+const bp=cy(65,10,M.edge,32);bp.position.y=5;bp.receiveShadow=true;robot.add(bp);
+const bRing=new THREE.Mesh(new THREE.TorusGeometry(50,3,12,32),M.hub);
+bRing.rotation.x=Math.PI/2;bRing.position.y=12;robot.add(bRing);
+const bTop=cy(42,16,M.body,32);bTop.position.y=22;robot.add(bTop);
+
+// J1: base rotation
+const j1g=new THREE.Group();j1g.position.y=L1;robot.add(j1g);
+const yH=65,yGap=44,yT=6,yD=34;
+const yL=bx(yT,yH,yD,M.body);yL.position.set(-yGap/2,yH/2,0);j1g.add(yL);
+const yR_=bx(yT,yH,yD,M.body);yR_.position.set(yGap/2,yH/2,0);j1g.add(yR_);
+const yB=bx(yGap+yT,10,yD,M.body);yB.position.set(0,5,0);j1g.add(yB);
+const s2=bx(20,40,28,M.servo);s2.position.set(0,38,0);j1g.add(s2);
+const h2L=jointHub(18,yT+2);h2L.position.set(-yGap/2,yH,0);j1g.add(h2L);
+const h2R=jointHub(18,yT+2);h2R.position.set(yGap/2,yH,0);j1g.add(h2R);
+
+// J2: shoulder pitch
+const j2g=new THREE.Group();j2g.position.y=yH;j1g.add(j2g);
+j2g.add(armPlate(50,L2,15));
+const s3=bx(16,36,24,M.servo);s3.position.set(0,L2-22,0);j2g.add(s3);
+const h3=jointHub(16,10);h3.position.y=L2;j2g.add(h3);
+
+// J3: elbow pitch
+const j3g=new THREE.Group();j3g.position.y=L2;j2g.add(j3g);
+j3g.add(armPlate(42,L3,13));
+const s4=bx(14,32,22,M.servo);s4.position.set(0,L3-20,0);j3g.add(s4);
+const h4=jointHub(13,8);h4.position.y=L3;j3g.add(h4);
+
+// J4: wrist pitch
+const j4g=new THREE.Group();j4g.position.y=L3;j3g.add(j4g);
+const wH=40;
+const w4L=bx(5,wH,22,M.body);w4L.position.set(-14,wH/2,0);j4g.add(w4L);
+const w4R=bx(5,wH,22,M.body);w4R.position.set(14,wH/2,0);j4g.add(w4R);
+const w4B=bx(33,7,22,M.body);w4B.position.set(0,3.5,0);j4g.add(w4B);
+const s5=bx(14,28,18,M.servo);s5.position.set(0,20,0);j4g.add(s5);
+
+// J5: wrist roll
+const j5g=new THREE.Group();j5g.position.y=wH;j4g.add(j5g);
+j5g.add(cy(11,12,M.hub,16));
+const gMount=bx(28,6,16,M.edge);gMount.position.y=-10;j5g.add(gMount);
+const gServo=bx(14,24,14,M.servo);gServo.position.y=-24;j5g.add(gServo);
+
+// Gripper
+const fL=new THREE.Group();
+const fLp=bx(4,42,12,M.grip);fLp.position.y=-21;fL.add(fLp);
+const fLt=bx(6,8,14,M.edge);fLt.position.y=-44;fL.add(fLt);
+fL.position.set(-12,-14,0);j5g.add(fL);
+const fR=new THREE.Group();
+const fRp=bx(4,42,12,M.grip);fRp.position.y=-21;fR.add(fRp);
+const fRt=bx(6,8,14,M.edge);fRt.position.y=-44;fR.add(fRt);
+fR.position.set(12,-14,0);j5g.add(fR);
+
+// ── Workspace ──
+function makeLabel(text,color){
+  const c=document.createElement('canvas');c.width=256;c.height=64;
+  const x=c.getContext('2d');x.fillStyle=color||'#fff';
+  x.font='bold 28px Oxanium,sans-serif';x.textAlign='center';x.textBaseline='middle';
+  x.fillText(text,128,32);
+  const t=new THREE.CanvasTexture(c);
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false}));
+  s.scale.set(60,15,1);return s;
+}
+function createBin(name,j1Deg,wc){
+  const ang=(j1Deg-90)*Math.PI/180,dist=280;
+  const x=dist*Math.sin(ang),z=dist*Math.cos(ang);
+  const g=new THREE.Group();
+  const wM=new THREE.MeshStandardMaterial({color:wc,roughness:0.7,metalness:0.05});
+  const wHt=25;
+  const fl=bx(60,2,50,wM);fl.position.y=1;g.add(fl);
+  const bw1=bx(60,wHt,3,wM);bw1.position.set(0,wHt/2+2,25);g.add(bw1);
+  const bw2=bx(60,wHt,3,wM);bw2.position.set(0,wHt/2+2,-25);g.add(bw2);
+  const bw3=bx(3,wHt,50,wM);bw3.position.set(-30,wHt/2+2,0);g.add(bw3);
+  const bw4=bx(3,wHt,50,wM);bw4.position.set(30,wHt/2+2,0);g.add(bw4);
+  const lbl=makeLabel(name.toUpperCase(),'#fff');lbl.position.y=42;g.add(lbl);
+  g.position.set(x,0,z);g.rotation.y=ang+Math.PI;scene.add(g);
+}
+createBin('Bolt',225,0x2d5a2d);
+createBin('Nut',-45,0x2d2d5a);
+
+const scanRing=new THREE.Mesh(new THREE.RingGeometry(50,70,32),
+  new THREE.MeshStandardMaterial({color:0x44aa44,roughness:0.8,transparent:true,opacity:0.25,side:THREE.DoubleSide}));
+scanRing.rotation.x=-Math.PI/2;scanRing.position.set(0,0.5,180);scene.add(scanRing);
+const scanLbl=makeLabel('SCAN ZONE','#4a4');scanLbl.position.set(0,8,180);scene.add(scanLbl);
+
+function sampleBolt(px,pz){const g=new THREE.Group();const head=cy(5,4,M.hub,6);head.position.y=2;g.add(head);const shaft=cy(2,10,M.edge,8);shaft.position.y=7;g.add(shaft);g.position.set(px,0,pz);scene.add(g)}
+function sampleNut(px,pz){const nut=cy(5,4,M.accent,6);nut.position.set(px,2,pz);scene.add(nut)}
+function sampleWasher(px,pz){const w=new THREE.Mesh(new THREE.TorusGeometry(5,1.5,8,16),M.edge);w.rotation.x=-Math.PI/2;w.position.set(px,1,pz);scene.add(w)}
+sampleBolt(-15,175);sampleBolt(20,190);
+sampleNut(5,170);sampleNut(-25,185);
+sampleWasher(15,165);sampleWasher(-10,195);
+
+// ── Update Robot ──
+function updateRobot(){
+  const A=state.angles;
+  j1g.rotation.y=(A.J1-90)*Math.PI/180;
+  j2g.rotation.x=-(A.J2-75)*Math.PI/150;
+  j3g.rotation.x=-(A.J3-90)*Math.PI/135;
+  j4g.rotation.x=-(A.J4-90)*Math.PI/120;
+  j5g.rotation.y=(A.J5-90)*Math.PI/180;
+  const fo=state.grip?12:5;
+  fL.position.x=-fo;fR.position.x=fo;
+}
+updateRobot();
+
+// ── FK for top-down ──
+function fkXY(a){
+  const a1=-(Math.PI/2)+(a.J2-75)*Math.PI/150;
+  const a2=a1+(a.J3-90)*Math.PI/135;
+  const a3=a2+(a.J4-90)*Math.PI/120;
+  let r=0;
+  r+=24*Math.cos(a1);r+=148*Math.cos(a2);r+=128*Math.cos(a3);
+  const j1r=(a.J1-90)*Math.PI/180;
+  return{x:r*Math.sin(j1r),y:r*Math.cos(j1r),r};
+}
+window._fkXY=fkXY;
+
+// ── Resize ──
+function resize3d(){
+  const w=container.clientWidth,h=container.clientHeight;
+  camera.aspect=w/h;camera.updateProjectionMatrix();
+  renderer.setSize(w,h);
+}
+new ResizeObserver(resize3d).observe(container);
+setTimeout(resize3d,50);
+
+// ── Render loop ──
+let simT=0;
+(function animate(){
+  requestAnimationFrame(animate);
+  orbit.update();
+  // Sim mode: gentle idle motion when no WS
+  if(!state.wsConnected){
+    simT+=0.008;
+    state.angles.J1=HOME.J1+Math.sin(simT*0.3)*15;
+    state.angles.J2=HOME.J2+Math.sin(simT*0.2)*8;
+    state.angles.J3=HOME.J3+Math.sin(simT*0.25)*6;
+    state.angles.J4=HOME.J4+Math.sin(simT*0.35)*5;
+    state.angles.J5=HOME.J5+Math.sin(simT*0.4)*10;
+  }
+  updateRobot();
+  renderer.render(scene,camera);
+})();
+
+// ════════════════════════════════════════════
+//  WEBSOCKET
+// ════════════════════════════════════════════
+function connectWS(){
+  let ws;
+  try{ws=new WebSocket('ws://localhost:8765')}catch{return}
+  ws.onopen=()=>{
+    state.wsConnected=true;
+    document.getElementById('wsDot').classList.add('on');
+    document.getElementById('wsLabel').textContent='WS 연결됨';
+    addLog('WebSocket 연결','ok');
+  };
+  ws.onmessage=e=>{
+    try{
+      const d=JSON.parse(e.data);
+      if(d.J1!=null)state.angles.J1=d.J1;
+      if(d.J2!=null)state.angles.J2=d.J2;
+      if(d.J3!=null)state.angles.J3=d.J3;
+      if(d.J4!=null)state.angles.J4=d.J4;
+      if(d.J5!=null)state.angles.J5=d.J5;
+      if(d.gripper!=null)state.grip=d.gripper==='open';
+      if(d.mpu_raw&&d.mpu_raw.length===9){
+        for(let i=0;i<9;i++)state.mpu[i]=d.mpu_raw[i];
+      }
+      if(d.source){
+        state.dataSource=d.source==='servo'?'SERVO':'SIM';
+        const sb=document.getElementById('srcBadge');
+        if(sb)sb.textContent='SRC: '+state.dataSource;
+      }
+      if(!state.isTeaching){
+        const ep=fkXY(state.angles);
+        state.trail.push({x:ep.x,y:ep.y});
+        if(state.trail.length>500)state.trail.shift();
+      }
+    }catch{}
+  };
+  ws.onclose=()=>{
+    state.wsConnected=false;
+    document.getElementById('wsDot').classList.remove('on');
+    document.getElementById('wsLabel').textContent='WS 대기';
+    setTimeout(connectWS,2000);
+  };
+  ws.onerror=()=>{try{ws.close()}catch{}};
+}
+connectWS();
+
+// Expose for inline
+window._updateRobot=updateRobot;
+</script>
+
+<!-- ════ UI LOGIC (non-module) ════ -->
+<script>
+const HOME={J1:90,J2:120,J3:150,J4:80,J5:90};
+const LIMITS={J1:[0,270],J2:[0,270],J3:[0,270],J4:[-90,270],J5:[0,270]};
+
+// 3D 모델과 공유하는 상수 (수정 시 3D도 자동 반영)
+const LINK={L2:245,L3:212,WH:40};
+const BIN_DIST=280;
+const SCAN_DIST=180;
+
+// ── Clock ──
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toTimeString().slice(0,8)},1000);
+
+// ── Mode toggle ──
+window.toggleMode=function(){
+  const s=window._state;s.isTeaching=!s.isTeaching;
+  const b=document.getElementById('modeBadge');
+  b.textContent=s.isTeaching?'TEACHING':'RUNNING';
+  b.className='mode-badge '+(s.isTeaching?'mode-teach':'mode-run');
+  document.getElementById('camBox1').style.display=s.isTeaching?'flex':'none';
+  document.getElementById('camBox2').style.display=s.isTeaching?'flex':'none';
+  document.getElementById('yoloCamBox').style.display=s.isTeaching?'none':'flex';
+  document.getElementById('cardYolo').style.display=s.isTeaching?'none':'block';
+  document.getElementById('lbl3d').textContent=s.isTeaching?'3D Simulation':'Digital Twin — Live';
+  document.getElementById('lblTd').textContent=s.isTeaching?'Top-Down View':'Digital Twin — Top View';
+  document.getElementById('twinBadge').style.display=s.isTeaching?'none':'block';
+  document.getElementById('srcBadge').style.display=s.isTeaching?'none':'block';
+  if(!s.isTeaching)s.trail=[];
+  addLog('모드 전환: '+(s.isTeaching?'TEACHING':'RUNNING'),'info');
+};
+
+// ── E-STOP ──
+window.eStop=function(){addLog('⚠ E-STOP 발동 — 전체 정지','err')};
+
+// ── Gripper ──
+window.toggleGrip=function(){
+  const s=window._state;s.grip=!s.grip;
+  const b=document.getElementById('gripBtn');
+  b.textContent=s.grip?'OPEN':'CLOSE';
+  b.className='grip-btn '+(s.grip?'grip-open':'grip-close');
+  document.getElementById('gripSt').textContent='SG90 · '+(s.grip?'90':'30')+'°';
+  addLog('그리퍼: '+(s.grip?'OPEN':'CLOSE'),'info');
+};
+
+// ── Joint bars ──
+function renderJoints(){
+  const s=window._state;if(!s)return;
+  const el=document.getElementById('jointBars');
+  el.innerHTML=['J1','J2','J3','J4','J5'].map(j=>{
+    const v=s.angles[j];
+    const lo=LIMITS[j][0],hi=LIMITS[j][1];
+    const pct=((v-lo)/(hi-lo)*100).toFixed(1);
+    const near=v<=lo+10||v>=hi-10;
+    return`<div class="jrow"><span class="jl">${j}</span><div class="bar-wrap"><div class="bar-fill ${near?'bar-amber':'bar-green'}" style="width:${pct}%"></div></div><span class="jv">${v.toFixed(1)}°</span></div>`;
+  }).join('');
+}
+
+// ── MPU ──
+function renderMPU(){
+  const s=window._state;if(!s)return;
+  for(let i=0;i<9;i++){
+    const el=document.getElementById('m'+i);
+    if(el)el.textContent=s.mpu[i].toFixed(1);
+  }
+}
+
+// ── Motors ──
+function renderMotors(){
+  const s=window._state;if(!s)return;
+  document.getElementById('motorRows').innerHTML=s.motors.map(m=>{
+    const tp=Math.min(m.temp/80*100,100);
+    const lp=Math.min(m.load,100);
+    const tw=m.temp>55,lw=m.load>80;
+    return`<div class="mrow"><span class="mid" style="color:${tw||lw?'var(--red)':'var(--txt2)'}">${m.id}</span><div class="mcols">
+    <div class="mcol"><span class="micon" style="color:var(--amber)">T</span><div class="mbar"><div class="mfill ${tw?'bar-red':'bar-amber'}" style="width:${tp}%"></div></div><span class="mval">${m.temp.toFixed(0)}°C</span></div>
+    <div class="mcol"><span class="micon" style="color:var(--cyan)">L</span><div class="mbar"><div class="mfill ${lw?'bar-red':'bar-cyan'}" style="width:${lp}%"></div></div><span class="mval">${m.load.toFixed(0)}%</span></div>
+    </div></div>`;
+  }).join('');
+}
+
+// ── Waypoints ──
+const wpDef=[{n:1,s:'done'},{n:2,s:'done'},{n:3,s:'cur'},{n:'CP',s:'cp'},{n:4,s:'pend'},{n:5,s:'pend'},{n:6,s:'pend'}];
+function renderWP(){
+  const cls={done:'wp-done',cur:'wp-cur',cp:'wp-cp',pend:'wp-pend'};
+  document.getElementById('wpTrack').innerHTML=wpDef.map((w,i)=>{
+    const line=i<wpDef.length-1?`<div class="wp-line ${w.s==='done'?'done':''}"></div>`:'';
+    return`<div class="wp-node"><div class="wp-c ${cls[w.s]}">${w.n}</div><div class="wp-tag">${w.s==='cp'?'CHECK':''}</div></div>${line}`;
+  }).join('');
+}
+renderWP();
+
+// ── Event log ──
+window.addLog=function(msg,type='def'){
+  const el=document.getElementById('elog');
+  const t=new Date().toTimeString().slice(0,8);
+  const row=document.createElement('div');row.className='elog-row';
+  row.innerHTML=`<span class="elog-t">${t}</span><span class="elog-${type}">${msg}</span>`;
+  el.appendChild(row);el.scrollTop=el.scrollHeight;
+  if(el.children.length>50)el.removeChild(el.firstChild);
+};
+addLog('시스템 초기화 완료','ok');
+addLog('3D 시뮬레이션 활성','info');
+addLog('WebSocket 연결 대기...','warn');
+
+// ── Top-down canvas ──
+// 3D 좌표를 그대로 투영 + 90°CCW 회전
+// 스캔존(오른쪽), 분류통(왼쪽), 팔은 3D와 동일 방향
+function drawTopDown(){
+  const canvas=document.getElementById('tdCanvas');
+  const box=canvas.parentElement;
+  canvas.width=box.clientWidth;canvas.height=box.clientHeight;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  const cx=W*.5,cy_=H*.5;
+  const sc=Math.min(W,H)/750;
+
+  // 3D createBin 좌표 → 캔버스 (90°CCW 회전 적용)
+  // 3D: x=dist*sin(ang), z=dist*cos(ang) where ang=(j1-90)*π/180
+  // Canvas: px=cx+z*sc, py=cy_-x*sc
+  function tdPlace(j1Deg,dist){
+    const ang=(j1Deg-90)*Math.PI/180;
+    const x3d=dist*Math.sin(ang), z3d=dist*Math.cos(ang);
+    return{x:cx+z3d*sc, y:cy_-x3d*sc};
+  }
+
+  ctx.fillStyle='#0a0e17';ctx.fillRect(0,0,W,H);
+
+  // Grid
+  ctx.strokeStyle='rgba(26,40,68,.4)';ctx.lineWidth=0.5;
+  for(let r=50;r<=400;r+=50){
+    ctx.beginPath();ctx.arc(cx,cy_,r*sc,0,Math.PI*2);ctx.stroke();
+  }
+  for(let a=0;a<360;a+=45){
+    const rad=a*Math.PI/180;
+    ctx.beginPath();ctx.moveTo(cx,cy_);
+    ctx.lineTo(cx+400*sc*Math.cos(rad),cy_-400*sc*Math.sin(rad));ctx.stroke();
+  }
+
+  // Scan zone (j1=90 방향 → 캔버스 오른쪽)
+  const sp=tdPlace(90,SCAN_DIST);
+  ctx.beginPath();ctx.arc(sp.x,sp.y,55*sc,0,Math.PI*2);
+  ctx.fillStyle='rgba(74,222,128,.06)';ctx.fill();
+  ctx.strokeStyle='rgba(74,222,128,.25)';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle='rgba(74,222,128,.5)';ctx.font=`bold ${9*sc}px JetBrains Mono`;ctx.textAlign='center';
+  ctx.fillText('SCAN',sp.x,sp.y+3*sc);
+
+  // Bins (j1=225, j1=315 → 캔버스 왼쪽 영역)
+  const bins=[{name:'BOLT',j1:225,col:'#2d5a2d'},{name:'NUT',j1:315,col:'#2d2d5a'}];
+  bins.forEach(b=>{
+    const bp=tdPlace(b.j1,BIN_DIST);
+    ctx.save();ctx.translate(bp.x,bp.y);
+    ctx.fillStyle=b.col;ctx.fillRect(-20*sc,-14*sc,40*sc,28*sc);
+    ctx.strokeStyle='rgba(255,255,255,.18)';ctx.lineWidth=1;ctx.strokeRect(-20*sc,-14*sc,40*sc,28*sc);
+    ctx.fillStyle='rgba(255,255,255,.7)';ctx.font=`bold ${9*sc}px JetBrains Mono`;
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(b.name,0,0);
+    ctx.restore();
+  });
+
+  // Base
+  ctx.beginPath();ctx.arc(cx,cy_,10*sc,0,Math.PI*2);
+  ctx.fillStyle='#1e3050';ctx.fill();
+  ctx.strokeStyle='#00d4ff';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle='rgba(0,212,255,.5)';ctx.font=`${9*sc}px JetBrains Mono`;
+  ctx.textAlign='center';ctx.fillText('BASE',cx,cy_+20*sc);
+
+  // Arm segments (FK → 3D 좌표 → 같은 캔버스 변환)
+  // 3D 팔 방향: j1g.rotation.y=(J1-90)*π/180, arm extends toward -Z in local
+  // 3D arm world pos: x_arm=-r*sin(ang), z_arm=-r*cos(ang) where ang=(J1-90)*π/180
+  // Canvas: px=cx+z_arm*sc, py=cy_-x_arm*sc
+  const s=window._state;
+  if(s){
+    const A=s.angles;
+    const ang=(A.J1-90)*Math.PI/180;
+    const a1=-(Math.PI/2)+(A.J2-75)*Math.PI/150;
+    const a2=a1+(A.J3-90)*Math.PI/135;
+    const a3=a2+(A.J4-90)*Math.PI/120;
+    const links=[LINK.L2,LINK.L3,LINK.WH];const angs_=[a1,a2,a3];
+    let r=0;
+    const pts=[{x:cx,y:cy_}];
+    for(let i=0;i<3;i++){
+      r+=links[i]*Math.cos(angs_[i]);
+      const x3d=-r*Math.sin(ang), z3d=-r*Math.cos(ang);
+      pts.push({x:cx+z3d*sc, y:cy_-x3d*sc});
+    }
+    // Link segments
+    const cols=['rgba(0,200,255,.8)','rgba(0,255,200,.8)','rgba(200,255,0,.8)'];
+    const widths=[5,4,3];
+    ctx.lineCap='round';
+    for(let i=0;i<3;i++){
+      ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[i+1].x,pts[i+1].y);
+      ctx.strokeStyle=cols[i];ctx.lineWidth=widths[i];ctx.stroke();
+    }
+    for(let i=1;i<3;i++){
+      ctx.beginPath();ctx.arc(pts[i].x,pts[i].y,3.5*sc,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,.6)';ctx.fill();
+    }
+    // End effector
+    const ep=pts[3];
+    ctx.beginPath();ctx.arc(ep.x,ep.y,6*sc,0,Math.PI*2);
+    ctx.fillStyle='#00d4ff';ctx.shadowBlur=12;ctx.shadowColor='#00d4ff';ctx.fill();ctx.shadowBlur=0;
+    if(!s.grip){ctx.beginPath();ctx.arc(ep.x,ep.y,3*sc,0,Math.PI*2);ctx.fillStyle='#ef4444';ctx.fill();}
+    // Reach label
+    ctx.fillStyle='rgba(0,212,255,.6)';ctx.font=`${8*sc}px JetBrains Mono`;ctx.textAlign='left';
+    ctx.fillText(`r=${r.toFixed(0)}mm  J1:${A.J1.toFixed(0)}°`,ep.x+8*sc,ep.y-4*sc);
+
+    // Running 모드: 궤적 트레일
+    if(!s.isTeaching&&s.trail&&s.trail.length>1){
+      ctx.beginPath();
+      for(let i=0;i<s.trail.length;i++){
+        const tp=s.trail[i];
+        const tx=cx+tp.y*sc,ty=cy_-tp.x*sc;
+        if(i===0)ctx.moveTo(tx,ty);else ctx.lineTo(tx,ty);
+      }
+      ctx.strokeStyle='rgba(0,212,255,.3)';ctx.lineWidth=1.5;ctx.stroke();
+      // 최근 점 강조
+      const last=s.trail[s.trail.length-1];
+      const lx=cx+last.y*sc,ly=cy_-last.x*sc;
+      ctx.beginPath();ctx.arc(lx,ly,3*sc,0,Math.PI*2);
+      ctx.fillStyle='rgba(0,212,255,.5)';ctx.fill();
+    }
+  }
+
+  // Info
+  ctx.fillStyle='rgba(90,109,132,.3)';ctx.textAlign='left';ctx.font=`${7*sc}px JetBrains Mono`;
+  const s2=window._state;
+  ctx.fillText(s2&&!s2.isTeaching?'DIGITAL TWIN':'TOP VIEW',8,14);
+  ctx.textAlign='right';
+  if(s2&&!s2.isTeaching){
+    ctx.fillStyle='rgba(0,212,255,.4)';
+    ctx.fillText('SRC: '+(s2.dataSource||'—')+' | trail: '+(s2.trail?s2.trail.length:0),W-8,14);
+  }else{
+    ctx.fillStyle='rgba(90,109,132,.3)';ctx.fillText('grid: 50mm',W-8,14);
+  }
+}
+
+// ── YOLO Canvas (running mode) ──
+let yoloT=0;
+function hexShape(ctx,cx,cy,r,fill,stroke,holeR){
+  ctx.beginPath();
+  for(let i=0;i<6;i++){const a=Math.PI/3*i-Math.PI/6;i===0?ctx.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a)):ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}
+  ctx.closePath();ctx.fillStyle=fill;ctx.fill();
+  ctx.strokeStyle=stroke;ctx.lineWidth=1.2;ctx.stroke();
+  if(holeR){ctx.beginPath();ctx.arc(cx,cy,holeR,0,Math.PI*2);ctx.fillStyle='#181c24';ctx.fill();}
+}
+function drawYoloCanvas(){
+  const s=window._state;if(!s||s.isTeaching)return;
+  const canvas=document.getElementById('yoloCanvas');if(!canvas)return;
+  const box=canvas.parentElement;
+  canvas.width=box.clientWidth;canvas.height=box.clientHeight;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  yoloT+=0.012;
+  const shake={x:Math.sin(yoloT*1.3)*.6,y:Math.cos(yoloT*.9)*.5};
+
+  // Metal surface
+  const sg=ctx.createLinearGradient(0,0,W,H);
+  sg.addColorStop(0,'#3a3f48');sg.addColorStop(.5,'#4a505a');sg.addColorStop(1,'#383d46');
+  ctx.fillStyle=sg;ctx.fillRect(0,0,W,H);
+  // Scratches
+  ctx.save();ctx.globalAlpha=.06;
+  for(let i=0;i<12;i++){const lx=Math.random()*W,ly=Math.random()*H;ctx.strokeStyle='#fff';ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+Math.random()*40-20,ly+Math.random()*6-3);ctx.stroke();}
+  ctx.restore();
+  // Work zone
+  ctx.strokeStyle='rgba(245,158,11,.3)';ctx.lineWidth=1.5;ctx.setLineDash([6,5]);
+  ctx.strokeRect(W*.1+shake.x,H*.08+shake.y,W*.8,H*.84);ctx.setLineDash([]);
+
+  // Objects
+  const nut1={x:W*.38+shake.x,y:H*.42+shake.y};
+  hexShape(ctx,nut1.x,nut1.y,W*.09,'#7a8898','#a0b0bc',W*.035);
+  const bolt1={x:W*.68+shake.x,y:H*.34+shake.y};
+  ctx.save();ctx.translate(bolt1.x,bolt1.y);ctx.rotate(.4);
+  hexShape(ctx,0,0,W*.07,'#8090a4','#aabbc8',0);
+  ctx.strokeStyle='rgba(40,50,60,.9)';ctx.lineWidth=W*.012;
+  ctx.beginPath();ctx.moveTo(-W*.04,0);ctx.lineTo(W*.04,0);ctx.stroke();
+  ctx.restore();
+  const nut2={x:W*.62+shake.x,y:H*.66+shake.y};
+  hexShape(ctx,nut2.x,nut2.y,W*.055,'#6a7888','#90a0ac',W*.022);
+  const bolt2={x:W*.28+shake.x,y:H*.7+shake.y};
+  ctx.save();ctx.translate(bolt2.x,bolt2.y);ctx.rotate(-.5);
+  hexShape(ctx,0,0,W*.05,'#788898','#a0b0be',0);
+  ctx.strokeStyle='rgba(40,50,60,.9)';ctx.lineWidth=W*.009;
+  ctx.beginPath();ctx.moveTo(-W*.03,0);ctx.lineTo(W*.03,0);ctx.stroke();
+  ctx.restore();
+
+  // YOLO bboxes
+  const boxes=[
+    {obj:nut1,hw:W*.11,hh:H*.14,label:'너트',conf:.93,col:'#10b981'},
+    {obj:bolt1,hw:W*.09,hh:H*.12,label:'볼트',conf:.91,col:'#f59e0b'},
+    {obj:nut2,hw:W*.07,hh:H*.10,label:'너트',conf:.87,col:'#10b981'},
+    {obj:bolt2,hw:W*.06,hh:H*.09,label:'볼트',conf:.85,col:'#f59e0b'},
+  ];
+  ctx.font=`bold ${Math.max(10,W*.02)}px JetBrains Mono`;
+  boxes.forEach(b=>{
+    const bx_=b.obj.x-b.hw,by_=b.obj.y-b.hh,bw=b.hw*2,bh=b.hh*2;
+    ctx.shadowBlur=6;ctx.shadowColor=b.col;ctx.strokeStyle=b.col;ctx.lineWidth=1.5;
+    ctx.strokeRect(bx_,by_,bw,bh);ctx.shadowBlur=0;
+    const cs=W*.016;ctx.lineWidth=2.5;
+    [[bx_,by_],[bx_+bw,by_],[bx_,by_+bh],[bx_+bw,by_+bh]].forEach(([x,y],i)=>{
+      ctx.beginPath();ctx.moveTo(x+(i%2===0?cs:-cs),y);ctx.lineTo(x,y);ctx.lineTo(x,y+(i<2?cs:-cs));ctx.stroke();
+    });
+    const lbl=`${b.label} ${(b.conf*100).toFixed(0)}%`;
+    const lw=ctx.measureText(lbl).width+8;
+    ctx.fillStyle=b.col;ctx.fillRect(bx_,by_-H*.04,lw,H*.04);
+    ctx.fillStyle='#000';ctx.fillText(lbl,bx_+3,by_-H*.01);
+  });
+
+  // Gripper fingers
+  ctx.fillStyle='#1a2030';
+  ctx.beginPath();ctx.moveTo(0,H*.84);ctx.lineTo(W*.14,H*.9);ctx.lineTo(W*.14,H);ctx.lineTo(0,H);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#3a5070';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,H*.84);ctx.lineTo(W*.14,H*.9);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(W,H*.84);ctx.lineTo(W*.86,H*.9);ctx.lineTo(W*.86,H);ctx.lineTo(W,H);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(W,H*.84);ctx.lineTo(W*.86,H*.9);ctx.stroke();
+
+  // Crosshair
+  const rx_=W*.5,ry_=H*.5;
+  ctx.strokeStyle='rgba(74,222,128,.6)';ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.arc(rx_,ry_,W*.035,0,Math.PI*2);ctx.stroke();
+  ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(rx_-W*.06,ry_);ctx.lineTo(rx_-W*.04,ry_);ctx.moveTo(rx_+W*.04,ry_);ctx.lineTo(rx_+W*.06,ry_);
+  ctx.moveTo(rx_,ry_-W*.06);ctx.lineTo(rx_,ry_-W*.04);ctx.moveTo(rx_,ry_+W*.04);ctx.lineTo(rx_,ry_+W*.06);ctx.stroke();ctx.setLineDash([]);
+  ctx.beginPath();ctx.arc(rx_,ry_,2,0,Math.PI*2);ctx.fillStyle='#4ade80';ctx.shadowBlur=6;ctx.shadowColor='#4ade80';ctx.fill();ctx.shadowBlur=0;
+
+  // Vignette
+  const vig=ctx.createRadialGradient(W/2,H/2,H*.15,W/2,H/2,H*.75);
+  vig.addColorStop(0,'rgba(0,0,0,0)');vig.addColorStop(1,'rgba(0,0,0,.5)');
+  ctx.fillStyle=vig;ctx.fillRect(0,0,W,H);
+
+  // HUD
+  const fps=28+Math.floor(Math.random()*4);
+  ctx.textAlign='right';ctx.fillStyle='rgba(74,222,128,.8)';ctx.font=`bold ${Math.max(10,W*.022)}px JetBrains Mono`;
+  ctx.fillText('GRIPPER CAM',W-6,16);
+  ctx.fillStyle='rgba(100,180,150,.5)';ctx.font=`${Math.max(8,W*.015)}px JetBrains Mono`;
+  ctx.fillText(`${fps} FPS | EYE-IN-HAND`,W-6,28);
+  ctx.textAlign='left';
+
+  // Update YOLO panel
+  const conf=85+Math.floor(Math.random()*13);
+  const cls=['볼트','너트'][Math.floor(yoloT/3)%2];
+  document.getElementById('yoloClass').textContent=cls;
+  document.getElementById('yoloClass').style.color=cls==='볼트'?'var(--amber)':'var(--green)';
+  document.getElementById('yoloConfBar').style.width=conf+'%';
+  document.getElementById('yoloConfTxt').textContent=`신뢰도 ${conf}%`;
+  const dx=(Math.sin(yoloT)*2.1).toFixed(1),dy=(Math.cos(yoloT*.8)*1.8).toFixed(1);
+  document.getElementById('corrVal').textContent=`ΔX:${dx>0?'+':''}${dx}  ΔY:${dy>0?'+':''}${dy} mm`;
+}
+
+// ── Cameras ──
+async function initCams(){
+  try{const p=await navigator.mediaDevices.getUserMedia({video:true});p.getTracks().forEach(t=>t.stop())}catch{}
+  const devs=await navigator.mediaDevices.enumerateDevices();
+  const cams=devs.filter(d=>d.kind==='videoinput');
+  [1,2].forEach(n=>{
+    const sel=document.getElementById('sel'+n);
+    sel.innerHTML='<option value="">-- 선택 --</option>';
+    cams.forEach((c,i)=>{
+      const o=document.createElement('option');o.value=c.deviceId;
+      o.textContent=c.label||'카메라 '+(i+1);sel.appendChild(o);
+    });
+    if(cams.length>=n)sel.value=cams[n-1].deviceId;
+  });
+}
+initCams().catch(()=>{});
+
+window.startCam=async function(n){
+  const id=document.getElementById('sel'+n).value;
+  if(!id)return;
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{deviceId:{ideal:id}}});
+    const vid=document.getElementById('vid'+n);
+    vid.srcObject=stream;vid.style.display='block';
+    document.getElementById('ph'+n).style.display='none';
+    addLog(`CAM${n} 연결됨`,'ok');
+  }catch(e){addLog(`CAM${n} 실패: ${e.message}`,'err')}
+};
+
+// ── Simulation ──
+function simNoise(v,r,lo,hi){return Math.max(lo,Math.min(hi,v+(Math.random()-.5)*r))}
+function simulate(){
+  const s=window._state;if(!s)return;
+  s.motors.forEach(m=>{m.temp=simNoise(m.temp,.6,30,70);m.load=simNoise(m.load,3,10,100)});
+  if(!s.wsConnected){
+    for(let i=0;i<9;i++)s.mpu[i]=Math.sin(Date.now()*.001+i)*(10+i*2);
+  }
+}
+
+// ── Log sim ──
+const logMsgs=[['물체 스캔 중...','info'],['볼트 감지 — 94%','ok'],['J1 보정 +2.3°','warn'],['픽업 완료','ok'],['분류통 이동','info'],['J3 부하 87%','warn'],['너트 감지 — 91%','ok']];
+let logI=0;
+setInterval(()=>{const[m,t]=logMsgs[logI++%logMsgs.length];addLog(m,t)},4000);
+
+// ── Main update loop ──
+setInterval(()=>{
+  simulate();
+  renderJoints();
+  renderMPU();
+  renderMotors();
+  drawTopDown();
+  drawYoloCanvas();
+},100);
+</script>
+</body>
+</html>

@@ -1,0 +1,934 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Sambo dashboard WS bridge v3 = v2(스냅샷 텔레메트리) + 모션 명령.
+
+추가: 대시보드 WS 명령 {"type":"COMMAND","command":...} 수신 시 모터 이동.
+  AUTO_START → 스캔자세로 이동
+  AUTO_STOP  → 스캔자세 복귀 후 원점(전 모터 180°)
+  HALT       → 즉시정지(진행 이동 선점 + 현재 실측각에 토크 홀드)
+  PING       → 무동작(수신 경로 검증용)
+
+이동은 ik_server.move_axis 와 동일한 S-curve 동기 이동(AXIS_SPEED 20°/s).
+새 명령이 오면 진행 중 이동을 선점(취소)하고 교체.
+
+⚠️ 브리지가 CAN 명령자가 되므로 ik_server.py / 키보드제어(v1_11)와 동시 실행 금지.
+"""
+import asyncio
+import json
+import math
+import socket
+import struct
+import threading
+import time
+from pathlib import Path
+
+import can
+import websockets
+
+try:
+    from sambo_vision_state import load_latest_runtime_state
+except Exception as e:
+    print(f"[VISION] sambo_vision_state disabled: {e}")
+
+    def load_latest_runtime_state():
+        return {"vision": {"target": "NONE", "confidence": 0.0, "stable_frames": 0,
+                           "bbox": None, "correction": {"dx_mm": 0.0, "dy_mm": 0.0}},
+                "gripper": {"state": "OPEN", "sg90_angle": 60.0, "fresh": False}}
+
+# ── PICK 두뇌 (pick_runner → ik_pose → ik) : 같은 폴더에 있어야 import 됨 ──
+try:
+    import pick_runner
+except Exception as e:
+    print(f"[PICK] pick_runner disabled: {e}")
+    pick_runner = None
+
+CAN_INTERFACE = "can0"
+WS_HOST = "0.0.0.0"
+WS_PORT = 8765
+SEND_HZ = 10
+STALE_S = 1.5
+NAMES = {1: "J1", 2: "J2", 3: "J3", 4: "J4", 5: "J5", 6: "J6"}
+
+# ── 모션 파라미터 (ik_server 와 동일) ──
+AXIS_SPEED = 20.0          # deg/s
+MIN_DURATION = 0.8
+DT = 1.0 / 40.0
+STREAM_MOVE_MS = 80
+SCAN_POSE = {1: 180.0, 2: 104.8, 3: 248.2, 4: 112.7, 5: 140.8, 6: 180.0}
+HOME_POSE = {i: 180.0 for i in range(1, 7)}
+MANUAL_MIN_DURATION = 0.3   # 수동 jog/적용 최소 소요시간[s] (작은 각도도 부드럽게)
+
+# ── M1 등속(스캔/스윕) + 5005 (ik_server 대체) ──
+CMD_SET_ANGLE_SPEED = 0x07   # STS3215 등속(위치+속도) — 틱틱 방지
+SCAN_SPEED_REG = 250         # 스캔/센터링 등속 속도(reg)
+SWEEP_SPEED = 28.0           # 스윕 시간추정 속도(°/s)
+SWEEP_SPEED_REG = 320        # 스윕 등속 reg
+SWEEP_LEFT, SWEEP_RIGHT = 120.0, 240.0
+M1_SCAN_MIN, M1_SCAN_MAX = 120.0, 240.0   # M1 스캔 안전범위(180±60)
+IK_PORT = 5005               # detect의 scan/home/sweep/stop 수신
+
+# ── 관절 소프트 한계 (raw 명령각, rpi_keyboard_control_v1_11 MOTOR_LIMITS와 동일) ──
+# 수동 시험에서 명령각이 이 범위를 넘지 않게 끝에서 자른다(clamp). 하드스톱 충돌 방지.
+MOTOR_LIMITS = {
+    1: (40.0, 320.0),
+    2: (60.0, 185.0),
+    3: (175.0, 300.0),
+    4: (80.0, 183.0),
+    5: (115.0, 250.0),
+    6: (80.0, 280.0),
+}
+
+
+def clamp_limit(mid, deg):
+    lo, hi = MOTOR_LIMITS.get(mid, (0.0, 360.0))
+    return max(lo, min(hi, deg))
+
+
+# ── MG90 그리퍼 (STM32 0x100 하위cmd 0x06, PA6 PWM) ──
+CMD_GRIPPER = 0x06
+GRIPPER_MIN, GRIPPER_MAX = 0, 180
+
+clients = set()
+lock = threading.Lock()
+motors = {i: {"current": None, "temp": None, "load": None, "target": None,
+              "flags": 0, "current_ma": None, "rx": 0.0, "cmd_rx": 0.0}
+          for i in range(1, 7)}
+health = {"received": 0, "last_rx_ms": 0}
+
+LIFE_USAGE_SCHEMA = "sambo_servo_life_usage_v1"
+LIFE_USAGE_PATH = Path(__file__).resolve().parent / "servo_life_usage.json"
+LIFE_JOINT_IDS = tuple(NAMES.values())
+LIFE_DEFAULT_DESIGN_EQ_CYCLES = 100000.0
+LIFE_USAGE_UNIT = "official_life_cycle_120deg"
+LIFE_DEG_PER_EQ_CYCLE = 120.0
+LIFE_LEGACY_DEG_PER_EQ_CYCLE = 120.0
+life_lock = threading.Lock()
+
+
+def _finite_float(value, default=0.0):
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return default
+    return v if math.isfinite(v) else default
+
+
+def _blank_life_usage():
+    return {
+        "schema": LIFE_USAGE_SCHEMA,
+        "usageUnit": LIFE_USAGE_UNIT,
+        "degreesPerEquivalentCycle": LIFE_DEG_PER_EQ_CYCLE,
+        "designEquivalentCycles": LIFE_DEFAULT_DESIGN_EQ_CYCLES,
+        "totalEquivalentCycles": {joint_id: 0.0 for joint_id in LIFE_JOINT_IDS},
+        "fatigueAdjustedEquivalentCycles": {joint_id: 0.0 for joint_id in LIFE_JOINT_IDS},
+        "healthState": {},
+        "updatedAt": None,
+        "storedOn": "raspberry_pi",
+    }
+
+
+def _normalize_health_state(payload):
+    if not isinstance(payload, dict):
+        return {}
+    result = {}
+    for joint_id in LIFE_JOINT_IDS:
+        raw = payload.get(joint_id)
+        if not isinstance(raw, dict):
+            continue
+        stress = _finite_float(raw.get("stressFactor", raw.get("factor", 1.0)), 1.0)
+        result[joint_id] = {
+            "severity": int(_finite_float(raw.get("severity"), 0.0)),
+            "label": str(raw.get("label") or "정상"),
+            "stressFactor": max(1.0, min(3.0, stress)),
+            "score": _finite_float(raw.get("score"), 100.0),
+            "confidence": str(raw.get("confidence") or ""),
+            "reasons": raw.get("reasons") if isinstance(raw.get("reasons"), list) else [],
+        }
+    return result
+
+
+def _normalize_life_usage(payload):
+    data = _blank_life_usage()
+    if not isinstance(payload, dict):
+        return data
+
+    design = _finite_float(payload.get("designEquivalentCycles"), LIFE_DEFAULT_DESIGN_EQ_CYCLES)
+    data["designEquivalentCycles"] = design if design > 0 else LIFE_DEFAULT_DESIGN_EQ_CYCLES
+    source_deg = _finite_float(payload.get("degreesPerEquivalentCycle"), LIFE_LEGACY_DEG_PER_EQ_CYCLE)
+    scale = source_deg / LIFE_DEG_PER_EQ_CYCLE if source_deg > 0 else 1.0
+
+    totals = payload.get("totalEquivalentCycles") or {}
+    if isinstance(totals, dict):
+        for joint_id in LIFE_JOINT_IDS:
+            value = _finite_float(totals.get(joint_id), 0.0)
+            data["totalEquivalentCycles"][joint_id] = max(0.0, value * scale)
+
+    adjusted = payload.get("fatigueAdjustedEquivalentCycles") or {}
+    if isinstance(adjusted, dict):
+        for joint_id in LIFE_JOINT_IDS:
+            fallback = _finite_float((totals if isinstance(totals, dict) else {}).get(joint_id), 0.0)
+            value = _finite_float(adjusted.get(joint_id), fallback)
+            data["fatigueAdjustedEquivalentCycles"][joint_id] = max(0.0, value * scale)
+    else:
+        data["fatigueAdjustedEquivalentCycles"] = dict(data["totalEquivalentCycles"])
+
+    health_state = payload.get("healthState")
+    if isinstance(health_state, dict):
+        data["healthState"] = _normalize_health_state(health_state)
+
+    updated_at = payload.get("updatedAt")
+    if isinstance(updated_at, str) and updated_at:
+        data["updatedAt"] = updated_at
+    return data
+
+
+def _load_life_usage():
+    try:
+        if LIFE_USAGE_PATH.exists():
+            raw = json.loads(LIFE_USAGE_PATH.read_text(encoding="utf-8"))
+            normalized = _normalize_life_usage(raw)
+            if (
+                raw.get("usageUnit") != LIFE_USAGE_UNIT
+                or raw.get("degreesPerEquivalentCycle") != LIFE_DEG_PER_EQ_CYCLE
+                or raw.get("healthState") != normalized.get("healthState")
+            ):
+                tmp_path = LIFE_USAGE_PATH.with_name(LIFE_USAGE_PATH.name + ".tmp")
+                tmp_path.write_text(json.dumps(normalized, ensure_ascii=False, indent=2), encoding="utf-8")
+                tmp_path.replace(LIFE_USAGE_PATH)
+            return normalized
+    except Exception as e:
+        print("[LIFE] usage load failed:", e)
+    return _blank_life_usage()
+
+
+life_usage = _load_life_usage()
+
+
+def life_usage_snapshot():
+    with life_lock:
+        return {
+            "schema": life_usage.get("schema", LIFE_USAGE_SCHEMA),
+            "usageUnit": life_usage.get("usageUnit", LIFE_USAGE_UNIT),
+            "degreesPerEquivalentCycle": life_usage.get("degreesPerEquivalentCycle", LIFE_DEG_PER_EQ_CYCLE),
+            "designEquivalentCycles": life_usage.get("designEquivalentCycles", LIFE_DEFAULT_DESIGN_EQ_CYCLES),
+            "totalEquivalentCycles": dict(life_usage.get("totalEquivalentCycles", {})),
+            "fatigueAdjustedEquivalentCycles": dict(life_usage.get("fatigueAdjustedEquivalentCycles", life_usage.get("totalEquivalentCycles", {}))),
+            "healthState": dict(life_usage.get("healthState", {})),
+            "updatedAt": life_usage.get("updatedAt"),
+            "storedOn": "raspberry_pi",
+        }
+
+
+def save_life_usage(payload):
+    global life_usage
+    normalized = _normalize_life_usage(payload)
+    normalized["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    tmp_path = LIFE_USAGE_PATH.with_name(LIFE_USAGE_PATH.name + ".tmp")
+    with life_lock:
+        life_usage = normalized
+        tmp_path.write_text(json.dumps(life_usage, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp_path.replace(LIFE_USAGE_PATH)
+        return {
+            "schema": life_usage.get("schema", LIFE_USAGE_SCHEMA),
+            "usageUnit": life_usage.get("usageUnit", LIFE_USAGE_UNIT),
+            "degreesPerEquivalentCycle": life_usage.get("degreesPerEquivalentCycle", LIFE_DEG_PER_EQ_CYCLE),
+            "designEquivalentCycles": life_usage.get("designEquivalentCycles", LIFE_DEFAULT_DESIGN_EQ_CYCLES),
+            "totalEquivalentCycles": dict(life_usage.get("totalEquivalentCycles", {})),
+            "fatigueAdjustedEquivalentCycles": dict(life_usage.get("fatigueAdjustedEquivalentCycles", life_usage.get("totalEquivalentCycles", {}))),
+            "healthState": dict(life_usage.get("healthState", {})),
+            "updatedAt": life_usage.get("updatedAt"),
+            "storedOn": "raspberry_pi",
+        }
+
+# ── 모션 상태 (generation 기반 선점) ──
+mlock = threading.Lock()
+motion = {"seq": None, "gen": 0, "label": "", "min_dur": MIN_DURATION,
+          "speed": AXIS_SPEED, "completed_gen": 0}
+
+# ── 그리퍼 요청 상태 (가장 최근 각도만 송신, gen 으로 갱신 감지) ──
+glock = threading.Lock()
+gripper_req = {"angle": None, "gen": 0}
+
+# MG90S 그리퍼는 위치 피드백이 없다(STS3215처럼 현재각을 못 읽음).
+# 따라서 '마지막으로 STM에 내린 명령각'을 그대로 현재각으로 보고한다(open-loop). lock 으로 보호.
+gripper_state = {"angle": None}
+
+
+def can_reader():
+    while True:
+        try:
+            bus = can.interface.Bus(channel=CAN_INTERFACE, interface="socketcan")
+        except Exception as e:
+            print("[CAN] open fail:", e); time.sleep(2); continue
+        print("[CAN] reading", CAN_INTERFACE)
+        last = time.monotonic()
+        try:
+            while True:
+                msg = bus.recv(1.0)
+                if msg is None:
+                    continue
+                now = time.monotonic()
+                d = bytes(msg.data)
+                aid = msg.arbitration_id
+                with lock:
+                    health["received"] += 1
+                    health["last_rx_ms"] = int((now - last) * 1000)
+                    if aid == 0x201 and len(d) >= 7:
+                        mid, ax10, tempC, load_raw, flags = struct.unpack("<BHBHB", d[0:7])
+                        m = motors.get(mid)
+                        if m:
+                            if flags & 0x01:
+                                m["current"] = ax10 / 10.0
+                            if flags & 0x02:
+                                m["temp"] = tempC
+                            if flags & 0x04:
+                                m["load"] = round((load_raw & 0x03FF) * 0.1, 1)
+                            m["flags"] = flags
+                            m["rx"] = now
+                            if m["cmd_rx"] == 0.0 and m["target"] is None and m["current"] is not None:
+                                pass  # 목표각 기본값(=current) 제거: 명령(0x100) 없으면 target 안 보냄
+                    elif aid == 0x202 and len(d) >= 4:
+                        mid = d[0]
+                        m = motors.get(mid)
+                        if m:
+                            if d[3]:
+                                m["current_ma"] = round(((d[1] | (d[2] << 8)) & 0x7FFF) * 6.5)
+                            m["rx"] = now
+                    elif aid == 0x100 and len(d) >= 4 and d[0] == 0x03:
+                        mid = d[1]
+                        m = motors.get(mid)
+                        if m:
+                            m["target"] = ((d[3] << 8) | d[2]) / 10.0
+                            m["cmd_rx"] = now
+                    elif aid == 0x100 and len(d) >= 2 and d[0] == CMD_GRIPPER:
+                        gripper_state["angle"] = int(max(GRIPPER_MIN, min(GRIPPER_MAX, d[1])))
+                last = now
+        except Exception as e:
+            print("[CAN] error:", e); time.sleep(1)
+        finally:
+            try:
+                bus.shutdown()
+            except Exception:
+                pass
+
+
+# ── 모션 ──
+def smoothstep(t):
+    return t * t * (3.0 - 2.0 * t)
+
+
+def _send_angle(bus, mid, deg, move_ms=STREAM_MOVE_MS):
+    deg = max(0.0, min(360.0, deg))
+    ax10 = int(round(deg * 10))
+    mt = int(move_ms) & 0xFFFF
+    data = [0x03, mid, ax10 & 0xFF, (ax10 >> 8) & 0xFF,
+            mt & 0xFF, (mt >> 8) & 0xFF, 0, 0]
+    try:
+        bus.send(can.Message(arbitration_id=0x100, data=data, is_extended_id=False))
+    except can.CanError:
+        pass
+
+
+def _send_gripper(bus, angle):
+    a = int(max(GRIPPER_MIN, min(GRIPPER_MAX, round(angle))))
+    data = [CMD_GRIPPER, a & 0xFF, 0, 0, 0, 0, 0, 0]
+    try:
+        bus.send(can.Message(arbitration_id=0x100, data=data, is_extended_id=False))
+    except can.CanError:
+        pass
+
+
+def request_motion(seq, label, min_dur=MIN_DURATION, speed=AXIS_SPEED):
+    """seq: [(targets_dict, sub_label), ...]. 새 요청은 진행 중 이동을 선점.
+    speed: deg/s (수동 기본 20, pick 30). M1 스윕 중이면 먼저 정지(0x03↔0x07 충돌 방지)."""
+    stop_sweep()
+    with mlock:
+        motion["seq"] = seq
+        motion["gen"] += 1
+        motion["label"] = label
+        motion["min_dur"] = min_dur
+        motion["speed"] = speed
+        return motion["gen"]
+
+
+def request_gripper(angle):
+    """가장 최근 그리퍼 목표각으로 교체(이전 요청 선점)."""
+    a = float(angle)
+    with glock:
+        gripper_req["angle"] = a
+        gripper_req["gen"] += 1
+    # 명령하는 즉시 현재각으로 기록(피드백이 없으므로 명령각 = 현재각).
+    with lock:
+        gripper_state["angle"] = int(max(GRIPPER_MIN, min(GRIPPER_MAX, round(a))))
+
+
+def _move_to(bus, targets, my_gen, min_dur=MIN_DURATION, speed=AXIS_SPEED):
+    with lock:
+        seeds = {m: (motors[m]["current"] if motors[m]["current"] is not None else 180.0)
+                 for m in targets}
+    maxd = max(abs(targets[m] - seeds[m]) for m in targets)
+    dur = max(maxd / speed, min_dur)
+    steps = max(1, int(dur / DT))
+    for i in range(steps + 1):
+        with mlock:
+            if motion["gen"] != my_gen:
+                return False  # 선점됨
+        s = smoothstep(i / steps)
+        for m in targets:
+            _send_angle(bus, m, seeds[m] + (targets[m] - seeds[m]) * s)
+        time.sleep(DT)
+    for m in targets:
+        _send_angle(bus, m, targets[m])
+    return True
+
+
+def motion_worker():
+    bus = None
+    while True:
+        with mlock:
+            seq = motion["seq"]; gen = motion["gen"]; label = motion["label"]
+            min_dur = motion["min_dur"]; speed = motion["speed"]
+            motion["seq"] = None
+        if seq is None:
+            time.sleep(0.03); continue
+        if bus is None:
+            try:
+                bus = can.interface.Bus(channel=CAN_INTERFACE, interface="socketcan")
+            except Exception as e:
+                print("[MOVE] send bus fail:", e); time.sleep(1); continue
+        print(f"[MOVE] start: {label}")
+        for targets, sub in seq:
+            print(f"[MOVE]   -> {sub}")
+            if not _move_to(bus, targets, gen, min_dur, speed):
+                print(f"[MOVE]   preempted at {sub}")
+                break
+        else:
+            with mlock:
+                motion["completed_gen"] = gen     # submit_and_wait가 done 판정
+            print(f"[MOVE] done: {label}")
+
+
+def gripper_worker():
+    """대시보드 그리퍼 명령을 별도 버스로 즉시 송신(관절 이동과 독립)."""
+    bus = None
+    last_gen = 0
+    while True:
+        with glock:
+            ang = gripper_req["angle"]; gen = gripper_req["gen"]
+        if gen == last_gen or ang is None:
+            time.sleep(0.03); continue
+        if bus is None:
+            try:
+                bus = can.interface.Bus(channel=CAN_INTERFACE, interface="socketcan")
+            except Exception as e:
+                print("[GRIP] send bus fail:", e); time.sleep(1); continue
+        last_gen = gen
+        _send_gripper(bus, ang)
+        print(f"[GRIP] {ang:.0f}°")
+
+
+# ── PICK (단일 잡기) : pick_runner 엔진 (계약 B) ───────────────────────────
+# 대시보드 S/PICK → 게이트 통과 → 스레드로 pick_runner.run(api). auto_runner(자동루프)는 안 엮음.
+PICK_CONF_TH = 0.5         # 신뢰도 임계
+PICK_STABLE_N = 5          # 연속 안정 프레임 임계
+PICK_TTL_MS = 2500         # alive 판정(age_ms < TTL)
+PICK_SPEED = 30.0          # 잡기 속도(수동 20과 분리, M4 발열↓)
+PICK_TIMEOUT_S = 30.0      # submit_and_wait 한 phase 최대 대기(무응답 안전망)
+
+pick_state = {"status": "SCAN_READY", "step": ""}   # SCAN_READY | BUSY
+pick_lock = threading.Lock()
+run_flags = {"estop": False, "stop_after_cycle": False}   # E-Stop 래치 / 종료(사이클 후 원점)
+BUSY_FLAG = Path(__file__).resolve().parent / "robot_busy.flag"   # 있으면 detect가 인식 정지
+CNC_FLAG = Path(__file__).resolve().parent / "cnc_busy.flag"      # 있으면 detect가 파이프 제외(가공중)
+
+
+def _set_busy(b):
+    """잡기/이동 중 깃발. detect가 이 파일이 있으면 인식·기록을 멈춤(스캔 정지 상태에서만 인식)."""
+    try:
+        if b:
+            BUSY_FLAG.write_text("1")
+        else:
+            BUSY_FLAG.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+def _set_cnc_busy(b):
+    """파이프 CNC 가공 중 깃발. detect가 있으면 파이프 제외(볼트/너트만). (계약 7c)"""
+    try:
+        if b:
+            CNC_FLAG.write_text("1")
+        else:
+            CNC_FLAG.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+def get_gen():
+    with mlock:
+        return motion["gen"]
+
+
+def get_vision():
+    return load_latest_runtime_state().get("vision", {})
+
+
+def submit_and_wait(seq, speed=PICK_SPEED, min_dur=MIN_DURATION, timeout=PICK_TIMEOUT_S):
+    """seq 제출 후 완료까지 대기 → "done" | "preempted"(HALT 등) | "timeout"(무응답).
+    내부에서 request_motion으로 gen 생성, motion_worker의 completed_gen으로 done 판정."""
+    my_gen = request_motion(seq, "pick", min_dur=min_dur, speed=speed)
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        with mlock:
+            g = motion["gen"]; done = motion["completed_gen"]
+        if g != my_gen:
+            return "preempted"      # 더 새 요청(HALT 등)이 선점
+        if done == my_gen:
+            return "done"
+        time.sleep(0.01)
+    return "timeout"
+
+
+class _PickApi:
+    """pick_runner에 주입할 DI 객체 (pick_runner가 브리지를 import 안 하게)."""
+    submit_and_wait = staticmethod(submit_and_wait)
+    request_gripper = staticmethod(request_gripper)
+    get_gen = staticmethod(get_gen)
+    set_cnc_busy = staticmethod(_set_cnc_busy)
+
+
+_pick_api = _PickApi()
+
+
+def _pick_gate(v):
+    """잡기 실행 조건: alive · 물체있음 · 신뢰도 · 안정프레임 · 좌표유효."""
+    return (v.get("age_ms", 9e9) < PICK_TTL_MS
+            and v.get("target", "NONE") != "NONE"
+            and v.get("confidence", 0.0) >= PICK_CONF_TH
+            and v.get("stable_frames", 0) >= PICK_STABLE_N
+            and v.get("x_mm") is not None and v.get("y_mm") is not None)
+
+
+def _pick_worker(v):
+    """게이트 통과한 vision 스냅샷으로 한 사이클 실행(별도 스레드)."""
+    def on_step(stage):
+        with pick_lock:
+            pick_state["step"] = stage
+    result = ("error", "unknown")
+    try:
+        result = pick_runner.run(
+            _pick_api, [v["x_mm"], v["y_mm"]], v.get("target", "NONE"),
+            angle_deg=v.get("angle_deg", 0.0),
+            near=v.get("near"), distance_mm=v.get("distance_mm"),
+            on_step=on_step)
+        print(f"[PICK] result: {result}")
+    except Exception as e:
+        result = ("error", str(e))
+        print(f"[PICK] error: {e}")
+    finally:
+        _set_busy(False)                  # detect 인식 재개(스캔)
+        with pick_lock:
+            pick_state["status"] = "SCAN_READY"
+            pick_state["step"] = ""
+            end = run_flags["stop_after_cycle"]; es = run_flags["estop"]
+            if end:
+                run_flags["stop_after_cycle"] = False
+    # 종료(END) 요청 + 정상 완료 + E-Stop 아님 → 원점 복귀
+    if end and not es and result[0] == "done":
+        request_motion([(HOME_POSE, "원점")], "END → 원점")
+        print("[PICK] END → 원점 복귀")
+
+
+def handle_pick():
+    """대시보드 PICK/S 명령 처리. 게이트 통과 시 스레드로 한 사이클 실행."""
+    if pick_runner is None:
+        print("[PICK] pick_runner 미탑재"); return "no_module"
+    v = get_vision()
+    with pick_lock:
+        if pick_state["status"] != "SCAN_READY":
+            print("[PICK] BUSY — 무시"); return "busy"
+        if not _pick_gate(v):
+            print("[PICK] 게이트 실패 "
+                  f"target={v.get('target')} conf={v.get('confidence')} "
+                  f"stable={v.get('stable_frames')} age={v.get('age_ms')}")
+            return "gate_fail"
+        pick_state["status"] = "BUSY"
+        pick_state["step"] = "PRE_GRASP"
+    _set_busy(True)                       # detect 인식 정지(이동 중)
+    threading.Thread(target=_pick_worker, args=(v,), daemon=True).start()
+    print(f"[PICK] start: {v.get('target')} @ ({v.get('x_mm')},{v.get('y_mm')})")
+    return "started"
+
+
+def _pick_snapshot():
+    with pick_lock:
+        return {"status": pick_state["status"], "step": pick_state["step"]}
+
+
+# ── M1 스캔/센터링 등속 + 스윕 + 5005 리스너 (ik_server_pose 대체) ──────────
+_m1_bus = None
+_sweep_stop = threading.Event()
+_sweep_thread = None
+_sweep_m1 = 180.0
+
+
+def _m1_can():
+    global _m1_bus
+    if _m1_bus is None:
+        _m1_bus = can.interface.Bus(channel=CAN_INTERFACE, interface="socketcan")
+    return _m1_bus
+
+
+def _send_angle_speed(mid, deg, speed):
+    """위치+Goal_Speed(0x07)로 STS3215 등속 회전(위치명령 최고속 튐 방지)."""
+    deg = max(0.0, min(360.0, deg))
+    ax10 = int(round(deg * 10)); sp = int(speed) & 0xFFFF
+    data = [CMD_SET_ANGLE_SPEED, mid, ax10 & 0xFF, (ax10 >> 8) & 0xFF,
+            sp & 0xFF, (sp >> 8) & 0xFF, 0, 0]
+    try:
+        _m1_can().send(can.Message(arbitration_id=0x100, data=data, is_extended_id=False))
+    except Exception:
+        pass
+
+
+def rotate_m1(target_deg, speed=SCAN_SPEED_REG):
+    """M1을 등속으로 target까지(스캔/센터링). 안전범위 클램프."""
+    t = max(M1_SCAN_MIN, min(M1_SCAN_MAX, float(target_deg)))
+    _send_angle_speed(1, t, speed)
+    return t
+
+
+def _glide(start, goal):
+    """start→goal 등속 한 방 + 시간추정. stop 시 현재 추정각에서 정지."""
+    global _sweep_m1
+    dist = abs(goal - start)
+    if dist < 0.5:
+        _sweep_m1 = goal; return goal
+    dur = dist / SWEEP_SPEED
+    sign = 1.0 if goal > start else -1.0
+    _send_angle_speed(1, goal, SWEEP_SPEED_REG)
+    t0 = time.time()
+    while not _sweep_stop.is_set():
+        el = time.time() - t0
+        if el >= dur:
+            _sweep_m1 = goal; return goal
+        _sweep_m1 = start + sign * SWEEP_SPEED * el
+        time.sleep(0.03)
+    cur = start + sign * SWEEP_SPEED * (time.time() - t0)
+    cur = min(max(cur, min(start, goal)), max(start, goal))
+    _sweep_m1 = cur
+    _send_angle_speed(1, cur, SWEEP_SPEED_REG)
+    return cur
+
+
+def _sweep_worker():
+    while not _sweep_stop.is_set():
+        _glide(_sweep_m1, SWEEP_LEFT)
+        if _sweep_stop.is_set():
+            return
+        _glide(_sweep_m1, SWEEP_RIGHT)
+
+
+def start_sweep():
+    global _sweep_thread, _sweep_m1
+    stop_sweep()
+    with lock:
+        a = motors[1]["current"]
+    if a is not None:
+        _sweep_m1 = a
+    _sweep_stop.clear()
+    _sweep_thread = threading.Thread(target=_sweep_worker, daemon=True)
+    _sweep_thread.start()
+
+
+def stop_sweep():
+    global _sweep_thread
+    _sweep_stop.set()
+    if _sweep_thread is not None:
+        _sweep_thread.join(timeout=1.0)
+        _sweep_thread = None
+    return _sweep_m1
+
+
+def ik5005_server():
+    """detect의 M1 스캔/홈/스윕/정지 명령(5005) 수신 → 실행. ik_server_pose 대체.
+    프로토콜 그대로라 detect 변경 없음. 잡기(pick)는 WS PICK로 처리하므로 여기선 거부."""
+    srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        srv.bind(("0.0.0.0", IK_PORT)); srv.listen(1)
+    except OSError as e:
+        print(f"[5005] bind 실패: {e}")
+        return
+    print(f"[5005] ik 명령 수신 대기 (scan/home/sweep/stop) — ik_server 대체")
+    while True:
+        try:
+            conn, _addr = srv.accept()
+        except Exception:
+            continue
+        with conn:
+            try:
+                buf = conn.recv(4096)
+                if not buf:
+                    continue
+                req = json.loads(buf.decode())
+            except Exception:
+                try:
+                    conn.sendall(b'{"ok":false,"err":"bad json"}')
+                except Exception:
+                    pass
+                continue
+            act = req.get("action")
+            with pick_lock:
+                _es = run_flags["estop"]
+            if _es and act in ("home", "scan", "sweep"):
+                try:
+                    conn.sendall(json.dumps({"ok": False, "err": "E-STOP"}).encode())
+                except Exception:
+                    pass
+                continue
+            try:
+                if act == "home":
+                    conn.sendall(json.dumps({"ok": True, "action": "home"}).encode())
+                    request_motion([(HOME_POSE, "원점(5005 home)")], "5005 HOME")
+                elif act == "scan":
+                    m1 = rotate_m1(req.get("m1", 180.0))
+                    conn.sendall(json.dumps({"ok": True, "m1": round(m1, 1)}).encode())
+                elif act == "sweep":
+                    start_sweep()
+                    conn.sendall(json.dumps({"ok": True, "sweeping": True}).encode())
+                elif act == "stop":
+                    m1 = stop_sweep()
+                    conn.sendall(json.dumps({"ok": True, "m1": round(m1, 1)}).encode())
+                else:
+                    conn.sendall(json.dumps({"ok": False, "err": "pick은 WS PICK 사용"}).encode())
+            except Exception as e:
+                print(f"[5005] {act} 처리 오류: {e}")
+
+
+def derive_can_status(comms):
+    """모터별 comm(WAIT/STALE/PARTIAL/OK)을 CAN 버스 전체 상태로 집계.
+    OK=전 노드 정상, WARN=일부만 수신/플래그 부분, STALE=버스 침묵 또는 수신 끊김."""
+    if all(c == "WAIT" for c in comms):
+        return "STALE"          # 한 번도 수신 없음 = 버스 침묵(끊김)
+    if any(c == "STALE" for c in comms):
+        return "STALE"          # 수신하다 끊긴 모터 존재
+    if any(c in ("WAIT", "PARTIAL") for c in comms):
+        return "WARN"           # 일부만 수신 / 텔레메트리 플래그 부분
+    return "OK"
+
+
+def build_snapshot():
+    now = time.monotonic()
+    joints = []
+    comms = []
+    with lock:
+        for i in range(1, 7):
+            m = motors[i]
+            if not m["rx"]:
+                comm = "WAIT"
+            elif (now - m["rx"]) > STALE_S:
+                comm = "STALE"
+            elif (m["flags"] & 0x07) != 0x07:
+                comm = "PARTIAL"
+            else:
+                comm = "OK"
+            comms.append(comm)
+            j = {"id": NAMES[i], "comm": comm}
+            for k in ("current", "temp", "load", "target", "current_ma"):
+                if m[k] is not None:
+                    j[k] = m[k]
+            joints.append(j)
+        hp = dict(health)
+        ga = gripper_state["angle"]
+    runtime = load_latest_runtime_state()
+    vision = runtime.get("vision", {})
+    # 그리퍼(MG90S)는 피드백이 없다. 브리지가 마지막에 STM으로 내린 명령각을 현재각으로 덮어쓴다.
+    gripper = dict(runtime.get("gripper", {}))
+    if ga is not None:
+        gripper["sg90_angle"] = ga
+        gripper["state"] = "OPEN" if ga < (GRIPPER_MIN + GRIPPER_MAX) / 2 else "CLOSED"
+        gripper["source"] = "dashboard_bridge_cmd"
+        gripper["fresh"] = True
+        gripper["reason"] = "bridge_command"
+    with pick_lock:
+        es = run_flags["estop"]
+    system = {"server_connected": True, "can_status": derive_can_status(comms), "estop": es}
+    if vision.get("fresh"):
+        system.update({"camera_status": "OK", "ai_status": "RUNNING"})
+    return {"robot": {"joints": joints},
+            "system": system,
+            "vision": vision,
+            "gripper": gripper,
+            "pick": _pick_snapshot(),
+            "life_usage": life_usage_snapshot(),
+            "can_health": hp}
+
+
+async def broadcast(text):
+    dead = []
+    for ws in list(clients):
+        try:
+            await asyncio.wait_for(ws.send(text), timeout=0.25)
+        except Exception:
+            dead.append(ws)
+    for ws in dead:
+        clients.discard(ws)
+
+
+async def broadcaster():
+    period = 1.0 / SEND_HZ
+    while True:
+        await asyncio.sleep(period)
+        if clients:
+            await broadcast(json.dumps(build_snapshot(), ensure_ascii=False))
+
+
+async def ws_handler(ws):
+    clients.add(ws)
+    print("[WS] connect", ws.remote_address)
+    try:
+        async for message in ws:
+            try:
+                d = json.loads(message)
+            except Exception:
+                continue
+            msg_type = d.get("type")
+            if msg_type == "LIFE_USAGE_GET":
+                await ws.send(json.dumps({"type": "LIFE_USAGE_STATE", "life_usage": life_usage_snapshot()},
+                                         ensure_ascii=False))
+                continue
+            if msg_type == "LIFE_USAGE_SAVE":
+                try:
+                    saved = save_life_usage(d.get("payload") or {})
+                    await ws.send(json.dumps({"type": "LIFE_USAGE_SAVED", "life_usage": saved},
+                                             ensure_ascii=False))
+                    print("[LIFE] usage saved")
+                except Exception as e:
+                    await ws.send(json.dumps({"type": "LIFE_USAGE_ERROR", "message": str(e)},
+                                             ensure_ascii=False))
+                    print("[LIFE] usage save failed:", e)
+                continue
+            if msg_type == "COMMAND":
+                cmd = d.get("command")
+                payload = d.get("payload") or {}
+                with pick_lock:
+                    _es = run_flags["estop"]
+                if _es and cmd not in ("ESTOP", "ESTOP_RESET", "HALT", "PING"):
+                    print(f"[CMD] {cmd} 거부 (E-STOP 래치)")
+                    continue
+                if cmd == "AUTO_START":
+                    request_motion([(SCAN_POSE, "스캔자세")], "START → 스캔자세")
+                    print("[CMD] AUTO_START → 스캔자세 이동")
+                elif cmd == "AUTO_STOP":
+                    request_motion([(SCAN_POSE, "스캔복귀"), (HOME_POSE, "원점180")],
+                                   "STOP → 스캔 후 원점")
+                    print("[CMD] AUTO_STOP → 스캔 후 원점 이동")
+                elif cmd == "HALT":
+                    # 즉시정지: 진행 중 이동을 선점하고 각 모터를 현재 실측각에 짧게 홀드(토크 유지).
+                    with lock:
+                        hold = {m: motors[m]["current"] for m in range(1, 7)
+                                if motors[m]["current"] is not None}
+                    if hold:
+                        request_motion([(hold, "HALT 현재각 홀드")],
+                                       "HALT 즉시정지", min_dur=0.05)
+                        print(f"[CMD] HALT → 현재각 홀드 {sorted(hold)}")
+                    else:
+                        request_motion([], "HALT 선점")  # 현재각 미수신: 진행 이동만 선점
+                        print("[CMD] HALT: 현재각 없음 — 진행 이동만 선점")
+                elif cmd == "MANUAL_MOVE":
+                    # payload.targets: [{motor_id, angle_deg(raw)}, ...]  여러 모터 동시 S-curve.
+                    targets = {}
+                    for t in payload.get("targets", []):
+                        try:
+                            mid = int(t.get("motor_id"))
+                            deg = float(t.get("angle_deg"))
+                        except (TypeError, ValueError):
+                            continue
+                        if mid in MOTOR_LIMITS:
+                            targets[mid] = clamp_limit(mid, deg)
+                    if targets:
+                        sub = " ".join(f"M{m}={targets[m]:.1f}" for m in sorted(targets))
+                        request_motion([(targets, sub)], f"수동 {sub}",
+                                       min_dur=MANUAL_MIN_DURATION)
+                        print(f"[CMD] MANUAL_MOVE → {sub}")
+                    else:
+                        print("[CMD] MANUAL_MOVE: 유효 타깃 없음")
+                elif cmd == "SET_JOINT_ANGLE":
+                    # 단일 관절(하위호환). 여러 관절은 MANUAL_MOVE 권장.
+                    try:
+                        mid = int(payload.get("motor_id"))
+                        deg = float(payload.get("angle_deg"))
+                    except (TypeError, ValueError):
+                        mid = None
+                    if mid in MOTOR_LIMITS:
+                        deg = clamp_limit(mid, deg)
+                        request_motion([({mid: deg}, f"M{mid}={deg:.1f}")],
+                                       f"수동 M{mid}", min_dur=MANUAL_MIN_DURATION)
+                        print(f"[CMD] SET_JOINT_ANGLE → M{mid}={deg:.1f}")
+                    else:
+                        print("[CMD] SET_JOINT_ANGLE: 잘못된 motor_id")
+                elif cmd == "GRIPPER":
+                    ang = payload.get("sg90_angle_deg", payload.get("angle_deg"))
+                    if ang is not None:
+                        request_gripper(ang)
+                        print(f"[CMD] GRIPPER → {float(ang):.0f}°")
+                    else:
+                        print("[CMD] GRIPPER: 각도 없음")
+                elif cmd == "SWEEP":
+                    start_sweep()                       # M1 120↔240 등속 좌우 스윕(이미 구현)
+                    print("[CMD] SWEEP → 스윕 시작")
+                elif cmd == "SWEEP_STOP":
+                    m1 = stop_sweep()                   # 스윕 멈추고 현재 M1에서 정지
+                    print(f"[CMD] SWEEP_STOP → M1={m1:.1f}")
+                elif cmd in ("PICK", "S", "VISION_SEND"):
+                    res = handle_pick()
+                    print(f"[CMD] PICK → {res}")
+                elif cmd == "ESTOP":
+                    with pick_lock:
+                        run_flags["estop"] = True
+                    request_motion([(SCAN_POSE, "E-STOP 스캔복귀"), (HOME_POSE, "E-STOP 원점")], "E-STOP 후퇴")
+                    print("[CMD] ESTOP → 중단·스캔→원점·래치")
+                elif cmd == "ESTOP_RESET":
+                    with pick_lock:
+                        run_flags["estop"] = False
+                    print("[CMD] ESTOP_RESET → 해제")
+                elif cmd == "END":
+                    with pick_lock:
+                        busy = pick_state["status"] == "BUSY"
+                        run_flags["stop_after_cycle"] = True
+                    if not busy:
+                        request_motion([(SCAN_POSE, "스캔복귀"), (HOME_POSE, "원점")], "END → 원점")
+                        with pick_lock:
+                            run_flags["stop_after_cycle"] = False
+                        print("[CMD] END → (유휴) 원점 복귀")
+                    else:
+                        print("[CMD] END → 사이클 후 원점 (대기)")
+                elif cmd == "PING":
+                    print("[CMD] PING (무동작, 수신확인용)")
+                else:
+                    print("[CMD] unknown:", cmd)
+    finally:
+        clients.discard(ws)
+        print("[WS] disconnect")
+
+
+async def main():
+    threading.Thread(target=can_reader, daemon=True).start()
+    threading.Thread(target=motion_worker, daemon=True).start()
+    threading.Thread(target=gripper_worker, daemon=True).start()
+    threading.Thread(target=ik5005_server, daemon=True).start()   # detect M1 스캔/홈/스윕 수신(ik_server 대체)
+    _set_busy(False)                      # 시작 시 잔여 깃발 제거(이전 크래시 대비)
+    _set_cnc_busy(False)
+    print(f"Sambo WS Bridge v4 — ws://0.0.0.0:{WS_PORT}, snapshot {SEND_HZ}Hz, "
+          f"motion+manual+gripper+halt enabled")
+    async with websockets.serve(ws_handler, WS_HOST, WS_PORT):
+        await broadcaster()
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nbye")
