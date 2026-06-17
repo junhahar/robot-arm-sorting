@@ -497,13 +497,17 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 
 /* ===== ZIP dashboard layout match ===== */
 .layout{min-height:0;height:calc(100vh - 116px);grid-template-columns:minmax(0,1fr) 360px;grid-template-rows:auto minmax(0,1fr) 184px;align-items:stretch;padding:7px;box-sizing:border-box;overflow:hidden}
-.step-chart{grid-column:1;grid-row:1;align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:9px;padding:11px 18px}
+.step-chart{grid-column:1;grid-row:1;align-self:stretch;height:134px;display:flex;flex-direction:row;align-items:stretch;gap:10px;padding:9px 14px}
+.sc-box{border:1px solid var(--line);border-radius:10px;background:rgba(13,27,45,.55);padding:8px 13px;display:flex;flex-direction:column;justify-content:center;gap:7px;min-width:0}
+.sc-arm{flex:1 1 auto}
+.sc-cnc{flex:0 0 210px;gap:6px}
+.sc-head{font-size:10px;font-weight:800;letter-spacing:.05em;color:var(--dim);text-transform:uppercase}
 .workspace{grid-column:1;grid-row:2;align-self:stretch;grid-template-rows:none;min-height:0;height:auto;display:flex;flex-direction:column}
 .workspace>.main-stage{flex:1 1 auto;min-height:0;height:auto}
 .bottom-strip{grid-column:1;grid-row:3;align-self:stretch;min-height:0;display:grid;grid-template-columns:minmax(180px,.55fr) minmax(590px,1.85fr) minmax(170px,.75fr);gap:7px}
 .right-panel{position:static;right:auto;top:auto;width:auto;height:auto;align-self:stretch;grid-column:2;grid-row:1/4;overflow:hidden;padding-bottom:0;display:flex;flex-direction:column;gap:7px;z-index:auto}
-.right-panel>.joint-panel,.right-panel>.motor-panel{flex:0 0 auto;min-height:0;display:flex;flex-direction:column}
-.right-panel>.sorting-panel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.right-panel>.work-panel{flex:0 0 134px;height:134px;min-height:0;display:flex;flex-direction:column}
+.right-panel>.joint-panel,.right-panel>.motor-panel{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
 .main-stage.split-stage{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:none;height:100%}
 .main-stage.split-stage>.panel{min-height:0;height:100%}
 .main-stage.manual-stage{grid-template-columns:minmax(390px,.72fr) minmax(0,1.28fr);height:100%}
@@ -522,6 +526,23 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 .step-chart-now b{font-size:17px;color:var(--text);white-space:nowrap}
 .step-chart-now>span{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .step-chart-pct{margin-left:auto;color:var(--cyan);font-size:21px;font-weight:900;text-align:right;line-height:1.05;white-space:nowrap}
+/* CNC 박스 */
+.cnc-state{display:flex;align-items:center;gap:8px}
+.cnc-dot{width:11px;height:11px;border-radius:50%;background:var(--dim);flex:0 0 auto;box-shadow:0 0 0 3px rgba(78,107,130,.14)}
+.cnc-state.idle .cnc-dot{background:var(--dim)}
+.cnc-state.running .cnc-dot{background:var(--red);box-shadow:0 0 9px var(--red);animation:cncpulse 1.1s ease-in-out infinite}
+.cnc-state.done .cnc-dot{background:var(--green);box-shadow:0 0 9px var(--green)}
+@keyframes cncpulse{0%,100%{opacity:1}50%{opacity:.35}}
+.cnc-state b{font-size:15px;color:var(--text);white-space:nowrap}
+.cnc-state.done b{color:var(--green)}
+.cnc-timer{font-size:13px;color:var(--muted);font-weight:700;white-space:nowrap}
+.cnc-timer .mono{color:var(--text);font-size:15px}
+.cnc-timer.hidden{visibility:hidden}
+.cnc-bar{height:7px;border-radius:5px;background:rgba(54,94,126,.35);overflow:hidden}
+.cnc-bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--red),var(--yellow));transition:width .4s linear}
+.cnc-bar.hidden{visibility:hidden}
+.cnc-rack{font-size:11px;color:var(--muted)}
+.cnc-rack .mono{color:var(--text);font-weight:800}
 .step-chart-pct small{display:block;color:var(--dim);font-size:9px;font-weight:600}
 .cam-wrap{position:relative;background:#05090f}
 .cam-stream{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none;background:#000}
@@ -539,12 +560,22 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 .right-panel .motor-row{height:auto;min-height:27px;font-size:10px}
 .right-panel .meter{height:6px}.right-panel .meter-label{font-size:9px}
 .right-panel .pill{min-height:21px;align-items:center;padding:3px 8px;font-size:10px}
-.sorting-body{flex:1;min-height:0;padding:9px 11px;display:flex;flex-direction:column;gap:8px;overflow:auto;justify-content:space-evenly}
-.sort-bins{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.sort-bin{min-height:74px;border:1px solid rgba(32,213,232,.24);border-radius:7px;background:rgba(5,12,20,.42);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--dim);font-size:10px;padding:15px 8px}
-.sort-bin.bolt{border-color:rgba(74,222,128,.35)}.sort-bin.nut{border-color:rgba(96,165,250,.35)}
-.sort-bin b{font-size:27px;margin-top:6px;color:var(--green);line-height:1}.sort-bin.nut b{color:#60a5fa}
-.sort-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sort-summary div{border:1px solid rgba(28,56,85,.55);border-radius:7px;background:rgba(5,12,20,.34);padding:12px;text-align:center;color:var(--dim);font-size:10px}.sort-summary b{display:block;margin-top:6px;color:var(--text);font-size:16px}.sort-last{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--dim);font-size:10px}.sort-last b{color:var(--text)}
+/* 작업 현황(파이프 라인) — 완료/사이클/평균 + 최근처리 */
+.work-body{flex:1;min-height:0;padding:8px 11px;display:flex;flex-direction:column;gap:8px;justify-content:center}
+.work-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.work-stat{border:1px solid rgba(28,56,85,.55);border-radius:8px;background:rgba(5,12,20,.4);padding:9px 5px;text-align:center;color:var(--dim);font-size:10px}
+.work-stat b{display:block;margin-top:5px;color:var(--cyan);font-size:23px;font-weight:900;line-height:1}
+.work-stat b small{font-size:11px;color:var(--muted);font-weight:700;margin-left:2px}
+.work-stat.done b{color:var(--green)}
+.work-last{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--dim);font-size:10px;border-top:1px solid rgba(28,56,85,.4);padding-top:7px}
+.work-last b{color:var(--text)}
+/* 관절·모터 상태 — 남는 공간을 균등 분할, 안의 행도 박스 높이에 맞춰 균등 확장 */
+.right-panel .joint-panel .status-scroll,.right-panel .motor-panel .status-scroll{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.right-panel .joint-panel #jointRows,.right-panel .motor-panel #motorRows{flex:1 1 auto;display:flex;flex-direction:column;gap:5px;min-height:0}
+.right-panel .joint-panel .joint-row{flex:1 1 0;min-height:30px;align-items:center}
+.right-panel .motor-panel .motor-row{flex:1 1 0;min-height:30px;align-items:center}
+.right-panel .motor-panel .meter{height:9px}
+.right-panel .motor-panel .meter-label{font-size:10px}
 .bottom-strip>.panel{min-height:0;display:flex;flex-direction:column}
 .bottom-strip .logs{flex:1;height:auto;max-height:none;min-height:0}
 .tof-body{flex:1;min-height:0;padding:9px 12px;display:flex;flex-direction:column;justify-content:center;gap:8px}
@@ -697,14 +728,24 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 
 <main class="layout">
   <section class="step-chart panel" id="stepChartPanel">
-    <div class="step-chart-track" id="stepChartTrack"></div>
-    <div class="step-chart-foot">
-      <div class="step-chart-now">
-        <span class="step-chart-no mono" id="stepChartNo">00</span>
-        <b id="stepChartName">대기</b>
-        <span id="stepChartDesc" class="muted">시작 버튼을 누르면 자동 분류 단계가 진행됩니다.</span>
+    <div class="sc-box sc-arm">
+      <div class="sc-head">로봇팔 / Robot Arm</div>
+      <div class="step-chart-track" id="stepChartTrack"></div>
+      <div class="step-chart-foot">
+        <div class="step-chart-now">
+          <span class="step-chart-no mono" id="stepChartNo">H</span>
+          <b id="stepChartName">대기</b>
+          <span id="stepChartDesc" class="muted">시작 버튼을 누르면 자동 분류 단계가 진행됩니다.</span>
+        </div>
+        <div class="step-chart-pct mono"><span id="stepChartPct">0</span>%<small>진행률</small></div>
       </div>
-      <div class="step-chart-pct mono"><span id="stepChartPct">0</span>%<small>진행률</small></div>
+    </div>
+    <div class="sc-box sc-cnc" id="cncBox">
+      <div class="sc-head">CNC</div>
+      <div class="cnc-state idle" id="cncState"><span class="cnc-dot"></span><b id="cncStateLabel">대기</b></div>
+      <div class="cnc-timer hidden" id="cncTimer">⏱ <span class="mono" id="cncRemain">—</span> 남음</div>
+      <div class="cnc-bar hidden" id="cncBar"><i id="cncBarFill"></i></div>
+      <div class="cnc-rack">적재 <span class="mono" id="cncRack">0/2</span></div>
     </div>
   </section>
 
@@ -713,6 +754,11 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
   </section>
 
   <aside class="right-panel">
+    <article class="panel work-panel">
+      <div class="panel-head">작업 현황 / Work Status <small>파이프 라인</small></div>
+      <div class="work-body" id="workBody"></div>
+    </article>
+
     <article class="panel joint-panel">
       <div class="panel-head">로봇 관절 상태 / Joint Status <small>STS3215 x 6 · 그리퍼</small></div>
       <div class="joint-table status-scroll">
@@ -727,11 +773,6 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
         <div class="table-head"><span>모터</span><span>온도</span><span>부하</span><span>통신</span></div>
         <div id="motorRows"></div>
       </div>
-    </article>
-
-    <article class="panel sorting-panel">
-      <div class="panel-head">분류 현황 / Sorting Status <small>통별 누적</small></div>
-      <div class="sorting-body" id="sortingBody"></div>
     </article>
   </aside>
 
@@ -964,14 +1005,16 @@ document.addEventListener("keydown",e=>{
 const JOINT_NAMES={J1:"Base",J2:"Shoulder",J3:"Elbow",J4:"Wrist Pitch",J5:"Wrist Roll",J6:"End Assist"};
 // 표시 전용: 6모터(M1~M6) → 5축(J1~J5). J2 어깨는 거울쌍 M2·M3 2모터. (내부 id는 그대로, 화면 라벨만 이 매핑 사용)
 const JOINT_DISPLAY=[{axis:"J1",fn:"Base"},{axis:"J2",fn:"Shoulder"},{axis:"J2",fn:"Shoulder"},{axis:"J3",fn:"Elbow"},{axis:"J4",fn:"Wrist Pitch"},{axis:"J5",fn:"Wrist Roll"}];
-const STEP_LABELS={HOME:"HOME",SCAN:"스캔 중",DETECT:"물체 감지·분류",PRE_GRASP:"집기 전 접근",GRASP:"집기",LIFT:"들어 올리기",CARRY:"운반",PLACE:"분류통 배치",TEACHING:"티칭 중",PAUSED:"일시 정지",ERROR:"오류 정지"};
-const OBJECT_LABELS={BOLT:"볼트",NUT:"너트",WASHER:"와셔",NONE:"대기"};
+const STEP_LABELS={HOME:"대기",SCAN:"스캔",PRE_GRASP:"접근",GRASP:"집기",LIFT:"들기",CARRY:"운반",PLACE:"놓기",DETECT:"감지",TEACHING:"티칭 중",PAUSED:"일시 정지",ERROR:"오류 정지"};
+const OBJECT_LABELS={BOLT:"볼트",NUT:"너트",WASHER:"와셔",PIPE:"파이프",NONE:"대기"};
+// 목적지(dest)는 백엔드 auto_runner가 판단해 내려줌 — 대시보드는 표시 변환만.
+const DEST_LABELS={cnc:"CNC",bin:"분류통",rack:"적재 V홈",CNC:"CNC",BIN:"분류통",RACK:"적재 V홈"};
 const PHOTO_HOME_ANGLES=[180,180,180,180,180,180];
 const SERVO_RAW_HOME_ANGLES=[180,180,180,180,180,180];
 window.SAMBO_PHOTO_HOME_ANGLES=PHOTO_HOME_ANGLES.slice();
 window.SAMBO_SERVO_RAW_HOME_ANGLES=SERVO_RAW_HOME_ANGLES.slice();
 const state={
-  mode:"AUTO_RUN",demo:true,ws:null,wpList:[],logCount:0,lastFrame:0,events:[],auto:{running:false},camera:{gripper_url:""},sorting:{bolt:0,nut:0,total:0,cycle_s:null,last:null},
+  mode:"AUTO_RUN",demo:true,ws:null,wpList:[],logCount:0,lastFrame:0,events:[],auto:{running:false},camera:{gripper_url:""},work:{done:0,cycle_s:null,avg_s:null,last:null},
   system:{server_connected:false,can_status:"WAIT",camera_status:"WAIT",ai_status:"RUNNING",estop:false,ws_errors:0},
   robot:{joints:[
     {id:"J1",name:"Base",current:PHOTO_HOME_ANGLES[0],target:PHOTO_HOME_ANGLES[0],temp:41.2,load:35,status:"OK"},
@@ -988,7 +1031,8 @@ const state={
   vision:{target:"NONE",confidence:.0,stable_frames:0,bbox:null,correction:{dx_mm:0,dy_mm:0}},
   pick:{status:"SCAN_READY",step:""},
   teach:{poses:{},taught:[],missing:["cnc_infeed","cnc_grab","rack_v0","rack_v1"],lastError:""},
-  path:{current_step:"HOME",steps:["HOME","SCAN","DETECT","PRE_GRASP","GRASP","LIFT","CARRY","PLACE"],progress_percent:0},
+  path:{current_step:"HOME",steps:["HOME","SCAN","PRE_GRASP","GRASP","LIFT","CARRY","PLACE"],progress_percent:0,dest:"none"},
+  cnc:{state:"idle",remaining_s:null,total_s:20,rack_count:0,rack_max:2},
   precheck:{home_confirmed:true,path_loaded:true,servo_ready:true,sg90_ready:true,tof_ready:true},
   can_health:{received:1842,errors:0,delay_ms:18,last_rx_ms:22},
   calibration:{tof:"OK",camera:"OK",mpu:"OK",servo:"OK"},
@@ -1817,19 +1861,35 @@ function renderPrimary(){
 }
 
 function deriveCurrentStep(){
-  // 현재 단계 = 잡기 중이면 pick.step(접근~배치), 아니면 비전으로 스캔/감지, 정지면 홈(원점).
+  // 현재 단계 = 잡기 중이면 pick.step(접근~놓기), 아니면 비전으로 스캔(감지는 스캔에 흡수), 정지면 홈(원점).
   const steps=state.path.steps||[],pk=state.pick||{};let step="HOME";
   if(pk.status==="BUSY"){
     step=steps.includes(pk.step)?pk.step:"PLACE";   // RETURN 등은 마지막 단계 유지(되감김 깜빡임 방지)
   }else{
     const v=state.vision||{},alive=(v.age_ms!=null?v.age_ms:9e9)<2500;
-    if(alive&&v.target&&v.target!=="NONE")step="DETECT";
-    else if(alive)step="SCAN";
+    if(alive)step="SCAN";                            // 탐색·감지 모두 스캔 노드(문구로 구분)
     else step="HOME";                               // 카메라/검출 정지 → 홈(원점/대기)
   }
   state.path.current_step=step;
   const idx=steps.indexOf(step),denom=Math.max(steps.length-1,1);
   state.path.progress_percent=idx>0?Math.round(idx/denom*100):0;   // 홈=0%, 마지막=100%
+}
+// 단계별 변수 조립 문구: {타입}이 스캔~들기, {목적지}가 운반~놓기를 채움
+function stepCaption(step){
+  const v=state.vision||{},tgt=(v.target&&v.target!=="NONE")?v.target:null;
+  const typeKo=OBJECT_LABELS[tgt]||"물체";
+  const dest=state.path.dest&&state.path.dest!=="none"?state.path.dest:(state.pick&&state.pick.dest)||null;
+  const destKo=DEST_LABELS[dest]||"목적지";
+  switch(step){
+    case "HOME": return "원점에서 대기 중";
+    case "SCAN": return tgt?`${typeKo}로 판별`:"물체 탐색 중…";
+    case "PRE_GRASP": return `${typeKo} 위치로 접근`;
+    case "GRASP": return `${typeKo} 집는 중`;
+    case "LIFT": return `${typeKo} 들어 올림`;
+    case "CARRY": return `${destKo} 위치로 이동`;
+    case "PLACE": return `${destKo}에 놓기`;
+    default: return STEP_LABELS[step]||step;
+  }
 }
 function renderPath(){
   const p=state.path,steps=p.steps||[],isEstop=state.system.estop;
@@ -1837,13 +1897,31 @@ function renderPath(){
   const track=$("stepChartTrack");
   if(track)track.innerHTML=steps.map((step,i)=>{
     const done=active&&i<curIdx,current=active&&i===curIdx,cls=isEstop?"":current?"current":done?"done":"";
-    const num=step==="HOME"?"H":String(i).padStart(2,"0");   // 홈은 H, 사이클은 01~07
+    const num=step==="HOME"?"H":String(i).padStart(2,"0");   // 홈은 H, 사이클은 01~06
     return `${i?`<i class="step-line ${done?"done":""}"></i>`:""}<div class="step-node ${cls}"><span class="step-dot mono">${num}</span><span class="step-label">${STEP_LABELS[step]||step}</span></div>`;
   }).join("");
-  setText("stepChartNo",isEstop?"!!":(active&&p.current_step!=="HOME"?String(curIdx).padStart(2,"0"):""));
+  setText("stepChartNo",isEstop?"!!":(active&&p.current_step!=="HOME"?String(curIdx).padStart(2,"0"):"H"));
   setText("stepChartName",isEstop?"E-STOP 정지":(STEP_LABELS[p.current_step]||"대기"));
-  setText("stepChartDesc",isEstop?"하드웨어 E-STOP과 서보 전원을 확인하세요.":active&&p.current_step!=="HOME"?"센서 피드백을 확인하며 분류 단계를 진행합니다.":"홈(원점) 대기 — 시작/PICK을 누르거나 물체를 올리세요.");
+  setText("stepChartDesc",isEstop?"하드웨어 E-STOP과 서보 전원을 확인하세요.":stepCaption(active?p.current_step:"HOME"));
   setText("stepChartPct",Math.round(active?(p.progress_percent||0):0));
+  renderCnc();
+}
+function renderCnc(){
+  const c=state.cnc||{},box=$("cncState");if(!box)return;
+  const st=c.state||"idle";   // idle | running | done
+  box.className="cnc-state "+(["idle","running","done"].includes(st)?st:"idle");
+  setText("cncStateLabel",st==="running"?"가공 중":st==="done"?"가공 완료":"대기");
+  const timer=$("cncTimer"),bar=$("cncBar"),fill=$("cncBarFill");
+  if(st==="running"&&c.remaining_s!=null){
+    const rem=Math.max(0,Math.round(c.remaining_s)),tot=c.total_s||20;
+    setText("cncRemain",rem+"s");
+    if(timer)timer.classList.remove("hidden");
+    if(bar){bar.classList.remove("hidden");if(fill)fill.style.width=Math.max(0,Math.min(100,rem/tot*100))+"%";}
+  }else{
+    if(timer)timer.classList.add("hidden");
+    if(bar)bar.classList.add("hidden");
+  }
+  setText("cncRack",(c.rack_count||0)+"/"+(c.rack_max||2));
 }
 
 function renderRightPanel(){
@@ -1854,22 +1932,19 @@ function renderRightPanel(){
   $("motorRows").innerHTML=state.robot.joints.map((j,i)=>{const danger=j.temp>=65||j.load>=90,warn=j.temp>55||j.load>=80,sc=danger?"err":warn?"warn":"ok",csc=(j.comm==="OK"?"ok":j.comm==="PARTIAL"?"warn":j.comm==="STALE"?"err":""),ctext=(j.comm==="OK"?"정상":j.comm==="PARTIAL"?"주의":j.comm==="STALE"?"끊김":"대기");
     return `<div class="motor-row mono"><b>${JOINT_DISPLAY[i].axis} (M${i+1})</b><div><div class="meter"><i class="temp" style="width:${clamp(j.temp/75*100,0,100)}%"></i></div><span class="meter-label">${fmt(j.temp,0)}°C</span></div>
       <div><div class="meter"><i style="width:${clamp(j.load,0,100)}%;background:${danger?"var(--red)":warn?"var(--yellow)":"var(--cyan)"}"></i></div><span class="meter-label">${fmt(j.load,0)}%</span></div><span class="pill ${csc}">${ctext}</span></div>`}).join("");
-  const g=state.gripper,approach=getApproachGuide(),so=state.sorting||{};
+  const g=state.gripper,approach=getApproachGuide(),wk=state.work||{};
   const tb=$("tofBody");
   if(tb)tb.innerHTML=`<div class="tof-big mono">${fmt(g.tof_mm)}<span class="unit">mm</span></div>
     <div class="tof-judge"><span>집기 판단</span><b class="${approach.cls}">${approach.ready?"집기 가능":approach.label}</b></div>
     <div class="approach-track"><i style="width:${approach.percent}%"></i></div>
     <div class="approach-zones"><span>접근 필요</span><span>집기 18~35mm</span><span>너무 가까움</span></div>`;
-  const sb=$("sortingBody");
-  if(sb)sb.innerHTML=`<div class="sort-bins">
-      <div class="sort-bin bolt"><span>볼트통</span><b>${so.bolt||0}</b></div>
-      <div class="sort-bin nut"><span>너트통</span><b>${so.nut||0}</b></div>
+  const wb=$("workBody");
+  if(wb)wb.innerHTML=`<div class="work-stats">
+      <div class="work-stat done"><span>완료</span><b>${wk.done||0}<small> 개</small></b></div>
+      <div class="work-stat"><span>사이클</span><b>${wk.cycle_s!=null?wk.cycle_s.toFixed(1):"-"}<small> 초</small></b></div>
+      <div class="work-stat"><span>평균</span><b>${wk.avg_s!=null?wk.avg_s.toFixed(1):"-"}<small> 초</small></b></div>
     </div>
-    <div class="sort-summary">
-      <div><span>총 분류</span><b>${so.total||0}<span class="unit"> 개</span></b></div>
-      <div><span>사이클</span><b>${so.cycle_s?so.cycle_s+" s":"-"}</b></div>
-    </div>
-    <div class="sort-last"><span>최근 처리</span><b>${so.last?`${objectLabel(so.last.type)} -> ${so.last.bin} ${so.last.ok?"OK":"NG"}`:"대기"}</b></div>`;
+    <div class="work-last"><span>최근 처리</span><b>${wk.last?`파이프 · ${wk.last.cycle_s!=null?wk.last.cycle_s.toFixed(1)+"초":"-"} · ${wk.last.at||""}`:"대기"}</b></div>`;
   renderManualTwinCard();
 }
 
@@ -2078,7 +2153,7 @@ function getTwinPoseFromAngles(A){
   const shoulderM2=motorToJointDelta("J2",A.J2);
   const shoulderM3=motorToJointDelta("J3",A.J3);
   const shoulder=-((shoulderM2+shoulderM3)/2)*J2_VISUAL_SHOULDER_GAIN+J2_VISUAL_HOME_OFFSET_DEG;
-  const wristRoll=motorToJointDelta("J6",A.J6);
+  const wristRoll=-motorToJointDelta("J6",A.J6); // J5(UI)=M6 손목롤 방향 반전
   return{
     base,
     shoulder,
@@ -2678,7 +2753,7 @@ function applyIncoming(d){
   if(d.can_frame)applyCanFrame(d.can_frame);
   if(d.human_pose)Object.assign(state.human_pose,d.human_pose);if(d.gripper){const _g=typeof d.gripper==="string"?{state:d.gripper.toUpperCase()}:Object.assign({},d.gripper);if(gripperPreviewDirty){delete _g.sg90_angle;delete _g.sg90_angle_deg;delete _g.state;}Object.assign(state.gripper,_g);}
   if(d.vision){Object.assign(state.vision,d.vision);if(d.vision.correction)Object.assign(state.vision.correction,d.vision.correction)}
-  if(d.path)Object.assign(state.path,d.path);if(d.precheck)Object.assign(state.precheck,d.precheck);if(d.can_health)Object.assign(state.can_health,d.can_health);if(d.calibration)Object.assign(state.calibration,d.calibration);if(Array.isArray(d.alerts))state.alerts=d.alerts;if(d.pick&&typeof d.pick==="object")state.pick=Object.assign(state.pick||{},d.pick);deriveCurrentStep();
+  if(d.path)Object.assign(state.path,d.path);if(d.cnc&&typeof d.cnc==="object")state.cnc=Object.assign(state.cnc||{},d.cnc);if(d.work&&typeof d.work==="object")state.work=Object.assign(state.work||{},d.work);if(d.precheck)Object.assign(state.precheck,d.precheck);if(d.can_health)Object.assign(state.can_health,d.can_health);if(d.calibration)Object.assign(state.calibration,d.calibration);if(Array.isArray(d.alerts))state.alerts=d.alerts;if(d.pick&&typeof d.pick==="object")state.pick=Object.assign(state.pick||{},d.pick);deriveCurrentStep();
   if(d.event?.message)addLog(d.event.message,(d.event.level||"INFO").toLowerCase());
 }
 
@@ -2729,6 +2804,34 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 setInterval(()=>{const now=currentTime();setText("clock",now);const sc=$("splashClock");if(sc)sc.textContent=now;const timer=$("recordTimer");if(timer){const s=Math.floor((Date.now()-bootTime)/1000);timer.textContent=`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`}},1000);
+/* ===== 로컬 디자인 미리보기용 데모 시나리오 (state.demo일 때만 동작 — 라이브 수신 연결 시 자동 정지) ===== */
+(function(){
+  const PICK=["SCAN","PRE_GRASP","GRASP","LIFT","CARRY","PLACE"];
+  const seq=[];
+  const pushPick=(dest,cnc)=>PICK.forEach(step=>seq.push({target:"PIPE",dest,step,busy:step!=="SCAN",cnc,rem:null}));
+  pushPick("cnc","idle");                                  // 1) 파이프 → CNC 투입
+  [16,12,8,4].forEach(r=>seq.push({target:"NONE",dest:"none",step:"WAIT",busy:false,cnc:"running",rem:r}));  // 2) CNC 가공 중 — 팔 대기
+  seq.push({target:"NONE",dest:"none",step:"WAIT",busy:false,cnc:"done",rem:null});  // 가공 완료
+  pushPick("rack","done");                                 // 3) 파이프 회수 → 적재
+  let idx=0,rack=0,done=0,times=[];
+  setInterval(()=>{
+    if(!state.demo)return;                                 // 라이브 연결되면 데모 정지
+    if(idx>0){const prev=seq[(idx-1)%seq.length];if(prev.dest==="rack"&&prev.step==="PLACE"){
+      const c=36+Math.random()*6;times.push(c);if(times.length>5)times.shift();
+      done++;rack=(rack+1)%3;
+      const avg=times.reduce((a,b)=>a+b,0)/times.length,n=new Date();
+      const at=`${String(n.getHours()).padStart(2,"0")}:${String(n.getMinutes()).padStart(2,"0")}`;
+      Object.assign(state.work,{done,cycle_s:c,avg_s:avg,last:{cycle_s:c,at}});
+    }}
+    const f=seq[idx%seq.length],waiting=f.step==="WAIT";
+    state.vision.target=f.target;state.vision.confidence=(f.target&&f.target!=="NONE")?.9:0;state.vision.age_ms=waiting?9e9:0;
+    Object.assign(state.pick,{status:f.busy?"BUSY":"SCAN_READY",step:waiting?"":f.step,dest:f.dest});
+    state.path.dest=f.dest;
+    Object.assign(state.cnc,{state:f.cnc,remaining_s:f.rem,rack_count:rack});
+    deriveCurrentStep();requestUiRender(true);
+    idx++;
+  },900);
+})();
 const bootTime=Date.now();
 const initialWsUrl=getWsUrl();if($("wsUrlLabel"))$("wsUrlLabel").textContent=initialWsUrl;
 addLog("서버 연결 대기 — 실데이터 수신 시 화면 갱신","warn");addLog(`WebSocket ${initialWsUrl} 연결 대기`,"info");addLog("6축 STS3215 상태 패널 준비 완료","ok");
