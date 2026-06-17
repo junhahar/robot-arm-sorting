@@ -297,7 +297,7 @@ button{cursor:pointer}
   padding:3px 6px;color:var(--muted);background:#0a1727;border:1px solid var(--line);border-radius:4px;font-size:9px
 }
 .sim3d-tools button:hover{color:var(--cyan);border-color:var(--cyan)}
-.sim-labels{position:absolute;left:10px;right:218px;bottom:10px;display:flex;flex-wrap:wrap;gap:5px;max-width:calc(100% - 228px)}
+.sim-labels{position:absolute;left:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:5px;max-width:72%}
 .sim-labels span{font-size:9px;padding:3px 5px;border:1px solid rgba(28,56,85,.78);border-radius:4px;color:var(--dim);background:rgba(5,12,20,.68)}
 .sim-labels span.now{color:var(--cyan);border-color:rgba(32,213,232,.55)}
 .led-buzzer-sim{position:absolute;right:10px;bottom:10px;width:192px;padding:7px;border:1px solid rgba(28,56,85,.78);border-radius:7px;background:rgba(5,12,20,.78);backdrop-filter:blur(4px);color:var(--muted);font-size:9px}
@@ -519,13 +519,14 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 .sc-head{font-size:10px;font-weight:800;letter-spacing:.05em;color:var(--dim);text-transform:uppercase}
 .workspace{grid-column:1;grid-row:2;align-self:stretch;grid-template-rows:none;min-height:0;height:auto;display:flex;flex-direction:column}
 .workspace>.main-stage{flex:1 1 auto;min-height:0;height:auto}
-.bottom-strip{grid-column:1;grid-row:3;align-self:stretch;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px}
-/* 자동운전: ToF(=그리퍼캠 폭) + 이벤트로그(=3D트윈 폭) 2칸, 가운데 티칭 박스 숨김 */
+.bottom-strip{grid-column:1;grid-row:3;align-self:stretch;min-height:0;display:grid;grid-template-columns:minmax(0,.5fr) minmax(0,.5fr) minmax(0,1fr);gap:7px}
+/* 자동운전: ToF 반폭 + LED/부저 + 이벤트로그 3칸, 가운데 티칭 박스 숨김 */
 .bottom-strip>.panel.life-panel{display:none}
 /* 수동시험 하단: 티칭(=수동시험 패널 폭) + 이벤트로그(=3D트윈 폭) 2칸, ToF 제거 */
 body.manual-mode .bottom-strip{grid-template-columns:minmax(390px,.72fr) minmax(0,1.28fr)}
 body.manual-mode .bottom-strip>.life-panel{display:flex}
 body.manual-mode .bottom-strip>.panel.tof-panel{display:none}
+body.manual-mode .bottom-strip>.panel.led-buzzer-panel{display:none}
 /* 수동시험 상단: 작업단계 + 우측 작업현황은 빈 박스(내용 숨김, 추후 채움) */
 body.manual-mode .step-chart .sc-box{display:none}
 body.manual-mode .work-panel>*{display:none}
@@ -602,23 +603,31 @@ body.manual-mode .work-panel>*{display:none}
 .right-panel .motor-panel .meter-label{font-size:10px}
 .bottom-strip>.panel{min-height:0;display:flex;flex-direction:column}
 .bottom-strip .logs{flex:1;height:auto;max-height:none;min-height:0}
-.tof-body{flex:1;min-height:0;padding:4px 12px 5px;display:grid;grid-template-columns:minmax(128px,.34fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) 8px 10px;align-items:center;gap:3px 10px;overflow:hidden}
-.tof-readout{grid-column:1;grid-row:1/4;min-width:0;align-self:stretch;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;overflow:hidden}
-.tof-big{font-size:36px;font-weight:900;color:var(--cyan);line-height:1;text-align:center;letter-spacing:0}
-.tof-big .unit{font-size:13px;color:var(--muted);margin-left:5px;font-weight:700}
+.tof-body{flex:1;min-height:0;padding:8px 10px;display:grid;grid-template-columns:minmax(88px,.42fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);align-items:center;gap:8px;overflow:hidden}
+.tof-readout{grid-column:1;grid-row:1;min-width:0;align-self:stretch;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;overflow:hidden}
+.tof-big{font-size:30px;font-weight:900;color:var(--cyan);line-height:1;text-align:center;letter-spacing:0}
+.tof-big .unit{font-size:11px;color:var(--muted);margin-left:4px;font-weight:700}
 .tof-current-label{display:block;text-align:center;color:var(--muted);font-size:10px;font-weight:800;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tof-grip-flow{grid-column:2;grid-row:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;height:100%;min-height:0}
-.tof-phase{min-width:0;min-height:0;border:1px solid rgba(32,213,232,.24);border-radius:7px;background:rgba(5,12,20,.36);padding:3px 8px;color:var(--dim);overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+.tof-grip-flow{grid-column:2;grid-row:1;display:grid;grid-template-columns:minmax(0,1fr);gap:7px;height:100%;min-height:0}
+.tof-phase{min-width:0;min-height:0;border:1px solid rgba(32,213,232,.24);border-radius:7px;background:rgba(5,12,20,.36);padding:7px 8px;color:var(--dim);overflow:hidden;display:flex;flex-direction:column;justify-content:center}
 .tof-phase.active{border-color:rgba(74,222,128,.52);background:rgba(74,222,128,.08)}
 .tof-phase.green{border-color:rgba(74,222,128,.55)}.tof-phase.yellow{border-color:rgba(247,201,72,.55)}.tof-phase.red{border-color:rgba(255,91,91,.55)}
 .tof-phase span{display:block;font-size:8px;line-height:1.2;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tof-phase b{display:block;color:var(--text);font-size:13px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tof-phase b{display:block;color:var(--text);font-size:15px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tof-phase em{display:block;margin-top:2px;font-style:normal;font-size:9px;color:var(--dim);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tof-scale{grid-column:2;grid-row:2;align-self:end;position:relative;height:8px;margin:0;border-radius:8px;background:linear-gradient(90deg,rgba(96,165,250,.2),rgba(74,222,128,.55),rgba(247,201,72,.25));overflow:visible}
 .tof-scale:after{content:"";position:absolute;left:50%;top:-3px;width:2px;height:15px;border-radius:2px;background:rgba(255,255,255,.58);transform:translateX(-50%)}
 .tof-marker{position:absolute;top:-3px;width:5px;height:15px;border-radius:3px;background:var(--yellow);box-shadow:0 0 10px rgba(247,201,72,.65);transform:translateX(-50%)}
 .tof-zones{grid-column:2;grid-row:3;display:flex;justify-content:space-between;color:var(--dim);font-size:8px;line-height:1.05}
 .tof-zones span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.led-buzzer-panel .panel-head small{color:var(--dim)}
+.led-buzzer-body{flex:1;min-height:0;padding:7px;display:flex}
+.led-buzzer-panel .led-buzzer-sim{position:static;width:auto;flex:1;min-height:0;padding:8px;border-radius:7px;background:rgba(5,12,20,.44);backdrop-filter:none}
+.led-buzzer-panel .led-buzzer-head{margin-bottom:6px}
+.led-buzzer-panel .led-buzzer-outputs{gap:7px}
+.led-buzzer-panel .led-output{height:48px}
+.led-buzzer-panel .led-output i{width:16px;height:16px}
+.led-buzzer-panel .led-output.buzzer i{width:18px;height:15px}
 body.manual-mode .tof-body{display:flex;flex-direction:column;justify-content:center;padding:5px 9px;gap:3px}
 body.manual-mode .tof-big{font-size:32px;line-height:.95}
 body.manual-mode .tof-grip-flow{width:100%;grid-template-columns:1fr;gap:4px}
@@ -819,8 +828,24 @@ body.manual-mode .tof-scale,body.manual-mode .tof-zones{width:100%}
 
   <section class="bottom-strip" id="bottomStrip">
     <article class="panel tof-panel">
-      <div class="panel-head">ToF 거리/집기 판단 <small>평면 기준</small></div>
+      <div class="panel-head">ToF 거리/집기 판단 <small>집기 여부</small></div>
       <div class="tof-body" id="tofBody"></div>
+    </article>
+
+    <article class="panel led-buzzer-panel">
+      <div class="panel-head">LED + 부저 Nano <small>CAN 0x410</small></div>
+      <div class="led-buzzer-body">
+        <div class="led-buzzer-sim" id="ledBuzzerSim">
+          <div class="led-buzzer-head"><b>LED + 부저 Nano</b><span id="ledBuzzerFrame">CAN 0x410</span></div>
+          <div class="led-buzzer-state"><b id="ledBuzzerState">대기</b><span id="ledBuzzerCode">state 0</span></div>
+          <div class="led-buzzer-outputs">
+            <div class="led-output red"><i id="ledBuzzerRed"></i><span>빨강</span></div>
+            <div class="led-output green"><i id="ledBuzzerGreen"></i><span>초록</span></div>
+            <div class="led-output buzzer"><i id="ledBuzzerBuzz"></i><span>부저</span></div>
+          </div>
+          <div class="led-buzzer-note" id="ledBuzzerNote">표시용 Nano 출력 시뮬레이션</div>
+        </div>
+      </div>
     </article>
 
     <article class="panel placeholder-panel life-panel">
@@ -1838,18 +1863,6 @@ function onGripperStreamError(){
 }
 
 /* ===== Dynamic center content ===== */
-function ledBuzzerSimMarkup(){
-  return `<div class="led-buzzer-sim" id="ledBuzzerSim">
-    <div class="led-buzzer-head"><b>LED + 부저 Nano</b><span id="ledBuzzerFrame">CAN 0x410</span></div>
-    <div class="led-buzzer-state"><b id="ledBuzzerState">대기</b><span id="ledBuzzerCode">state 0</span></div>
-    <div class="led-buzzer-outputs">
-      <div class="led-output red"><i id="ledBuzzerRed"></i><span>빨강</span></div>
-      <div class="led-output green"><i id="ledBuzzerGreen"></i><span>초록</span></div>
-      <div class="led-output buzzer"><i id="ledBuzzerBuzz"></i><span>부저</span></div>
-    </div>
-    <div class="led-buzzer-note" id="ledBuzzerNote">표시용 Nano 출력 시뮬레이션</div>
-  </div>`;
-}
 function renderStandardStage(){
   $("mainStage").className="main-stage split-stage";
   $("mainStage").innerHTML=`
@@ -1867,7 +1880,7 @@ function renderStandardStage(){
     </article>
     <article class="panel media-panel" id="robot3dPanel"><div class="panel-head">로봇 3D 시뮬레이션 / Robot 3D Simulation
       <span class="head-right sim3d-tools"><button onclick="rotateView(-15)" title="좌회전 15°">↶ 15°</button><span class="zoom-pct" id="rotDeg">340°</span><button onclick="rotateView(15)" title="우회전 15°">15° ↷</button><button onclick="tiltView(-15)" title="위에서 보기">⤒</button><span class="zoom-pct" id="tiltDeg">⤓65°</span><button onclick="tiltView(15)" title="아래에서 보기">⤓</button><button onclick="reset3DView()">기본 시점</button><button onclick="zoomStep(-1)" title="축소">−</button><span class="zoom-pct" id="zoomPct">80%</span><button onclick="zoomStep(1)" title="확대">+</button></span>
-      </div><div class="media-wrap"><canvas id="robot3dCanvas"></canvas><div class="hud hud-right mono" id="eeHud"></div><div class="sim-labels" id="simLabels"></div>${ledBuzzerSimMarkup()}</div>
+      </div><div class="media-wrap"><canvas id="robot3dCanvas"></canvas><div class="hud hud-right mono" id="eeHud"></div><div class="sim-labels" id="simLabels"></div></div>
     </article>`;
   applyGripperStream();bind3DDrag();
 }
@@ -1882,7 +1895,7 @@ function renderManualStage(){
       </div></div></article>
     <article class="panel media-panel" id="robot3dPanel"><div class="panel-head">로봇 3D 시뮬레이션 / Robot 3D Simulation
       <span class="head-right sim3d-tools"><button onclick="rotateView(-15)" title="좌회전 15°">↶ 15°</button><span class="zoom-pct" id="rotDeg">340°</span><button onclick="rotateView(15)" title="우회전 15°">15° ↷</button><button onclick="tiltView(-15)" title="위에서 보기">⤒</button><span class="zoom-pct" id="tiltDeg">⤓65°</span><button onclick="tiltView(15)" title="아래에서 보기">⤓</button><button onclick="reset3DView()">기본 시점</button><button onclick="zoomStep(-1)" title="축소">−</button><span class="zoom-pct" id="zoomPct">80%</span><button onclick="zoomStep(1)" title="확대">+</button></span>
-      </div><div class="media-wrap"><canvas id="robot3dCanvas"></canvas><div class="hud hud-right mono" id="eeHud"></div><div class="sim-labels" id="simLabels"></div>${ledBuzzerSimMarkup()}</div>
+      </div><div class="media-wrap"><canvas id="robot3dCanvas"></canvas><div class="hud hud-right mono" id="eeHud"></div><div class="sim-labels" id="simLabels"></div></div>
     </article>`;
   renderManualRows();bind3DDrag();
 }
@@ -2029,18 +2042,15 @@ function renderRightPanel(){
     return `<div class="motor-row mono"><b>${JOINT_DISPLAY[i].axis} (M${i+1})</b><div><div class="meter"><i class="temp" style="width:${clamp(j.temp/75*100,0,100)}%"></i></div><span class="meter-label">${fmt(j.temp,0)}°C</span></div>
       <div><div class="meter"><i style="width:${clamp(j.load,0,100)}%;background:${danger?"var(--red)":warn?"var(--yellow)":"var(--cyan)"}"></i></div><span class="meter-label">${fmt(j.load,0)}%</span></div><span class="pill ${csc}">${ctext}</span></div>`}).join("");
   const g=state.gripper,tofPlane=getTofPlaneGuide(),pipeGrip=getTofPipeGripGuide(tofPlane),objectGuide=getGripperObjectGuide(pipeGrip),wk=state.work||{};
-  const beforeActive=!objectGuide.active||(!objectGuide.detected&&!objectGuide.suspect&&!objectGuide.missing),afterActive=objectGuide.active||objectGuide.detected||objectGuide.suspect;
+  const afterActive=objectGuide.active||objectGuide.detected||objectGuide.suspect;
   const tb=$("tofBody");
   if(tb)tb.innerHTML=`<div class="tof-readout">
       <div class="tof-current-label">평면과의 거리</div>
       <div class="tof-big mono">${fmt(g.tof_mm)}<span class="unit">mm</span></div>
     </div>
     <div class="tof-grip-flow">
-      <div class="tof-phase ${beforeActive?"active":""}"><span>집기 전</span><b>평면 기준</b><em class="mono">기준 ${fmt(tofPlane.ref)} mm</em></div>
-      <div class="tof-phase ${objectGuide.cls} ${afterActive?"active":""}"><span>집은 후</span><b class="${objectGuide.cls}">${objectGuide.label}</b><em class="mono">감소 ${fmt(pipeGrip.drop)} mm</em></div>
-    </div>
-    <div class="tof-scale"><i class="tof-marker" style="left:${tofPlane.marker}%"></i></div>
-    <div class="tof-zones"><span>높음/가까움</span><span>기준</span><span>낮음/멀어짐</span></div>`;
+      <div class="tof-phase ${objectGuide.cls} ${afterActive?"active":""}"><span>집기 판단</span><b class="${objectGuide.cls}">${objectGuide.label}</b><em class="mono">감소 ${fmt(pipeGrip.drop)} mm</em></div>
+    </div>`;
   const wb=$("workBody");
   if(wb)wb.innerHTML=`<div class="work-stats">
       <div class="work-stat done"><span>완료</span><b>${wk.done||0}<small> 개</small></b></div>
