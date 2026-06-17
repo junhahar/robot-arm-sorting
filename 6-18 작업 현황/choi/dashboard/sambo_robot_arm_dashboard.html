@@ -588,9 +588,10 @@ body.manual-mode .work-panel>*{display:none}
 .bottom-strip>.panel{min-height:0;display:flex;flex-direction:column}
 .bottom-strip .logs{flex:1;height:auto;max-height:none;min-height:0}
 .tof-body{flex:1;min-height:0;padding:4px 12px 5px;display:grid;grid-template-columns:minmax(128px,.34fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) 8px 10px;align-items:center;gap:3px 10px;overflow:hidden}
-.tof-big{grid-column:1;grid-row:1/4;font-size:36px;font-weight:900;color:var(--cyan);line-height:1;text-align:center;letter-spacing:0}
+.tof-readout{grid-column:1;grid-row:1/4;min-width:0;align-self:stretch;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;overflow:hidden}
+.tof-big{font-size:36px;font-weight:900;color:var(--cyan);line-height:1;text-align:center;letter-spacing:0}
 .tof-big .unit{font-size:13px;color:var(--muted);margin-left:5px;font-weight:700}
-.tof-current-label{display:none;text-align:center;color:var(--dim);font-size:9px;line-height:11px;min-height:11px;white-space:nowrap;overflow:visible;text-overflow:ellipsis}
+.tof-current-label{display:block;text-align:center;color:var(--muted);font-size:10px;font-weight:800;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tof-grip-flow{grid-column:2;grid-row:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;height:100%;min-height:0}
 .tof-phase{min-width:0;min-height:0;border:1px solid rgba(32,213,232,.24);border-radius:7px;background:rgba(5,12,20,.36);padding:3px 8px;color:var(--dim);overflow:hidden;display:flex;flex-direction:column;justify-content:center}
 .tof-phase.active{border-color:rgba(74,222,128,.52);background:rgba(74,222,128,.08)}
@@ -1961,8 +1962,10 @@ function renderRightPanel(){
   const g=state.gripper,tofPlane=getTofPlaneGuide(),pipeGrip=getTofPipeGripGuide(tofPlane),objectGuide=getGripperObjectGuide(pipeGrip),wk=state.work||{};
   const beforeActive=!objectGuide.active||(!objectGuide.detected&&!objectGuide.suspect&&!objectGuide.missing),afterActive=objectGuide.active||objectGuide.detected||objectGuide.suspect;
   const tb=$("tofBody");
-  if(tb)tb.innerHTML=`<div class="tof-current-label">현재 ToF 거리</div>
-    <div class="tof-big mono">${fmt(g.tof_mm)}<span class="unit">mm</span></div>
+  if(tb)tb.innerHTML=`<div class="tof-readout">
+      <div class="tof-current-label">평면과의 거리</div>
+      <div class="tof-big mono">${fmt(g.tof_mm)}<span class="unit">mm</span></div>
+    </div>
     <div class="tof-grip-flow">
       <div class="tof-phase ${beforeActive?"active":""}"><span>집기 전</span><b>평면 기준</b><em class="mono">기준 ${fmt(tofPlane.ref)} mm</em></div>
       <div class="tof-phase ${objectGuide.cls} ${afterActive?"active":""}"><span>집은 후</span><b class="${objectGuide.cls}">${objectGuide.label}</b><em class="mono">감소 ${fmt(pipeGrip.drop)} mm</em></div>
