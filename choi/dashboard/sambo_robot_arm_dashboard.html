@@ -1030,7 +1030,7 @@ document.addEventListener("keydown",e=>{
 const JOINT_NAMES={J1:"Base",J2:"Shoulder",J3:"Elbow",J4:"Wrist Pitch",J5:"Wrist Roll",J6:"End Assist"};
 // 표시 전용: 6모터(M1~M6) → 5축(J1~J5). J2 어깨는 거울쌍 M2·M3 2모터. (내부 id는 그대로, 화면 라벨만 이 매핑 사용)
 const JOINT_DISPLAY=[{axis:"J1",fn:"Base"},{axis:"J2",fn:"Shoulder"},{axis:"J2",fn:"Shoulder"},{axis:"J3",fn:"Elbow"},{axis:"J4",fn:"Wrist Pitch"},{axis:"J5",fn:"Wrist Roll"}];
-const STEP_LABELS={HOME:"대기",SCAN:"스캔",PRE_GRASP:"접근",GRASP:"집기",LIFT:"들기",CARRY:"운반",PLACE:"놓기",DETECT:"감지",TEACHING:"티칭 중",PAUSED:"일시 정지",ERROR:"오류 정지"};
+const STEP_LABELS={HOME:"대기",SCAN:"스캔",PRE_GRASP:"접근",GRASP:"집기",LIFT:"들기",GRIP_CHECK:"파지 확인",CARRY:"운반",PLACE:"놓기",DETECT:"감지",TEACHING:"티칭 중",PAUSED:"일시 정지",ERROR:"오류 정지"};
 const OBJECT_LABELS={BOLT:"볼트",NUT:"너트",WASHER:"와셔",PIPE:"파이프",NONE:"대기"};
 // 목적지(dest)는 백엔드 auto_runner가 판단해 내려줌 — 대시보드는 표시 변환만.
 const DEST_LABELS={cnc:"CNC",bin:"분류통",rack:"적재 V홈",CNC:"CNC",BIN:"분류통",RACK:"적재 V홈"};
@@ -1056,7 +1056,7 @@ const state={
   vision:{target:"NONE",confidence:.0,stable_frames:0,bbox:null,correction:{dx_mm:0,dy_mm:0}},
   pick:{status:"SCAN_READY",step:""},
   teach:{poses:{},taught:[],missing:["cnc_infeed","cnc_grab","rack_v0","rack_v1"],lastError:""},
-  path:{current_step:"HOME",steps:["HOME","SCAN","PRE_GRASP","GRASP","LIFT","CARRY","PLACE"],progress_percent:0,dest:"none"},
+  path:{current_step:"HOME",steps:["HOME","SCAN","PRE_GRASP","GRASP","LIFT","GRIP_CHECK","CARRY","PLACE"],progress_percent:0,dest:"none"},
   cnc:{state:"idle",remaining_s:null,total_s:20,rack_count:0,rack_max:2},
   precheck:{home_confirmed:true,path_loaded:true,servo_ready:true,sg90_ready:true,tof_ready:true},
   can_health:{received:1842,errors:0,delay_ms:18,last_rx_ms:22},
@@ -1912,6 +1912,10 @@ function stepCaption(step){
     case "PRE_GRASP": return `${typeKo} 위치로 접근`;
     case "GRASP": return `${typeKo} 집는 중`;
     case "LIFT": return `${typeKo} 들어 올림`;
+    case "GRIP_CHECK": {
+      const r=(state.gripper&&state.gripper.grip_result)||null;   // 브리지가 판정 후 10초간 보냄
+      return r==="성공"?"✓ 파지 성공":r==="실패"?"✗ 파지 실패 · 재시도":"ToF로 파지 확인 중…";
+    }
     case "CARRY": return `${destKo} 위치로 이동`;
     case "PLACE": return `${destKo}에 놓기`;
     default: return STEP_LABELS[step]||step;
@@ -2862,7 +2866,7 @@ function frame(now){
 setInterval(()=>{const now=currentTime();setText("clock",now);const sc=$("splashClock");if(sc)sc.textContent=now;const timer=$("recordTimer");if(timer){const s=Math.floor((Date.now()-bootTime)/1000);timer.textContent=`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`}},1000);
 /* ===== 로컬 디자인 미리보기용 데모 시나리오 (state.demo일 때만 동작 — 라이브 수신 연결 시 자동 정지) ===== */
 (function(){
-  const PICK=["SCAN","PRE_GRASP","GRASP","LIFT","CARRY","PLACE"];
+  const PICK=["SCAN","PRE_GRASP","GRASP","LIFT","GRIP_CHECK","CARRY","PLACE"];
   const seq=[];
   const pushPick=(dest,cnc)=>PICK.forEach(step=>seq.push({target:"PIPE",dest,step,busy:step!=="SCAN",cnc,rem:null}));
   pushPick("cnc","idle");                                  // 1) 파이프 → CNC 투입
@@ -2884,6 +2888,7 @@ setInterval(()=>{const now=currentTime();setText("clock",now);const sc=$("splash
     Object.assign(state.pick,{status:f.busy?"BUSY":"SCAN_READY",step:waiting?"":f.step,dest:f.dest});
     state.path.dest=f.dest;
     Object.assign(state.cnc,{state:f.cnc,remaining_s:f.rem,rack_count:rack});
+    state.gripper.grip_result=(f.step==="GRIP_CHECK")?"성공":null;   // 데모: 파지확인 단계에서 성공 표시
     deriveCurrentStep();requestUiRender(true);
     idx++;
   },900);
