@@ -2417,10 +2417,13 @@ function addThreeSortBins(T,r){
   WORKSTATIONS.forEach((cell,idx)=>{
     const bin=new T.Group();bin.position.set(cell.x,0,cell.z);
     if(cell.kind==="CNC"){
+      bin.rotation.y=Math.atan2(cell.x,cell.z);
       const base=new T.Mesh(new T.BoxGeometry(.78,.46,.66),wallMat(cell.color));
       base.position.y=.23;base.castShadow=base.receiveShadow=true;bin.add(base);
       const window=new T.Mesh(new T.BoxGeometry(.50,.18,.018),new T.MeshStandardMaterial({color:0x7dd3fc,metalness:.02,roughness:.2,transparent:true,opacity:.38}));
       window.position.set(0,.29,-.34);bin.add(window);
+      const infeed=new T.Mesh(new T.BoxGeometry(.46,.035,.20),new T.MeshStandardMaterial({color:0x1f3f55,metalness:.08,roughness:.5}));
+      infeed.position.set(0,.48,-.43);infeed.rotation.x=-Math.PI*.04;infeed.castShadow=true;bin.add(infeed);
       const bed=new T.Mesh(new T.BoxGeometry(.62,.05,.44),beltMat);
       bed.position.y=.49;bed.castShadow=true;bin.add(bed);
       const chuck=new T.Mesh(new T.CylinderGeometry(.11,.11,.12,28),metalMat);
