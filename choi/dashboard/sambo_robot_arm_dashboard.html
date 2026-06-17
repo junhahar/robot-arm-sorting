@@ -504,7 +504,12 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 .sc-head{font-size:10px;font-weight:800;letter-spacing:.05em;color:var(--dim);text-transform:uppercase}
 .workspace{grid-column:1;grid-row:2;align-self:stretch;grid-template-rows:none;min-height:0;height:auto;display:flex;flex-direction:column}
 .workspace>.main-stage{flex:1 1 auto;min-height:0;height:auto}
-.bottom-strip{grid-column:1;grid-row:3;align-self:stretch;min-height:0;display:grid;grid-template-columns:minmax(180px,.55fr) minmax(590px,1.85fr) minmax(170px,.75fr);gap:7px}
+.bottom-strip{grid-column:1;grid-row:3;align-self:stretch;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px}
+/* 자동운전: ToF(=그리퍼캠 폭) + 이벤트로그(=3D트윈 폭) 2칸, 가운데 티칭 박스 숨김 */
+.bottom-strip>.panel.life-panel{display:none}
+/* 수동시험: ToF + 티칭 + 이벤트로그 3칸 복원 */
+body.manual-mode .bottom-strip{grid-template-columns:minmax(180px,.55fr) minmax(590px,1.85fr) minmax(170px,.75fr)}
+body.manual-mode .bottom-strip>.life-panel{display:flex}
 .right-panel{position:static;right:auto;top:auto;width:auto;height:auto;align-self:stretch;grid-column:2;grid-row:1/4;overflow:hidden;padding-bottom:0;display:flex;flex-direction:column;gap:7px;z-index:auto}
 .right-panel>.work-panel{flex:0 0 134px;height:134px;min-height:0;display:flex;flex-direction:column}
 .right-panel>.joint-panel,.right-panel>.motor-panel{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
@@ -1710,6 +1715,7 @@ function setMode(mode,fromSocket=false){
   }
   state.mode=mode;
   if(mode!=="AUTO_RUN"&&state.auto)state.auto.running=false;
+  document.body.classList.toggle("manual-mode",manual);   // 하단 스트립: 수동=3칸(티칭), 자동=2칸(ToF+로그)
   document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.mode===state.mode));
   if(manual)resetManualHomePreview();
   activeFocusView=state.mode==="AUTO_RUN"?"MONITOR":"ROBOT_3D";
