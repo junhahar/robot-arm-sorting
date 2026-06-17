@@ -587,21 +587,21 @@ body.manual-mode .work-panel>*{display:none}
 .right-panel .motor-panel .meter-label{font-size:10px}
 .bottom-strip>.panel{min-height:0;display:flex;flex-direction:column}
 .bottom-strip .logs{flex:1;height:auto;max-height:none;min-height:0}
-.tof-body{flex:1;min-height:0;padding:4px 12px 5px;display:grid;grid-template-columns:minmax(128px,.42fr) minmax(260px,1fr) minmax(170px,.62fr);grid-template-rows:minmax(0,1fr) 9px;align-items:center;gap:3px 10px;overflow:hidden}
-.tof-big{grid-column:1;grid-row:1/3;font-size:36px;font-weight:900;color:var(--cyan);line-height:1;text-align:center;letter-spacing:0}
+.tof-body{flex:1;min-height:0;padding:4px 12px 5px;display:grid;grid-template-columns:minmax(128px,.34fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) 8px 10px;align-items:center;gap:3px 10px;overflow:hidden}
+.tof-big{grid-column:1;grid-row:1/4;font-size:36px;font-weight:900;color:var(--cyan);line-height:1;text-align:center;letter-spacing:0}
 .tof-big .unit{font-size:13px;color:var(--muted);margin-left:5px;font-weight:700}
 .tof-current-label{display:none;text-align:center;color:var(--dim);font-size:9px;line-height:11px;min-height:11px;white-space:nowrap;overflow:visible;text-overflow:ellipsis}
-.tof-grip-flow{grid-column:2;grid-row:1/3;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;height:100%;min-height:0}
+.tof-grip-flow{grid-column:2;grid-row:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;height:100%;min-height:0}
 .tof-phase{min-width:0;min-height:0;border:1px solid rgba(32,213,232,.24);border-radius:7px;background:rgba(5,12,20,.36);padding:3px 8px;color:var(--dim);overflow:hidden;display:flex;flex-direction:column;justify-content:center}
 .tof-phase.active{border-color:rgba(74,222,128,.52);background:rgba(74,222,128,.08)}
 .tof-phase.green{border-color:rgba(74,222,128,.55)}.tof-phase.yellow{border-color:rgba(247,201,72,.55)}.tof-phase.red{border-color:rgba(255,91,91,.55)}
 .tof-phase span{display:block;font-size:8px;line-height:1.2;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tof-phase b{display:block;color:var(--text);font-size:13px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tof-phase em{display:block;margin-top:2px;font-style:normal;font-size:9px;color:var(--dim);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tof-scale{grid-column:3;grid-row:1;align-self:end;position:relative;height:8px;margin:0 0 1px;border-radius:8px;background:linear-gradient(90deg,rgba(96,165,250,.2),rgba(74,222,128,.55),rgba(247,201,72,.25));overflow:visible}
+.tof-scale{grid-column:2;grid-row:2;align-self:end;position:relative;height:8px;margin:0;border-radius:8px;background:linear-gradient(90deg,rgba(96,165,250,.2),rgba(74,222,128,.55),rgba(247,201,72,.25));overflow:visible}
 .tof-scale:after{content:"";position:absolute;left:50%;top:-3px;width:2px;height:15px;border-radius:2px;background:rgba(255,255,255,.58);transform:translateX(-50%)}
 .tof-marker{position:absolute;top:-3px;width:5px;height:15px;border-radius:3px;background:var(--yellow);box-shadow:0 0 10px rgba(247,201,72,.65);transform:translateX(-50%)}
-.tof-zones{grid-column:3;grid-row:2;display:flex;justify-content:space-between;color:var(--dim);font-size:8px;line-height:1.05}
+.tof-zones{grid-column:2;grid-row:3;display:flex;justify-content:space-between;color:var(--dim);font-size:8px;line-height:1.05}
 .tof-zones span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 body.manual-mode .tof-body{display:flex;flex-direction:column;justify-content:center;padding:5px 9px;gap:3px}
 body.manual-mode .tof-big{font-size:32px;line-height:.95}
