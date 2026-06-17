@@ -1034,7 +1034,7 @@ const JOINT_DISPLAY=[{axis:"J1",fn:"Base"},{axis:"J2",fn:"Shoulder"},{axis:"J2",
 const STEP_LABELS={HOME:"대기",SCAN:"스캔",PRE_GRASP:"접근",GRASP:"집기",LIFT:"들기",CARRY:"운반",PLACE:"놓기",DETECT:"감지",TEACHING:"티칭 중",PAUSED:"일시 정지",ERROR:"오류 정지"};
 const OBJECT_LABELS={BOLT:"볼트",NUT:"너트",WASHER:"와셔",PIPE:"파이프",NONE:"대기"};
 // 목적지(dest)는 백엔드 auto_runner가 판단해 내려줌 — 대시보드는 표시 변환만.
-const DEST_LABELS={cnc:"CNC",bin:"분류통",rack:"적재 V홈",CNC:"CNC",BIN:"분류통",RACK:"적재 V홈"};
+const DEST_LABELS={cnc:"CNC",bolt:"볼트 통",nut:"너트 통",bin:"분류통",rack:"적재함",CNC:"CNC",BOLT:"볼트 통",NUT:"너트 통",BIN:"분류통",RACK:"적재함"};
 const PHOTO_HOME_ANGLES=[180,180,180,180,180,180];
 const SERVO_RAW_HOME_ANGLES=[180,180,180,180,180,180];
 window.SAMBO_PHOTO_HOME_ANGLES=PHOTO_HOME_ANGLES.slice();
@@ -2306,9 +2306,12 @@ function getStlSafeAngleMap(T,r,field="current"){
   const fallbackReport=stlCollisionReport(T,r);
   if(field==="current")state.collision={blocked:true,messages:report.messages,visualFrozen:true,fallbackBlocked:fallbackReport.blocked};
   return fallback;
-}const SORT_CELLS=[
-  {key:"BOLT",label:"볼트 통",en:"BOLT BIN",x:-2.05,z:-1.20,color:0x26b97a,accent:0x4ade80},
-  {key:"NUT",label:"너트 통",en:"NUT BIN",x:2.05,z:-1.20,color:0x3478d4,accent:0x60a5fa}
+}
+const WORKSTATIONS=[
+  {key:"BOLT",kind:"BIN",label:"볼트 통",en:"BOLT BIN",x:-2.55,z:-1.20,color:0x26b97a,accent:0x4ade80},
+  {key:"NUT",kind:"BIN",label:"너트 통",en:"NUT BIN",x:-1.55,z:-1.20,color:0x3478d4,accent:0x60a5fa},
+  {key:"CNC",kind:"CNC",label:"CNC",en:"MACHINE",x:1.55,z:-1.20,color:0x5b6470,accent:0xf7c948},
+  {key:"RACK",kind:"RACK",label:"적재함",en:"STOCK RACK",x:2.55,z:-1.20,color:0x345b70,accent:0x20d5e8}
 ];
 function makeSceneLabel(T,text,accent,subtext=""){
   const canvas=document.createElement("canvas"),ctx=canvas.getContext("2d");
@@ -2320,31 +2323,57 @@ function makeSceneLabel(T,text,accent,subtext=""){
   const texture=new T.CanvasTexture(canvas),sprite=new T.Sprite(new T.SpriteMaterial({map:texture,transparent:true,depthTest:false}));
   sprite.scale.set(.78,.22,1);return sprite;
 }
+function addBoltPart(T,metalMat){
+  const part=new T.Group(),shaft=new T.Mesh(new T.CylinderGeometry(.035,.035,.27,18),metalMat),head=new T.Mesh(new T.CylinderGeometry(.09,.09,.05,6),metalMat);
+  shaft.rotation.z=Math.PI/2;head.rotation.z=Math.PI/2;head.position.x=-.15;shaft.castShadow=head.castShadow=true;part.add(shaft);part.add(head);return part;
+}
+function addNutPart(T,metalMat,rad=.13){
+  const nut=new T.Mesh(new T.TorusGeometry(rad,.032,12,6),metalMat);
+  nut.rotation.x=Math.PI/2;nut.castShadow=true;return nut;
+}
 function addThreeSortBins(T,r){
   const group=new T.Group(),wallMat=(color)=>new T.MeshStandardMaterial({color,metalness:.12,roughness:.62,transparent:true,opacity:.9,side:T.DoubleSide});
   const darkMat=new T.MeshStandardMaterial({color:0x06101b,metalness:.04,roughness:.82});
-  const metalMat=new T.MeshStandardMaterial({color:0xb6c3cd,metalness:.34,roughness:.5});
-  SORT_CELLS.forEach((cell,idx)=>{
+  const metalMat=new T.MeshStandardMaterial({color:0xb6c3cd,metalness:.34,roughness:.5}),beltMat=new T.MeshStandardMaterial({color:0x111827,metalness:.08,roughness:.68});
+  WORKSTATIONS.forEach((cell,idx)=>{
     const bin=new T.Group();bin.position.set(cell.x,0,cell.z);
-    const body=new T.Mesh(new T.CylinderGeometry(.42,.36,.34,48,1,true),wallMat(cell.color));
-    body.position.y=.17;body.castShadow=true;body.receiveShadow=true;bin.add(body);
-    const rim=new T.Mesh(new T.CylinderGeometry(.45,.45,.035,48),wallMat(cell.accent));
-    rim.position.y=.35;rim.castShadow=true;bin.add(rim);
-    const floor=new T.Mesh(new T.CylinderGeometry(.35,.35,.035,48),darkMat);
-    floor.position.y=.025;floor.receiveShadow=true;bin.add(floor);
-    const label=makeSceneLabel(T,cell.label,idx? "#60a5fa":"#4ade80",cell.en);
-    label.position.set(0,.72,.04);bin.add(label);
-    for(let i=0;i<3;i++){
-      const part=new T.Group(),a=(i*2.1+idx*.7),rad=.13+i*.015;
-      part.position.set(Math.cos(a)*.13,.39+i*.014,Math.sin(a)*.1);
-      if(cell.key==="BOLT"){
-        const shaft=new T.Mesh(new T.CylinderGeometry(.035,.035,.27,18),metalMat),head=new T.Mesh(new T.CylinderGeometry(.09,.09,.05,6),metalMat);
-        shaft.rotation.z=Math.PI/2;shaft.castShadow=true;head.rotation.z=Math.PI/2;head.position.x=-.15;head.castShadow=true;part.add(shaft);part.add(head);
-      }else{
-        const nut=new T.Mesh(new T.TorusGeometry(rad,.032,12,6),metalMat);
-        nut.rotation.x=Math.PI/2;nut.castShadow=true;part.add(nut);
+    if(cell.kind==="CNC"){
+      const base=new T.Mesh(new T.BoxGeometry(.78,.46,.66),wallMat(cell.color));
+      base.position.y=.23;base.castShadow=base.receiveShadow=true;bin.add(base);
+      const window=new T.Mesh(new T.BoxGeometry(.50,.18,.018),new T.MeshStandardMaterial({color:0x7dd3fc,metalness:.02,roughness:.2,transparent:true,opacity:.38}));
+      window.position.set(0,.29,-.34);bin.add(window);
+      const bed=new T.Mesh(new T.BoxGeometry(.62,.05,.44),beltMat);
+      bed.position.y=.49;bed.castShadow=true;bin.add(bed);
+      const chuck=new T.Mesh(new T.CylinderGeometry(.11,.11,.12,28),metalMat);
+      chuck.rotation.x=Math.PI/2;chuck.position.set(-.20,.58,0);chuck.castShadow=true;bin.add(chuck);
+      const label=makeSceneLabel(T,cell.label,"#f7c948",cell.en);
+      label.position.set(0,.86,.04);bin.add(label);
+    }else if(cell.kind==="RACK"){
+      const tray=new T.Mesh(new T.BoxGeometry(.78,.16,.58),wallMat(cell.color));
+      tray.position.y=.13;tray.castShadow=tray.receiveShadow=true;bin.add(tray);
+      [-.18,.18].forEach(x=>{
+        const slot=new T.Mesh(new T.BoxGeometry(.09,.11,.50),darkMat);
+        slot.position.set(x,.27,0);slot.rotation.z=Math.PI/4;slot.castShadow=true;bin.add(slot);
+        const pipe=new T.Mesh(new T.CylinderGeometry(.045,.045,.46,24),metalMat);
+        pipe.rotation.x=Math.PI/2;pipe.position.set(x,.39,0);pipe.castShadow=true;bin.add(pipe);
+      });
+      const label=makeSceneLabel(T,cell.label,"#20d5e8",cell.en);
+      label.position.set(0,.74,.04);bin.add(label);
+    }else{
+      const body=new T.Mesh(new T.CylinderGeometry(.42,.36,.34,48,1,true),wallMat(cell.color));
+      body.position.y=.17;body.castShadow=true;body.receiveShadow=true;bin.add(body);
+      const rim=new T.Mesh(new T.CylinderGeometry(.45,.45,.035,48),wallMat(cell.accent));
+      rim.position.y=.35;rim.castShadow=true;bin.add(rim);
+      const floor=new T.Mesh(new T.CylinderGeometry(.35,.35,.035,48),darkMat);
+      floor.position.y=.025;floor.receiveShadow=true;bin.add(floor);
+      const label=makeSceneLabel(T,cell.label,idx? "#60a5fa":"#4ade80",cell.en);
+      label.position.set(0,.72,.04);bin.add(label);
+      for(let i=0;i<3;i++){
+        const part=new T.Group(),a=(i*2.1+idx*.7),rad=.13+i*.015;
+        part.position.set(Math.cos(a)*.13,.39+i*.014,Math.sin(a)*.1);
+        part.add(cell.key==="BOLT"?addBoltPart(T,metalMat):addNutPart(T,metalMat,rad));
+        bin.add(part);
       }
-      bin.add(part);
     }
     group.add(bin);
   });
@@ -2382,8 +2411,10 @@ async function loadActualStlRobot(T,r){
   r.dynamicCollisionObjects=[arm1,arm2,wristHouse,wristPlate,rollAssembly,j4Hub,j4Mark];
   r.staticKeepouts=[
     {label:"베이스 하우징",min:[-.62,.02,-.58],max:[.62,.44,.58]},
-    {label:"볼트 통 프레임",min:[-2.55,.00,-1.70],max:[-1.55,.58,-.70]},
-    {label:"너트 통 프레임",min:[1.55,.00,-1.70],max:[2.55,.58,-.70]}
+    {label:"볼트 통 프레임",min:[-2.98,.00,-1.70],max:[-2.12,.58,-.70]},
+    {label:"너트 통 프레임",min:[-1.98,.00,-1.70],max:[-1.12,.58,-.70]},
+    {label:"CNC 프레임",min:[1.15,.00,-1.72],max:[1.95,.70,-.68]},
+    {label:"적재함 프레임",min:[2.15,.00,-1.72],max:[2.95,.62,-.68]}
   ];
   r.groups=G;r.j4Hub=j4Hub;r.j4Mark=j4Mark;r.rollAssembly=rollAssembly;r.gripperMesh=animatedGripper;updateAnimatedGripper(r);r.ready=true;
 }
@@ -2435,8 +2466,10 @@ function armDir(yaw,pitch){return V(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch
 const COLLISION_LIMITS={
   floorY:-220,
   boxes:[
-    {label:"볼트 통 프레임",x:-185,z:90,halfX:58,halfZ:54,minY:0,maxY:72},
-    {label:"너트 통 프레임",x:190,z:90,halfX:58,halfZ:54,minY:0,maxY:72},
+    {label:"볼트 통 프레임",x:-250,z:90,halfX:46,halfZ:54,minY:0,maxY:72},
+    {label:"너트 통 프레임",x:-150,z:90,halfX:46,halfZ:54,minY:0,maxY:72},
+    {label:"CNC 프레임",x:155,z:90,halfX:52,halfZ:58,minY:0,maxY:84},
+    {label:"적재함 프레임",x:255,z:90,halfX:46,halfZ:54,minY:0,maxY:74},
     {label:"작업대 전면 프레임",x:0,z:165,halfX:135,halfZ:32,minY:0,maxY:50}
   ]
 };
@@ -2491,7 +2524,7 @@ function project(p,W,H){
 function drawNative3D(){
   if(!$("robot3dCanvas"))return;const {x:ctx,w:W,h:H}=fitCanvas($("robot3dCanvas")),pose=fk(getVisualJointAngleMap(getCollisionSafeAngleMap("current")));
   const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#10233a");g.addColorStop(1,"#06101b");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-  drawGround(ctx,W,H);drawZone3D(ctx,W,H,V(0,1,170),70,"SCAN ZONE","#20d5e8");drawBox3D(ctx,W,H,V(-185,20,90),V(76,40,66),"#1e6c54","BOLT BIN");drawBox3D(ctx,W,H,V(190,20,90),V(76,40,66),"#304f8d","NUT BIN");
+  drawGround(ctx,W,H);drawZone3D(ctx,W,H,V(0,1,170),70,"SCAN ZONE","#20d5e8");drawBox3D(ctx,W,H,V(-250,20,90),V(76,40,66),"#1e6c54","BOLT BIN");drawBox3D(ctx,W,H,V(-150,20,90),V(76,40,66),"#304f8d","NUT BIN");drawBox3D(ctx,W,H,V(155,24,90),V(84,48,70),"#4b5563","CNC");drawBox3D(ctx,W,H,V(255,18,90),V(78,36,66),"#24536b","RACK");
   drawPart3D(ctx,W,H,V(-35,5,162),"볼트");drawPart3D(ctx,W,H,V(20,5,184),"너트");drawPart3D(ctx,W,H,V(48,5,150),"와셔");
   const pts=[pose.base,pose.shoulder,pose.elbow,pose.wrist,pose.end],colors=["#5b7892","#d9e9f5","#bcd0df","#83a0b6"];
   drawBox3D(ctx,W,H,V(0,19,0),V(88,38,88),"#18344e","BASE");
@@ -2532,7 +2565,7 @@ function drawTopDown(){
   ctx.fillStyle="#07121e";ctx.fillRect(0,0,W,H);ctx.strokeStyle="rgba(75,119,150,.28)";
   for(let r=50;r<=300;r+=50){ctx.beginPath();ctx.arc(cx,cy,r*s,0,Math.PI*2);ctx.stroke()}for(let a=0;a<360;a+=30){const t=a*Math.PI/180;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(t)*300*s,cy-Math.sin(t)*300*s);ctx.stroke()}
   const pos=p=>({x:cx+p.x*s,y:cy-p.z*s}),base=pos(V(0,0,0)),end=pos(V(pose.end.x,0,pose.end.z)),target=pos(V(35,0,175)),corrected=pos(V(35+state.vision.correction.dx_mm,0,175+state.vision.correction.dy_mm));
-  zone(0,170,64,"SCAN 영역","rgba(32,213,232,.15)","#20d5e8");zone(-190,75,42,"볼트 통","rgba(74,222,128,.14)","#4ade80");zone(190,75,42,"너트 통","rgba(96,165,250,.14)","#60a5fa");zone(0,-70,62,"위험 영역","rgba(255,91,91,.13)","#ff5b5b");
+  zone(0,170,64,"SCAN 영역","rgba(32,213,232,.15)","#20d5e8");zone(-250,75,42,"볼트 통","rgba(74,222,128,.14)","#4ade80");zone(-150,75,42,"너트 통","rgba(96,165,250,.14)","#60a5fa");zone(155,75,46,"CNC","rgba(247,201,72,.12)","#f7c948");zone(255,75,42,"적재함","rgba(32,213,232,.12)","#20d5e8");zone(0,-70,62,"위험 영역","rgba(255,91,91,.13)","#ff5b5b");
   ctx.lineCap="round";ctx.strokeStyle="#20d5e8";ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(base.x,base.y);ctx.lineTo(end.x,end.y);ctx.stroke();ctx.setLineDash([5,5]);ctx.strokeStyle="#4ade80";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(end.x,end.y);ctx.lineTo(target.x,target.y);ctx.stroke();ctx.setLineDash([]);
   mark(base,"BASE","#bcd0df");mark(end,"현재 팔 끝","#20d5e8");mark(target,"목표","#4ade80");mark(corrected,"보정","#f7c948");
   ctx.fillStyle="#83a0b6";ctx.font="10px Segoe UI";ctx.fillText("청록: 현재 · 초록: 목표 · 노랑: 보정 · 빨강: 제한",10,H-12);
@@ -2867,11 +2900,13 @@ setInterval(()=>{const now=currentTime();setText("clock",now);const sc=$("splash
 (function(){
   const PICK=["SCAN","PRE_GRASP","GRASP","LIFT","CARRY","PLACE"];
   const seq=[];
-  const pushPick=(dest,cnc)=>PICK.forEach(step=>seq.push({target:"PIPE",dest,step,busy:step!=="SCAN",cnc,rem:null}));
-  pushPick("cnc","idle");                                  // 1) 파이프 → CNC 투입
+  const pushPick=(target,dest,cnc)=>PICK.forEach(step=>seq.push({target,dest,step,busy:step!=="SCAN",cnc,rem:null}));
+  pushPick("PIPE","cnc","idle");                           // 1) 파이프 → CNC 투입
   [16,12,8,4].forEach(r=>seq.push({target:"NONE",dest:"none",step:"WAIT",busy:false,cnc:"running",rem:r}));  // 2) CNC 가공 중 — 팔 대기
   seq.push({target:"NONE",dest:"none",step:"WAIT",busy:false,cnc:"done",rem:null});  // 가공 완료
-  pushPick("rack","done");                                 // 3) 파이프 회수 → 적재
+  pushPick("PIPE","rack","done");                          // 3) 파이프 회수 → 적재
+  pushPick("BOLT","bolt","idle");                          // 4) 이물질 볼트 → 볼트 통
+  pushPick("NUT","nut","idle");                            // 5) 너트 → 너트 통
   let idx=0,rack=0,done=0,times=[];
   setInterval(()=>{
     if(!state.demo)return;                                 // 라이브 연결되면 데모 정지
