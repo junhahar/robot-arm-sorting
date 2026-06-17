@@ -583,11 +583,27 @@ body.manual-mode .bottom-strip>.life-panel{display:flex}
 .right-panel .motor-panel .meter-label{font-size:10px}
 .bottom-strip>.panel{min-height:0;display:flex;flex-direction:column}
 .bottom-strip .logs{flex:1;height:auto;max-height:none;min-height:0}
-.tof-body{flex:1;min-height:0;padding:9px 12px;display:flex;flex-direction:column;justify-content:center;gap:8px}
-.tof-big{font-size:30px;font-weight:900;color:var(--cyan);line-height:1;text-align:center;letter-spacing:-1px}
-.tof-big .unit{font-size:12px;color:var(--muted);margin-left:4px;font-weight:700}
-.tof-judge{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--dim)}
-.tof-judge b{font-size:13px}
+.tof-body{flex:1;min-height:0;padding:4px 12px 5px;display:grid;grid-template-columns:minmax(128px,.42fr) minmax(260px,1fr) minmax(170px,.62fr);grid-template-rows:minmax(0,1fr) 9px;align-items:center;gap:3px 10px;overflow:hidden}
+.tof-big{grid-column:1;grid-row:1/3;font-size:36px;font-weight:900;color:var(--cyan);line-height:1;text-align:center;letter-spacing:0}
+.tof-big .unit{font-size:13px;color:var(--muted);margin-left:5px;font-weight:700}
+.tof-current-label{display:none;text-align:center;color:var(--dim);font-size:9px;line-height:11px;min-height:11px;white-space:nowrap;overflow:visible;text-overflow:ellipsis}
+.tof-grip-flow{grid-column:2;grid-row:1/3;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;height:100%;min-height:0}
+.tof-phase{min-width:0;min-height:0;border:1px solid rgba(32,213,232,.24);border-radius:7px;background:rgba(5,12,20,.36);padding:3px 8px;color:var(--dim);overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+.tof-phase.active{border-color:rgba(74,222,128,.52);background:rgba(74,222,128,.08)}
+.tof-phase.green{border-color:rgba(74,222,128,.55)}.tof-phase.yellow{border-color:rgba(247,201,72,.55)}.tof-phase.red{border-color:rgba(255,91,91,.55)}
+.tof-phase span{display:block;font-size:8px;line-height:1.2;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tof-phase b{display:block;color:var(--text);font-size:13px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tof-phase em{display:block;margin-top:2px;font-style:normal;font-size:9px;color:var(--dim);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tof-scale{grid-column:3;grid-row:1;align-self:end;position:relative;height:8px;margin:0 0 1px;border-radius:8px;background:linear-gradient(90deg,rgba(96,165,250,.2),rgba(74,222,128,.55),rgba(247,201,72,.25));overflow:visible}
+.tof-scale:after{content:"";position:absolute;left:50%;top:-3px;width:2px;height:15px;border-radius:2px;background:rgba(255,255,255,.58);transform:translateX(-50%)}
+.tof-marker{position:absolute;top:-3px;width:5px;height:15px;border-radius:3px;background:var(--yellow);box-shadow:0 0 10px rgba(247,201,72,.65);transform:translateX(-50%)}
+.tof-zones{grid-column:3;grid-row:2;display:flex;justify-content:space-between;color:var(--dim);font-size:8px;line-height:1.05}
+.tof-zones span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.manual-mode .tof-body{display:flex;flex-direction:column;justify-content:center;padding:5px 9px;gap:3px}
+body.manual-mode .tof-big{font-size:32px;line-height:.95}
+body.manual-mode .tof-grip-flow{width:100%;grid-template-columns:1fr;gap:4px}
+body.manual-mode .tof-phase{padding:5px 7px}
+body.manual-mode .tof-scale,body.manual-mode .tof-zones{width:100%}
 .placeholder-body{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:14px;color:var(--dim);font-size:11px;text-align:center}
 .life-panel .placeholder-body{display:block;text-align:left;overflow-y:auto;padding:4px 9px}
 .life-joint-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
@@ -783,7 +799,7 @@ body.manual-mode .bottom-strip>.life-panel{display:flex}
 
   <section class="bottom-strip" id="bottomStrip">
     <article class="panel tof-panel">
-      <div class="panel-head">ToF 거리 / ToF Sensor</div>
+      <div class="panel-head">ToF 거리/집기 판단 <small>평면 기준</small></div>
       <div class="tof-body" id="tofBody"></div>
     </article>
 
@@ -1032,7 +1048,7 @@ const state={
   human_pose:{available:true,source:"MPU6050 × 3",confidence:.94,shoulder_motion:42,elbow_bend:78,wrist_direction:15,hand_delta_x:12,hand_delta_y:-8,status:"STABLE",mpu:[
     {id:"#1 상완",yaw:12.4,pitch:41.7,roll:-3.1},{id:"#2 전완",yaw:16.1,pitch:78.2,roll:5.4},{id:"#3 손등",yaw:15,pitch:11.8,roll:2.8}
   ]},
-  gripper:{state:"OPEN",sg90_angle:60,tof_mm:48.2,object_detected:true,pick_ready:true},
+  gripper:{state:"OPEN",sg90_angle:60,tof_mm:50.2,tof_ref_mm:50.0,pipe_grip_threshold_mm:8,pipe_grip_check_active:false,pipe_grip_confirmed:null,object_detected:true,pick_ready:true},
   vision:{target:"NONE",confidence:.0,stable_frames:0,bbox:null,correction:{dx_mm:0,dy_mm:0}},
   pick:{status:"SCAN_READY",step:""},
   teach:{poses:{},taught:[],missing:["cnc_infeed","cnc_grab","rack_v0","rack_v1"],lastError:""},
@@ -1938,12 +1954,17 @@ function renderRightPanel(){
   $("motorRows").innerHTML=state.robot.joints.map((j,i)=>{const danger=j.temp>=65||j.load>=90,warn=j.temp>55||j.load>=80,sc=danger?"err":warn?"warn":"ok",csc=(j.comm==="OK"?"ok":j.comm==="PARTIAL"?"warn":j.comm==="STALE"?"err":""),ctext=(j.comm==="OK"?"정상":j.comm==="PARTIAL"?"주의":j.comm==="STALE"?"끊김":"대기");
     return `<div class="motor-row mono"><b>${JOINT_DISPLAY[i].axis} (M${i+1})</b><div><div class="meter"><i class="temp" style="width:${clamp(j.temp/75*100,0,100)}%"></i></div><span class="meter-label">${fmt(j.temp,0)}°C</span></div>
       <div><div class="meter"><i style="width:${clamp(j.load,0,100)}%;background:${danger?"var(--red)":warn?"var(--yellow)":"var(--cyan)"}"></i></div><span class="meter-label">${fmt(j.load,0)}%</span></div><span class="pill ${csc}">${ctext}</span></div>`}).join("");
-  const g=state.gripper,approach=getApproachGuide(),wk=state.work||{};
+  const g=state.gripper,tofPlane=getTofPlaneGuide(),pipeGrip=getTofPipeGripGuide(tofPlane),objectGuide=getGripperObjectGuide(pipeGrip),wk=state.work||{};
+  const beforeActive=!objectGuide.active||(!objectGuide.detected&&!objectGuide.suspect&&!objectGuide.missing),afterActive=objectGuide.active||objectGuide.detected||objectGuide.suspect;
   const tb=$("tofBody");
-  if(tb)tb.innerHTML=`<div class="tof-big mono">${fmt(g.tof_mm)}<span class="unit">mm</span></div>
-    <div class="tof-judge"><span>집기 판단</span><b class="${approach.cls}">${approach.ready?"집기 가능":approach.label}</b></div>
-    <div class="approach-track"><i style="width:${approach.percent}%"></i></div>
-    <div class="approach-zones"><span>접근 필요</span><span>집기 18~35mm</span><span>너무 가까움</span></div>`;
+  if(tb)tb.innerHTML=`<div class="tof-current-label">현재 ToF 거리</div>
+    <div class="tof-big mono">${fmt(g.tof_mm)}<span class="unit">mm</span></div>
+    <div class="tof-grip-flow">
+      <div class="tof-phase ${beforeActive?"active":""}"><span>집기 전</span><b>평면 기준</b><em class="mono">기준 ${fmt(tofPlane.ref)} mm</em></div>
+      <div class="tof-phase ${objectGuide.cls} ${afterActive?"active":""}"><span>집은 후</span><b class="${objectGuide.cls}">${objectGuide.label}</b><em class="mono">감소 ${fmt(pipeGrip.drop)} mm</em></div>
+    </div>
+    <div class="tof-scale"><i class="tof-marker" style="left:${tofPlane.marker}%"></i></div>
+    <div class="tof-zones"><span>높음/가까움</span><span>기준</span><span>낮음/멀어짐</span></div>`;
   const wb=$("workBody");
   if(wb)wb.innerHTML=`<div class="work-stats">
       <div class="work-stat done"><span>완료</span><b>${wk.done||0}<small> 개</small></b></div>
@@ -1960,6 +1981,29 @@ function getApproachGuide(){
   if(mm<=35&&stable&&corrected&&!state.system.estop)return{ready:true,label:"집기 가능",cls:"green",percent:82};
   if(mm<=65)return{ready:false,label:"접근 중",cls:"yellow",percent:62};
   return{ready:false,label:"대상 접근 필요",cls:"yellow",percent:34};
+}
+function getTofPlaneGuide(){
+  const mm=Number(state.gripper.tof_mm||0),ref=Number(state.gripper.tof_ref_mm||state.calibration?.tof_ref_mm||50),delta=mm-ref,abs=Math.abs(delta),z_mm=ref-mm;
+  const marker=clamp(50+(delta/8)*50,4,96),cls=abs<=1.5?"green":abs<=4?"yellow":"red",label=abs<=1.5?"기준 유지":delta>0?"작업대 낮음":"작업대 높음";
+  return{ready:abs<=4,label,cls,ref,delta,z_mm,marker,percent:marker};
+}
+function getTofPipeGripGuide(tofPlane=getTofPlaneGuide()){
+  const g=state.gripper||{},step=state.path?.current_step||"",activeSteps=["GRASP","LIFT","CARRY","PLACE"],active=!!g.pipe_grip_check_active||activeSteps.includes(step)||g.state==="CLOSED",threshold=Number(g.pipe_grip_threshold_mm||8);
+  const drop=Math.max(0,tofPlane.ref-Number(g.tof_mm||0)),explicit=typeof g.pipe_grip_confirmed==="boolean"?g.pipe_grip_confirmed:null;
+  const detected=explicit===true||(explicit===null&&active&&drop>=threshold),suspect=active&&drop>=Math.max(3,threshold*.5)&&!detected;
+  const label=detected?"감지됨":suspect?"확인 중":active?"미감지":"대기";
+  const cls=detected?"green":suspect?"yellow":active?"red":"yellow";
+  return{active,detected,suspect,label,cls,drop,threshold};
+}
+function getGripperObjectGuide(pipeGrip=getTofPipeGripGuide()){
+  const g=state.gripper||{},step=state.path?.current_step||"",activeSteps=["GRASP","LIFT","CARRY","PLACE"],active=!!g.pipe_grip_check_active||activeSteps.includes(step)||g.state==="CLOSED";
+  const explicit=active&&typeof g.object_detected==="boolean"?g.object_detected:null;
+  const detected=pipeGrip.detected||explicit===true,suspect=pipeGrip.suspect&&!detected,missing=active&&!detected&&!suspect;
+  const cls=detected?"green":suspect?"yellow":missing?"red":"yellow";
+  const label=detected?"감지됨":suspect?"확인 중":missing?"미감지":"대기";
+  const head=detected?"OK":suspect?"확인":missing?"주의":"대기";
+  const note=detected?"파이프가 ToF 안에 들어옴":suspect?"거리 변화 확인 중":missing?"집는 중인데 감지 안 됨":"집기 전 상태";
+  return{label,head,note,cls,detected,suspect,missing,active};
 }
 function getTeachingQuality(){
   const h=state.human_pose,stability=Math.round((h.confidence||0)*100),sensorReady=(h.mpu||[]).length>=3,score=clamp(Math.round(stability-(h.status==="STABLE"?0:18)-(sensorReady?0:20)),0,100);
@@ -1979,13 +2023,13 @@ function getPrecheckItems(){
     ["CAN 통신",state.system.can_status==="OK","125 kbps 연결 상태"],
     ["서보 6축",p.servo_ready,"STS3215 상태 피드백"],
     ["그리퍼",p.sg90_ready,"열림/닫힘 확인"],
-    ["ToF 거리 센서",p.tof_ready&&c.tof==="OK",`${fmt(state.gripper.tof_mm)} mm 수신`],
+    ["ToF 거리/집기 판단",p.tof_ready&&c.tof==="OK",`${fmt(state.gripper.tof_mm)} mm 수신 · 거리 감소 확인`],
     ["HOME 자세",p.home_confirmed,"시작 위치 복귀 확인"],
     ["하드웨어 E-STOP",!state.system.estop,"물리 스위치 위치 확인"]
   ];
 }
 function renderOperationalInsights(){
-  const alerts=getAlerts(),quality=getTeachingQuality(),approach=getApproachGuide(),checks=getPrecheckItems(),passed=checks.filter(x=>x[1]).length,ch=state.can_health,cal=state.calibration;
+  const alerts=getAlerts(),quality=getTeachingQuality(),tofPlane=getTofPlaneGuide(),pipeGrip=getTofPipeGripGuide(tofPlane),objectGuide=getGripperObjectGuide(pipeGrip),checks=getPrecheckItems(),passed=checks.filter(x=>x[1]).length,ch=state.can_health,cal=state.calibration;
   $("alertSource").textContent=state.demo?"대기":"수신";$("alertSource").className=`source-tag ${state.demo?"demo":"live"}`;
   $("visionSource").textContent=state.demo?"대기":"수신";$("visionSource").className=`source-tag ${state.demo?"demo":"live"}`;
   $("alertsCard").innerHTML=alerts.length?alerts.map(a=>`<div class="alert-item ${a.cls||"warn"}">${a.text}</div>`).join(""):`<div class="alert-item">현재 즉시 조치가 필요한 경고가 없습니다.</div>`;
@@ -1993,9 +2037,9 @@ function renderOperationalInsights(){
   $("teachingQualityPanel").style.display=state.mode==="TEACHING"?"block":"none";
   $("teachingQualityCard").innerHTML=`<div class="compact-grid"><div class="compact-metric">종합 점수<b class="mono">${quality.score}<span class="unit"> / 100</span></b></div><div class="compact-metric">판단<b class="${quality.score>=80?"green":"yellow"}">${quality.label}</b></div></div><div class="compact-line"><span>MPU 센서 3개</span><b>${quality.sensorReady?"수신 정상":"확인 필요"}</b></div>`;
   $("gripperApproachPanel").style.display=state.mode==="TEACHING"?"none":"block";
-  $("gripperApproachCard").innerHTML=`<div class="compact-line"><span>현재 거리</span><b class="mono">${fmt(state.gripper.tof_mm)} mm · <span class="${approach.cls}">${approach.label}</span></b></div><div class="approach-track"><i style="width:${approach.percent}%"></i></div><div class="approach-zones"><span>접근 필요</span><span>집기 구간 18~35 mm</span><span>너무 가까움</span></div>`;
+  $("gripperApproachCard").innerHTML=`<div class="compact-line"><span>집기 전</span><b>평면 기준 ${fmt(tofPlane.ref)} mm</b></div><div class="compact-line"><span>현재 거리</span><b class="mono">${fmt(state.gripper.tof_mm)} mm</b></div><div class="compact-line"><span>집은 후</span><b class="${objectGuide.cls}">${objectGuide.label}</b></div><div class="compact-line"><span>거리 감소</span><b class="mono ${objectGuide.cls}">${fmt(pipeGrip.drop)} mm</b></div>`;
   $("canHealthCard").innerHTML=`<div class="compact-grid"><div class="compact-metric">수신 프레임<b class="mono">${ch.received}</b></div><div class="compact-metric">최근 수신<b class="mono">${ch.last_rx_ms} <span class="unit">ms</span></b></div><div class="compact-metric">지연 시간<b class="mono">${ch.delay_ms} <span class="unit">ms</span></b></div><div class="compact-metric">오류<b class="mono ${ch.errors?"red":"green"}">${ch.errors}</b></div></div>`;
-  $("calibrationCard").innerHTML=`<div class="compact-line"><span>ToF 거리</span><b class="${cal.tof==="OK"?"green":"yellow"}">${cal.tof==="OK"?"보정 완료":"확인 필요"}</b></div><div class="compact-line"><span>그리퍼 카메라</span><b class="${cal.camera==="OK"?"green":"yellow"}">${cal.camera==="OK"?"보정 완료":"확인 필요"}</b></div><div class="compact-line"><span>MPU 영점</span><b class="${cal.mpu==="OK"?"green":"yellow"}">${cal.mpu==="OK"?"보정 완료":"확인 필요"}</b></div><div class="compact-line"><span>서보 HOME</span><b class="${cal.servo==="OK"?"green":"yellow"}">${cal.servo==="OK"?"확인 완료":"확인 필요"}</b></div>`;
+  $("calibrationCard").innerHTML=`<div class="compact-line"><span>ToF 기준 평면</span><b class="${cal.tof==="OK"?"green":"yellow"}">${cal.tof==="OK"?"보정 완료":"확인 필요"}</b></div><div class="compact-line"><span>그리퍼 카메라</span><b class="${cal.camera==="OK"?"green":"yellow"}">${cal.camera==="OK"?"보정 완료":"확인 필요"}</b></div><div class="compact-line"><span>MPU 영점</span><b class="${cal.mpu==="OK"?"green":"yellow"}">${cal.mpu==="OK"?"보정 완료":"확인 필요"}</b></div><div class="compact-line"><span>서보 HOME</span><b class="${cal.servo==="OK"?"green":"yellow"}">${cal.servo==="OK"?"확인 완료":"확인 필요"}</b></div>`;
   renderManualTwinCard();
 }
 function digitalTwinMarkup(){
@@ -2700,15 +2744,17 @@ function addChatMessage(text,who="bot",note=""){
   const row=document.createElement("div");row.className=`ai-msg ${who}`;row.textContent=text;if(note){const small=document.createElement("small");small.textContent=note;row.appendChild(small)}$("aiChatMessages").appendChild(row);$("aiChatMessages").scrollTop=$("aiChatMessages").scrollHeight;
 }
 function getAiDashboardState(){
-  return{data_source:state.demo?"DISCONNECTED":"LIVE WebSocket",mode:state.mode,system:state.system,joints:state.robot.joints,gripper:state.gripper,vision:state.vision,path:state.path,alerts:getAlerts(),can_health:state.can_health,teaching_quality:getTeachingQuality(),approach:getApproachGuide()};
+  const tofPlane=getTofPlaneGuide(),pipeGrip=getTofPipeGripGuide(tofPlane),objectGuide=getGripperObjectGuide(pipeGrip);
+  return{data_source:state.demo?"DISCONNECTED":"LIVE WebSocket",mode:state.mode,system:state.system,joints:state.robot.joints,gripper:state.gripper,vision:state.vision,path:state.path,alerts:getAlerts(),can_health:state.can_health,teaching_quality:getTeachingQuality(),approach:getApproachGuide(),tof_plane:tofPlane,pipe_grip:pipeGrip,gripper_object:objectGuide};
 }
 function localEasyAssistant(question){
-  const q=question.toLowerCase(),j3=state.robot.joints[3],a=getApproachGuide(),alerts=getAlerts(),source=state.demo?"현재 로봇과 연결되어 있지 않습니다. 표시값은 실제 측정값이 아닐 수 있습니다.":"현재 화면은 WebSocket으로 수신한 LIVE 데이터입니다.";
+  const q=question.toLowerCase(),j3=state.robot.joints[3],tofPlane=getTofPlaneGuide(),pipeGrip=getTofPipeGripGuide(tofPlane),objectGuide=getGripperObjectGuide(pipeGrip),alerts=getAlerts(),source=state.demo?"현재 로봇과 연결되어 있지 않습니다. 표시값은 실제 측정값이 아닐 수 있습니다.":"현재 화면은 WebSocket으로 수신한 LIVE 데이터입니다.";
   if(q.includes("발표"))return `${source}\n\n[한 줄 설명]\n이 시스템은 MPU 티칭, 그리퍼 카메라 AI 인식, CAN 통신, 6축 서보 피드백을 한 화면에서 연결해 보여주는 로봇팔 자동 분류 시스템입니다.\n\n[현장 흐름]\n사람 동작 티칭 → 물체 감지 → 위치 보정 → 접근 → 집기 → 분류통 배치`;
   if(q.includes("can"))return `${source}\n\n[현재 상태]\nCAN 상태: ${state.system.can_status==="OK"?"정상":"확인 필요"}\n최근 수신: ${state.can_health.last_rx_ms} ms\n오류: ${state.can_health.errors}건\n\n[설명]\nCAN은 Raspberry Pi 쪽 판단 결과와 하위 제어기의 모터·센서 상태를 주고받는 통신 통로입니다.`;
   if(q.includes("j3")||q.includes("모터"))return `${source}\n\n[J3 (M4) Elbow]\n현재각 ${deg(j3.current)} / 목표각 ${deg(j3.target)}\n온도 ${fmt(j3.temp,0)}°C / 부하 ${fmt(j3.load,0)}%\n\n[판단]\n${j3.load>=80?"부하가 80% 이상입니다. 팔꿈치 축 간섭이나 작업물 저항을 먼저 확인하세요.":"현재 즉시 조치가 필요한 부하는 아닙니다."}`;
-  if(q.includes("그리퍼")||q.includes("집"))return `${source}\n\n[그리퍼 판단]\nToF 거리: ${fmt(state.gripper.tof_mm)} mm\n대상: ${objectLabel(state.vision.target)} ${(state.vision.confidence*100).toFixed(0)}%\n판단: ${a.ready?"집기 가능":a.label}\n\n[다음 확인]\n안정 검출 ${state.vision.stable_frames}/3 프레임과 위치 보정값을 함께 확인하세요.`;
-  return `${source}\n\n[현재 요약]\n모드: ${state.mode}\n현재 단계: ${STEP_LABELS[state.path.current_step]||state.path.current_step}\n알림: ${alerts.length?alerts.map(x=>x.text).join(" / "):"즉시 조치가 필요한 경고 없음"}\n\n[먼저 볼 것]\nCAN 상태, J3 부하, ToF 거리, 안정 검출 3/3 여부를 순서대로 확인하세요.`;
+  if(q.includes("tof")||q.includes("z")||q.includes("작업대")||q.includes("평면")||q.includes("파이프"))return `${source}\n\n[ToF 거리/집기 판단]\n현재 거리: ${fmt(state.gripper.tof_mm)} mm\n집기 전 기준: ${fmt(tofPlane.ref)} mm\n거리 감소: ${fmt(pipeGrip.drop)} mm\n집은 후 판단: ${objectGuide.label}`;
+  if(q.includes("그리퍼")||q.includes("집"))return `${source}\n\n[그리퍼 판단]\n현재 ToF 거리: ${fmt(state.gripper.tof_mm)} mm\n집기 전 평면 기준: ${fmt(tofPlane.ref)} mm\n거리 감소: ${fmt(pipeGrip.drop)} mm\n판단: ${objectGuide.label}\n\n[다음 확인]\n집기 전에는 평면 기준 거리가 보이고, 파이프가 들어오면 거리 감소가 커지면서 감지됨으로 바뀌는지 보세요.`;
+  return `${source}\n\n[현재 요약]\n모드: ${state.mode}\n현재 단계: ${STEP_LABELS[state.path.current_step]||state.path.current_step}\n알림: ${alerts.length?alerts.map(x=>x.text).join(" / "):"즉시 조치가 필요한 경고 없음"}\n\n[먼저 볼 것]\nCAN 상태, J3 부하, 현재 ToF 거리, 거리 감소량을 순서대로 확인하세요.`;
 }
 async function submitAiChat(event){
   event.preventDefault();const input=$("aiChatInput"),question=input.value.trim();if(!question)return;input.value="";addChatMessage(question,"user");
