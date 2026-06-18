@@ -2423,7 +2423,6 @@ function addThreeSortBins(T,r){
   WORKSTATIONS.forEach((cell,idx)=>{
     const bin=new T.Group();bin.position.set(cell.x,0,cell.z);
     if(cell.kind==="CNC"){
-      bin.rotation.y=Math.atan2(cell.x,cell.z);
       const base=new T.Mesh(new T.BoxGeometry(.78,.46,.66),wallMat(cell.color));
       base.position.y=.23;base.castShadow=base.receiveShadow=true;bin.add(base);
       const window=new T.Mesh(new T.BoxGeometry(.50,.18,.018),new T.MeshStandardMaterial({color:0x7dd3fc,metalness:.02,roughness:.2,transparent:true,opacity:.38}));
