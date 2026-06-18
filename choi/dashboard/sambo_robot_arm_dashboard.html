@@ -733,7 +733,7 @@ body.manual-mode .tof-scale,body.manual-mode .tof-zones{width:100%}
     </div>
     <div class="status-chip header-hidden mode-chip" id="modeChip">TEACHING</div>
     <div class="status-chip"><i class="dot warn" id="serverDot"></i><span><b id="serverText">서버 대기</b><small id="serverSub">Raspberry Pi 연결</small></span></div>
-    <div class="status-chip has-tip" id="canChip"><i class="dot warn" id="canDot"></i><span><b id="canText">CAN 대기</b><small>제어기 연결 대기</small></span><div class="chip-tip mono" id="canTip"></div></div>
+    <div class="status-chip" id="canChip"><i class="dot warn" id="canDot"></i><span><b id="canText">CAN 대기</b><small>제어기 연결 대기</small></span></div>
     <div class="status-chip header-hidden"><i class="dot warn" id="cameraDot"></i><span><b id="cameraText">카메라 대기</b><small>Human · Gripper Cam</small></span></div>
     <div class="status-chip header-hidden"><i class="dot run" id="aiDot"></i><span><b id="aiText">YOLO 실행 중</b><small>AI 판단</small></span></div>
   </div>
@@ -748,6 +748,7 @@ body.manual-mode .tof-scale,body.manual-mode .tof-zones{width:100%}
   </div>
   <div class="toolbar-spacer"></div>
   <button class="tool-btn" onclick="openModal('systemModal')">시스템 연결도</button>
+  <button class="tool-btn" onclick="reconnectCan(this)" title="CAN(can0) down→설정→up 재연결">⟳ 통신 재연결</button>
   <button class="tool-btn" onclick="openModal('canModal')">통신 상세</button>
 </nav>
 
@@ -889,12 +890,6 @@ body.manual-mode .tof-scale,body.manual-mode .tof-zones{width:100%}
       <details open><summary>상세 로그 / Debug Log</summary><pre id="debugLog">[INFO] WebSocket 연결을 기다리는 중입니다.
 [INFO] 로봇 연결 시 실시간 데이터로 표시됩니다.
 [INFO] 명령, 상태, 센서 데이터는 작업자 화면에서 읽기 쉬운 상태로 표시됩니다.</pre></details>
-      <details><summary>WebSocket JSON 입력 예시</summary><pre>{
-  "mode": "AUTO_RUN",
-  "system": {"can_status":"OK","camera_status":"OK","ai_status":"RUNNING"},
-  "robot": {"joints":[{"id":"J1","current":92.3,"target":95.0,"temp":41.2,"load":35}]},
-  "vision": {"target":"BOLT","confidence":0.94,"correction":{"dx_mm":2.1,"dy_mm":-1.8}}
-}</pre></details>
     </div>
   </section>
 </div>
@@ -1788,12 +1783,10 @@ function renderHeader(){
   setHeaderStatus("can",!s.server_connected?"CAN 대기":s.can_status==="OK"?"CAN 정상":s.can_status==="WARN"?"CAN 지연":"CAN 끊김",!s.server_connected?"warn":statusClass(s.can_status));
   setHeaderStatus("camera",s.camera_status==="OK"?"카메라 연결":s.camera_status==="ERROR"?"카메라 오류":"카메라 대기",statusClass(s.camera_status));
   setHeaderStatus("ai",s.ai_status==="RUNNING"?"YOLO 실행 중":s.ai_status==="ERROR"?"검출 실패":"AI 대기",s.ai_status==="RUNNING"?"run":s.ai_status==="ERROR"?"err":"warn");
-  // 통신 진단(canModal) 카드 + CAN 칩 툴팁 라이브 갱신
+  // 통신 진단(canModal) 카드 라이브 갱신
   setText("diagConn",s.server_connected?"연결됨 · LIVE":"미연결 · 대기");
   setText("diagLatency",state.lastFrame?`${Math.max(0,Date.now()-state.lastFrame)}ms 전`:"수신 없음");
   setText("diagError",`통신 오류 ${s.ws_errors||0}건`);
-  const _dt=state.digital_twin||{},_ct=$("canTip");
-  if(_ct)_ct.innerHTML=`CAN 125 kbps · 종단 60Ω<br>노드 STM32(서보6) · Nano#1(ToF)<br>명령 ${_dt.cmd_id||"0x100"} · 텔레 ${_dt.telemetry_id||"0x201"} · 전류 ${_dt.current_id||"0x202"} · ToF 0x300<br>상태 ${!s.server_connected?"서버 미연결":s.can_status==="OK"?"정상":s.can_status==="WARN"?"지연":"끊김"}`;
   updateRunHeaderControls();
 }
 function setHeaderStatus(prefix,text,cls){setText(prefix+"Text",text);const d=$(prefix+"Dot");if(d)d.className=`dot ${cls}`}
@@ -2720,6 +2713,18 @@ function sendDashboardCommand(command,payload={}){
   beginVisualMotionFromCommand(command,payload);
   if(state.ws?.readyState===WebSocket.OPEN){state.ws.send(JSON.stringify({type:"COMMAND",command,payload}));debug(`COMMAND sent: ${command}`);return true}
   debug(`[DEMO] ${command} command logged only`);return false;
+}
+async function reconnectCan(btn){
+  // CAN 재연결: 독립 미니 서비스(:8096)에 요청 → can0 down→설정→up. 브리지와 무관(브리지 죽어도 됨).
+  const old=btn?btn.textContent:"";if(btn){btn.textContent="재연결 중…";btn.disabled=true;}
+  addLog("CAN 재연결 요청…","info");
+  try{
+    const r=await fetch(`http://${location.hostname}:8096/reset`,{cache:"no-store"});
+    const d=await r.json();
+    if(d.ok)addLog(`CAN 재연결 완료 — 상태 ${d.state}`,d.state==="ERROR-ACTIVE"?"ok":"warn");
+    else addLog(`CAN 재연결 실패 — ${d.step||"명령 오류"}`,"err");
+  }catch(e){addLog("CAN 재연결 실패 — 리셋 서비스(8096) 응답 없음(서비스 실행 확인)","err");}
+  finally{if(btn){btn.textContent=old;btn.disabled=false;}}
 }
 function goHome(){
   if(!confirm("스캔 자세를 거쳐 원점(180°)으로 복귀합니다.\n실제 장비 주변에 사람이 없는지 먼저 확인하세요."))return;
