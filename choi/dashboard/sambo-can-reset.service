@@ -1,0 +1,12 @@
+[Unit]
+Description=Sambo CAN reset mini service (can0 reconnect, :8096)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/pi/sambo_robot/dashboard/can_reset_server.py
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
