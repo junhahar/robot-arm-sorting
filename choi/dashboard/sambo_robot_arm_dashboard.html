@@ -748,6 +748,7 @@ body.manual-mode .tof-scale,body.manual-mode .tof-zones{width:100%}
   </div>
   <div class="toolbar-spacer"></div>
   <button class="tool-btn" onclick="openModal('systemModal')">시스템 연결도</button>
+  <button class="tool-btn" onclick="reconnectServer(this)" title="브리지(WS 서버) 재시작 — 서버 대기 풀기">↻ 서버 재연결</button>
   <button class="tool-btn" onclick="reconnectCan(this)" title="CAN(can0) down→설정→up 재연결">⟳ 통신 재연결</button>
   <button class="tool-btn" onclick="openModal('canModal')">통신 상세</button>
 </nav>
@@ -2724,6 +2725,18 @@ async function reconnectCan(btn){
     if(d.ok)addLog(`CAN 재연결 완료 — 상태 ${d.state}`,d.state==="ERROR-ACTIVE"?"ok":"warn");
     else addLog(`CAN 재연결 실패 — ${d.step||"명령 오류"}`,"err");
   }catch(e){addLog("CAN 재연결 실패 — 리셋 서비스(8096) 응답 없음(서비스 실행 확인)","err");}
+  finally{if(btn){btn.textContent=old;btn.disabled=false;}}
+}
+async function reconnectServer(btn){
+  // 서버 재연결: 독립 서비스(:8096)가 브리지 서비스 재시작 → 대시보드가 곧 자동 재연결. 브리지 죽어도 작동.
+  const old=btn?btn.textContent:"";if(btn){btn.textContent="재시작 중…";btn.disabled=true;}
+  addLog("서버(브리지) 재시작 요청…","info");
+  try{
+    const r=await fetch(`http://${location.hostname}:8096/bridge-restart`,{cache:"no-store"});
+    const d=await r.json();
+    if(d.ok)addLog(`브리지 재시작됨 (${d.state}) — 곧 자동 재연결`,"ok");
+    else addLog(`브리지 재시작 실패 — ${d.msg||d.state||"오류"}`,"err");
+  }catch(e){addLog("서버 재연결 실패 — 리셋 서비스(8096) 응답 없음(서비스 실행 확인)","err");}
   finally{if(btn){btn.textContent=old;btn.disabled=false;}}
 }
 function goHome(){
