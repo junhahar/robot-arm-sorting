@@ -23,9 +23,17 @@ choi auto_runner.py 초안(SCAN→DETECT→PICK 단순루프) 위에 실제 워�
 """
 
 import time
+import threading
 
 import pick_runner
 from pick_runner import SCAN_POSE, GRIPPER_OPEN
+
+# LED+부저 Nano 상태 송신(CAN 0x410). 모듈 없거나 python-can 미설치면 자동 비활성(워크플로우는 정상 동작).
+try:
+    from cnc_status_buzzer import (CncStatusCanNode, calc_cnc_status,
+                                   remaining_cnc_seconds, open_socketcan_bus)
+except Exception:
+    CncStatusCanNode = None
 
 ENABLED = False          # ★ 자동진행 비활성. 검증 끝나기 전 절대 True 금지.
 CNC_TIMER_S = 20.0       # CNC 가공 시간(타이머)
@@ -116,6 +124,30 @@ def run(api, cfg=None, log=None, dry_run=False):
     cycle = 0
     sorted_ok = 0
     aborted = False
+    # 0x410 송신 스레드가 읽는 공유 상태(루프가 갱신). loaded_until = 적재 직후 RACK_LOADED(부저3회) 표시 구간.
+    led_ctx = {"busy": False, "start": 0.0, "rack": 0, "loaded_until": 0.0}
+    _led_stop = threading.Event()
+    _led_thread = None
+    _led_bus = None
+
+    def _led_worker(node):
+        # CNC 상태(led_ctx) → calc_cnc_status → 0x410 송신(~5Hz). 워크플로우 루프 타이밍과 독립.
+        while not _led_stop.is_set():
+            now = time.time()
+            busy = led_ctx["busy"]
+            start = led_ctx["start"] if busy else None
+            loaded = now < led_ctx["loaded_until"]
+            try:
+                st = calc_cnc_status(now=now, cnc_occupied=busy, cnc_process_started_at=start,
+                                     rack_count=led_ctx["rack"], rack_capacity=cfg["rack_slots"],
+                                     rack_loaded_event=loaded, cnc_process_sec=CNC_TIMER_S)
+                rem = remaining_cnc_seconds(now=now, cnc_occupied=busy, cnc_process_started_at=start,
+                                            cnc_process_sec=CNC_TIMER_S)
+                node.send_status(st, rack_count=led_ctx["rack"],
+                                 rack_capacity=cfg["rack_slots"], remaining_sec=rem)
+            except Exception:
+                pass
+            _led_stop.wait(0.2)
 
     if log:
         log.start_session(mode="auto")
@@ -128,11 +160,22 @@ def run(api, cfg=None, log=None, dry_run=False):
     def set_cnc_busy(b):
         nonlocal cnc_busy
         cnc_busy = b
+        led_ctx["busy"] = b    # 0x410 송신 스레드와 상태 공유
         api.set_cnc_busy(b)    # detect가 파이프 제외(cnc_busy면 볼트/너트만 best)
 
     try:
         if not dry_run:
             api.request_gripper(GRIPPER_OPEN)
+            if CncStatusCanNode is not None:   # LED+부저 Nano 상태 송신(0x410) 시작
+                try:
+                    _led_bus = open_socketcan_bus("can0")
+                    _led_thread = threading.Thread(target=_led_worker,
+                                                   args=(CncStatusCanNode(_led_bus),), daemon=True)
+                    _led_thread.start()
+                    print("[auto_runner] LED 상태 송신(0x410) 시작")
+                except Exception as e:
+                    print(f"[auto_runner] LED 송신 비활성(CAN 못 엶): {e}")
+                    _led_bus = None
 
         while not aborted and not api.should_stop():
             cycle += 1
@@ -181,6 +224,8 @@ def run(api, cfg=None, log=None, dry_run=False):
                     aborted = True; break
                 if r2[0] == "done":
                     rack_count += 1
+                    led_ctx["rack"] = rack_count
+                    led_ctx["loaded_until"] = time.time() + 2.0   # 적재 직후 2초 RACK_LOADED(부저3회)
                     set_cnc_busy(False)
                     if log:
                         log.log_sort(object_type="PIPE", bin=f"rack{rack_count}", success=True)
@@ -211,7 +256,7 @@ def run(api, cfg=None, log=None, dry_run=False):
                     step("PIPE_TO_CNC")
                     r = _pipe_to_cnc(api, arm_mm, v, dry_run)
                     if r[0] == "done":
-                        set_cnc_busy(True); cnc_start = _now(); pipe_fail = 0
+                        set_cnc_busy(True); cnc_start = _now(); led_ctx["start"] = cnc_start; pipe_fail = 0
                         print("  [CNC] 파이프 투입 → 가공 시작(타이머 20초)")
                     elif r[0] == "grip_fail":
                         pipe_fail += 1
@@ -246,6 +291,16 @@ def run(api, cfg=None, log=None, dry_run=False):
                 elif r[0] == "aborted":
                     aborted = True; break
     finally:
+        _led_stop.set()                      # 0x410 송신 스레드 정지
+        if _led_thread is not None:
+            _led_thread.join(timeout=1.0)
+        if _led_bus is not None:
+            _sd = getattr(_led_bus, "shutdown", None)
+            if _sd is not None:
+                try:
+                    _sd()
+                except Exception:
+                    pass
         if not aborted and not dry_run:
             _safe_move(api, SCAN_POSE, "SCAN", cfg)
         api.set_step("IDLE")
