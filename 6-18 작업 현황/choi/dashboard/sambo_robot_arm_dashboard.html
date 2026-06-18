@@ -300,6 +300,21 @@ button{cursor:pointer}
 .sim-labels{position:absolute;left:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:5px;max-width:72%}
 .sim-labels span{font-size:9px;padding:3px 5px;border:1px solid rgba(28,56,85,.78);border-radius:4px;color:var(--dim);background:rgba(5,12,20,.68)}
 .sim-labels span.now{color:var(--cyan);border-color:rgba(32,213,232,.55)}
+.led-buzzer-sim{position:absolute;right:10px;bottom:10px;width:192px;padding:7px;border:1px solid rgba(28,56,85,.78);border-radius:7px;background:rgba(5,12,20,.78);backdrop-filter:blur(4px);color:var(--muted);font-size:9px}
+.led-buzzer-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px}
+.led-buzzer-head b{font-size:10px;color:var(--text);white-space:nowrap}.led-buzzer-head span{font-size:8px;color:var(--dim);white-space:nowrap}
+.led-buzzer-state{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px;font-size:9px}
+.led-buzzer-state b{color:var(--cyan);font-size:10px;white-space:nowrap}.led-buzzer-state span{color:var(--dim);white-space:nowrap}
+.led-buzzer-outputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.led-output{min-width:0;height:42px;border:1px solid rgba(28,56,85,.62);border-radius:6px;background:rgba(9,21,34,.68);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;overflow:hidden}
+.led-output i{width:15px;height:15px;border-radius:50%;border:1px solid rgba(133,157,178,.5);background:#111827;box-shadow:inset 0 0 5px rgba(0,0,0,.8)}
+.led-output span{font-size:8px;line-height:1;color:var(--dim);white-space:nowrap}
+.led-output.red i.on{background:#ff4f4f;border-color:#ff7676;box-shadow:0 0 12px rgba(255,91,91,.85),inset 0 0 5px rgba(255,255,255,.4)}
+.led-output.green i.on{background:#4ade80;border-color:#86efac;box-shadow:0 0 12px rgba(74,222,128,.8),inset 0 0 5px rgba(255,255,255,.36)}
+.led-output.buzzer i{border-radius:5px;width:17px;height:14px}
+.led-output.buzzer i.on{background:#f7c948;border-color:#fde68a;box-shadow:0 0 13px rgba(247,201,72,.86),inset 0 0 5px rgba(255,255,255,.36)}
+.led-output.buzzer i.on+span{color:var(--yellow)}
+.led-buzzer-note{margin-top:5px;color:#9fb5c6;font-size:8px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ===== Lower stage ===== */
 .lower-stage{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(365px,.8fr);gap:7px}
@@ -504,16 +519,21 @@ body.estop-active .action-control{opacity:.36;pointer-events:none}
 .sc-head{font-size:10px;font-weight:800;letter-spacing:.05em;color:var(--dim);text-transform:uppercase}
 .workspace{grid-column:1;grid-row:2;align-self:stretch;grid-template-rows:none;min-height:0;height:auto;display:flex;flex-direction:column}
 .workspace>.main-stage{flex:1 1 auto;min-height:0;height:auto}
-.bottom-strip{grid-column:1;grid-row:3;align-self:stretch;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px}
-/* 자동운전: ToF(=그리퍼캠 폭) + 이벤트로그(=3D트윈 폭) 2칸, 가운데 티칭 박스 숨김 */
+.bottom-strip{grid-column:1;grid-row:3;align-self:stretch;min-height:0;display:grid;grid-template-columns:minmax(0,.5fr) minmax(0,.5fr) minmax(0,1fr);gap:7px}
+/* 자동운전: ToF 반폭 + LED/부저 + 이벤트로그 3칸, 가운데 티칭 박스 숨김 */
 .bottom-strip>.panel.life-panel{display:none}
 /* 수동시험 하단: 티칭(=수동시험 패널 폭) + 이벤트로그(=3D트윈 폭) 2칸, ToF 제거 */
 body.manual-mode .bottom-strip{grid-template-columns:minmax(390px,.72fr) minmax(0,1.28fr)}
 body.manual-mode .bottom-strip>.life-panel{display:flex}
 body.manual-mode .bottom-strip>.panel.tof-panel{display:none}
-/* 수동시험 상단: 작업단계 + 우측 작업현황은 빈 박스(내용 숨김, 추후 채움) */
-body.manual-mode .step-chart .sc-box{display:none}
-body.manual-mode .work-panel>*{display:none}
+body.manual-mode .bottom-strip>.panel.led-buzzer-panel{display:none}
+/* 수동시험 상단: 사용하지 않는 자동운전 요약 패널 제거 */
+body.manual-mode .layout{grid-template-rows:minmax(0,1fr) 184px}
+body.manual-mode .step-chart{display:none}
+body.manual-mode .workspace{grid-row:1}
+body.manual-mode .bottom-strip{grid-row:2}
+body.manual-mode .right-panel{grid-row:1/3}
+body.manual-mode .right-panel>.work-panel{display:none}
 .right-panel{position:static;right:auto;top:auto;width:auto;height:auto;align-self:stretch;grid-column:2;grid-row:1/4;overflow:hidden;padding-bottom:0;display:flex;flex-direction:column;gap:7px;z-index:auto}
 .right-panel>.work-panel{flex:0 0 134px;height:134px;min-height:0;display:flex;flex-direction:column}
 .right-panel>.joint-panel,.right-panel>.motor-panel{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
@@ -587,22 +607,31 @@ body.manual-mode .work-panel>*{display:none}
 .right-panel .motor-panel .meter-label{font-size:10px}
 .bottom-strip>.panel{min-height:0;display:flex;flex-direction:column}
 .bottom-strip .logs{flex:1;height:auto;max-height:none;min-height:0}
-.tof-body{flex:1;min-height:0;padding:4px 12px 5px;display:grid;grid-template-columns:minmax(128px,.42fr) minmax(260px,1fr) minmax(170px,.62fr);grid-template-rows:minmax(0,1fr) 9px;align-items:center;gap:3px 10px;overflow:hidden}
-.tof-big{grid-column:1;grid-row:1/3;font-size:36px;font-weight:900;color:var(--cyan);line-height:1;text-align:center;letter-spacing:0}
-.tof-big .unit{font-size:13px;color:var(--muted);margin-left:5px;font-weight:700}
-.tof-current-label{display:none;text-align:center;color:var(--dim);font-size:9px;line-height:11px;min-height:11px;white-space:nowrap;overflow:visible;text-overflow:ellipsis}
-.tof-grip-flow{grid-column:2;grid-row:1/3;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;height:100%;min-height:0}
-.tof-phase{min-width:0;min-height:0;border:1px solid rgba(32,213,232,.24);border-radius:7px;background:rgba(5,12,20,.36);padding:3px 8px;color:var(--dim);overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+.tof-body{flex:1;min-height:0;padding:8px 10px;display:grid;grid-template-columns:minmax(88px,.42fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);align-items:center;gap:8px;overflow:hidden}
+.tof-readout{grid-column:1;grid-row:1;min-width:0;align-self:stretch;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;overflow:hidden}
+.tof-big{font-size:30px;font-weight:900;color:var(--cyan);line-height:1;text-align:center;letter-spacing:0}
+.tof-big .unit{font-size:11px;color:var(--muted);margin-left:4px;font-weight:700}
+.tof-current-label{display:block;text-align:center;color:var(--muted);font-size:10px;font-weight:800;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tof-grip-flow{grid-column:2;grid-row:1;display:grid;grid-template-columns:minmax(0,1fr);gap:7px;height:100%;min-height:0}
+.tof-phase{min-width:0;min-height:0;border:1px solid rgba(32,213,232,.24);border-radius:7px;background:rgba(5,12,20,.36);padding:9px 10px;color:var(--dim);overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .tof-phase.active{border-color:rgba(74,222,128,.52);background:rgba(74,222,128,.08)}
 .tof-phase.green{border-color:rgba(74,222,128,.55)}.tof-phase.yellow{border-color:rgba(247,201,72,.55)}.tof-phase.red{border-color:rgba(255,91,91,.55)}
-.tof-phase span{display:block;font-size:8px;line-height:1.2;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tof-phase b{display:block;color:var(--text);font-size:13px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tof-phase span{display:block;font-size:12px;line-height:1.2;margin-bottom:8px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tof-phase b{display:block;width:100%;max-width:100%;color:var(--text);font-size:30px;font-weight:900;line-height:1.12;white-space:normal;word-break:keep-all;overflow:hidden;text-overflow:clip}
 .tof-phase em{display:block;margin-top:2px;font-style:normal;font-size:9px;color:var(--dim);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tof-scale{grid-column:3;grid-row:1;align-self:end;position:relative;height:8px;margin:0 0 1px;border-radius:8px;background:linear-gradient(90deg,rgba(96,165,250,.2),rgba(74,222,128,.55),rgba(247,201,72,.25));overflow:visible}
+.tof-scale{grid-column:2;grid-row:2;align-self:end;position:relative;height:8px;margin:0;border-radius:8px;background:linear-gradient(90deg,rgba(96,165,250,.2),rgba(74,222,128,.55),rgba(247,201,72,.25));overflow:visible}
 .tof-scale:after{content:"";position:absolute;left:50%;top:-3px;width:2px;height:15px;border-radius:2px;background:rgba(255,255,255,.58);transform:translateX(-50%)}
 .tof-marker{position:absolute;top:-3px;width:5px;height:15px;border-radius:3px;background:var(--yellow);box-shadow:0 0 10px rgba(247,201,72,.65);transform:translateX(-50%)}
-.tof-zones{grid-column:3;grid-row:2;display:flex;justify-content:space-between;color:var(--dim);font-size:8px;line-height:1.05}
+.tof-zones{grid-column:2;grid-row:3;display:flex;justify-content:space-between;color:var(--dim);font-size:8px;line-height:1.05}
 .tof-zones span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.led-buzzer-panel .panel-head small{color:var(--dim)}
+.led-buzzer-body{flex:1;min-height:0;padding:7px;display:flex}
+.led-buzzer-panel .led-buzzer-sim{position:static;width:auto;flex:1;min-height:0;padding:8px;border-radius:7px;background:rgba(5,12,20,.44);backdrop-filter:none}
+.led-buzzer-panel .led-buzzer-head{margin-bottom:6px}
+.led-buzzer-panel .led-buzzer-outputs{gap:7px}
+.led-buzzer-panel .led-output{height:48px}
+.led-buzzer-panel .led-output i{width:16px;height:16px}
+.led-buzzer-panel .led-output.buzzer i{width:18px;height:15px}
 body.manual-mode .tof-body{display:flex;flex-direction:column;justify-content:center;padding:5px 9px;gap:3px}
 body.manual-mode .tof-big{font-size:32px;line-height:.95}
 body.manual-mode .tof-grip-flow{width:100%;grid-template-columns:1fr;gap:4px}
@@ -803,8 +832,24 @@ body.manual-mode .tof-scale,body.manual-mode .tof-zones{width:100%}
 
   <section class="bottom-strip" id="bottomStrip">
     <article class="panel tof-panel">
-      <div class="panel-head">ToF 거리/집기 판단 <small>평면 기준</small></div>
+      <div class="panel-head">ToF 거리/집기 판단 <small>집기 여부</small></div>
       <div class="tof-body" id="tofBody"></div>
+    </article>
+
+    <article class="panel led-buzzer-panel">
+      <div class="panel-head">LED + 부저 Nano <small>CAN 0x410</small></div>
+      <div class="led-buzzer-body">
+        <div class="led-buzzer-sim" id="ledBuzzerSim">
+          <div class="led-buzzer-head"><b>LED + 부저 Nano</b><span id="ledBuzzerFrame">CAN 0x410</span></div>
+          <div class="led-buzzer-state"><b id="ledBuzzerState">대기</b><span id="ledBuzzerCode">state 0</span></div>
+          <div class="led-buzzer-outputs">
+            <div class="led-output red"><i id="ledBuzzerRed"></i><span>빨강</span></div>
+            <div class="led-output green"><i id="ledBuzzerGreen"></i><span>초록</span></div>
+            <div class="led-output buzzer"><i id="ledBuzzerBuzz"></i><span>부저</span></div>
+          </div>
+          <div class="led-buzzer-note" id="ledBuzzerNote">표시용 Nano 출력 시뮬레이션</div>
+        </div>
+      </div>
     </article>
 
     <article class="panel placeholder-panel life-panel">
@@ -1033,7 +1078,7 @@ const JOINT_DISPLAY=[{axis:"J1",fn:"Base"},{axis:"J2",fn:"Shoulder"},{axis:"J2",
 const STEP_LABELS={HOME:"대기",SCAN:"스캔",PRE_GRASP:"접근",GRASP:"집기",LIFT:"들기",CARRY:"운반",PLACE:"놓기",DETECT:"감지",TEACHING:"티칭 중",PAUSED:"일시 정지",ERROR:"오류 정지"};
 const OBJECT_LABELS={BOLT:"볼트",NUT:"너트",WASHER:"와셔",PIPE:"파이프",NONE:"대기"};
 // 목적지(dest)는 백엔드 auto_runner가 판단해 내려줌 — 대시보드는 표시 변환만.
-const DEST_LABELS={cnc:"CNC",bin:"분류통",rack:"적재 V홈",CNC:"CNC",BIN:"분류통",RACK:"적재 V홈"};
+const DEST_LABELS={cnc:"CNC",bolt:"볼트 통",nut:"너트 통",bin:"분류통",rack:"적재함",CNC:"CNC",BOLT:"볼트 통",NUT:"너트 통",BIN:"분류통",RACK:"적재함"};
 const PHOTO_HOME_ANGLES=[180,180,180,180,180,180];
 const SERVO_RAW_HOME_ANGLES=[180,180,180,180,180,180];
 window.SAMBO_PHOTO_HOME_ANGLES=PHOTO_HOME_ANGLES.slice();
@@ -1949,6 +1994,48 @@ function renderCnc(){
   }
   setText("cncRack",(c.rack_count||0)+"/"+(c.rack_max||2));
 }
+const DISPLAY_STATUS_META={
+  IDLE:{code:0,label:"IDLE",ko:"CNC 비어 있음",note:"초록 ON · 부저 OFF"},
+  MACHINING:{code:1,label:"MACHINING",ko:"CNC 가공 중",note:"빨강 ON · 부저 OFF"},
+  DONE_WAIT:{code:2,label:"DONE_WAIT",ko:"가공 완료 대기",note:"초록 느린 점멸"},
+  RACK_FULL:{code:3,label:"RACK_FULL",ko:"적재함 만재",note:"빨강 두 번 + 부저 두 번"},
+  ERROR:{code:4,label:"ERROR",ko:"오류",note:"빨강/초록/부저 빠른 점멸"},
+  CAN_LOST:{code:255,label:"CAN_LOST",ko:"상태 프레임 끊김",note:"빨강/초록 교차 점멸"}
+};
+function ledPhase(now,halfPeriodMs){return (Math.floor(now/halfPeriodMs)%2)===0}
+function ledDoublePulse(now,cycleMs){const t=now%cycleMs;return t<120||(t>=220&&t<340)}
+function getLedBuzzerStatusKey(){
+  const c=state.cnc||{},sys=state.system||{};
+  const st=String(c.state||"idle").toLowerCase();
+  const rackCount=Number(c.rack_count||0),rackMax=Number(c.rack_max||2),rackFull=rackMax>0&&rackCount>=rackMax;
+  const canBad=sys.server_connected&&["ERR","ERROR","LOST","OFF"].includes(String(sys.can_status||"").toUpperCase());
+  if(sys.estop||canBad)return"ERROR";
+  if(!state.demo&&!sys.server_connected)return"CAN_LOST";
+  if(st==="running"||st==="machining")return"MACHINING";
+  if(st==="done"||st==="done_wait"||st==="complete")return rackFull?"RACK_FULL":"DONE_WAIT";
+  if(rackFull)return"RACK_FULL";
+  return"IDLE";
+}
+function getLedBuzzerOutputs(key,now){
+  if(key==="IDLE")return{red:false,green:true,buzzer:false};
+  if(key==="MACHINING")return{red:true,green:false,buzzer:false};
+  if(key==="DONE_WAIT")return{red:false,green:ledPhase(now,500),buzzer:false};
+  if(key==="RACK_FULL")return{red:ledDoublePulse(now,1200),green:false,buzzer:ledDoublePulse(now,1800)};
+  if(key==="ERROR"){const blink=ledPhase(now,120);return{red:blink,green:blink,buzzer:blink}}
+  const p=ledPhase(now,650);return{red:p,green:!p,buzzer:false};
+}
+function renderLedBuzzerSim(){
+  if(!$("ledBuzzerSim"))return;
+  const now=Date.now(),key=getLedBuzzerStatusKey(),meta=DISPLAY_STATUS_META[key]||DISPLAY_STATUS_META.CAN_LOST,out=getLedBuzzerOutputs(key,now);
+  $("ledBuzzerSim").className=`led-buzzer-sim state-${key.toLowerCase()}${out.buzzer?" buzzer-on":""}`;
+  $("ledBuzzerRed")?.classList.toggle("on",out.red);
+  $("ledBuzzerGreen")?.classList.toggle("on",out.green);
+  $("ledBuzzerBuzz")?.classList.toggle("on",out.buzzer);
+  setText("ledBuzzerState",meta.ko);
+  setText("ledBuzzerCode",`state ${meta.code}`);
+  setText("ledBuzzerFrame",`0x410 · ${meta.label}`);
+  setText("ledBuzzerNote",meta.note);
+}
 
 function renderRightPanel(){
   if(!$("jointRows"))return;
@@ -1959,16 +2046,17 @@ function renderRightPanel(){
     return `<div class="motor-row mono"><b>${JOINT_DISPLAY[i].axis} (M${i+1})</b><div><div class="meter"><i class="temp" style="width:${clamp(j.temp/75*100,0,100)}%"></i></div><span class="meter-label">${fmt(j.temp,0)}°C</span></div>
       <div><div class="meter"><i style="width:${clamp(j.load,0,100)}%;background:${danger?"var(--red)":warn?"var(--yellow)":"var(--cyan)"}"></i></div><span class="meter-label">${fmt(j.load,0)}%</span></div><span class="pill ${csc}">${ctext}</span></div>`}).join("");
   const g=state.gripper,tofPlane=getTofPlaneGuide(),pipeGrip=getTofPipeGripGuide(tofPlane),objectGuide=getGripperObjectGuide(pipeGrip),wk=state.work||{};
-  const beforeActive=!objectGuide.active||(!objectGuide.detected&&!objectGuide.suspect&&!objectGuide.missing),afterActive=objectGuide.active||objectGuide.detected||objectGuide.suspect;
+  const afterActive=objectGuide.active||objectGuide.detected||objectGuide.suspect;
+  const gripLabel=objectGuide.detected?"물체를 집음":"물체를 안집음";
+  const gripCls=objectGuide.detected?"green":objectGuide.suspect?"yellow":objectGuide.active?"red":"yellow";
   const tb=$("tofBody");
-  if(tb)tb.innerHTML=`<div class="tof-current-label">현재 ToF 거리</div>
-    <div class="tof-big mono">${fmt(g.tof_mm)}<span class="unit">mm</span></div>
-    <div class="tof-grip-flow">
-      <div class="tof-phase ${beforeActive?"active":""}"><span>집기 전</span><b>평면 기준</b><em class="mono">기준 ${fmt(tofPlane.ref)} mm</em></div>
-      <div class="tof-phase ${objectGuide.cls} ${afterActive?"active":""}"><span>집은 후</span><b class="${objectGuide.cls}">${objectGuide.label}</b><em class="mono">감소 ${fmt(pipeGrip.drop)} mm</em></div>
+  if(tb)tb.innerHTML=`<div class="tof-readout">
+      <div class="tof-current-label">평면과의 거리</div>
+      <div class="tof-big mono">${fmt(g.tof_mm)}<span class="unit">mm</span></div>
     </div>
-    <div class="tof-scale"><i class="tof-marker" style="left:${tofPlane.marker}%"></i></div>
-    <div class="tof-zones"><span>높음/가까움</span><span>기준</span><span>낮음/멀어짐</span></div>`;
+    <div class="tof-grip-flow">
+      <div class="tof-phase ${gripCls} ${afterActive?"active":""}"><span>집기 판단</span><b class="${gripCls}">${gripLabel}</b></div>
+    </div>`;
   const wb=$("workBody");
   if(wb)wb.innerHTML=`<div class="work-stats">
       <div class="work-stat done"><span>완료</span><b>${wk.done||0}<small> 개</small></b></div>
@@ -2303,10 +2391,14 @@ function getStlSafeAngleMap(T,r,field="current"){
   const fallbackReport=stlCollisionReport(T,r);
   if(field==="current")state.collision={blocked:true,messages:report.messages,visualFrozen:true,fallbackBlocked:fallbackReport.blocked};
   return fallback;
-}const SORT_CELLS=[
-  {key:"BOLT",label:"볼트 통",en:"BOLT BIN",x:-2.05,z:-1.20,color:0x26b97a,accent:0x4ade80},
-  {key:"NUT",label:"너트 통",en:"NUT BIN",x:2.05,z:-1.20,color:0x3478d4,accent:0x60a5fa}
+}
+const WORKSTATIONS=[
+  {key:"BOLT",kind:"BIN",label:"볼트 통",en:"BOLT BIN",x:-2.35,z:-1.75,color:0x26b97a,accent:0x4ade80},
+  {key:"NUT",kind:"BIN",label:"너트 통",en:"NUT BIN",x:-2.35,z:-.65,color:0x3478d4,accent:0x60a5fa},
+  {key:"CNC",kind:"CNC",label:"CNC",en:"MACHINE",x:2.35,z:-1.75,color:0x5b6470,accent:0xf7c948},
+  {key:"RACK",kind:"RACK",label:"적재함",en:"STOCK RACK",x:2.35,z:-.65,color:0x345b70,accent:0x20d5e8}
 ];
+const RIGHT_WORKSTATION_YAW=(()=>{const cells=WORKSTATIONS.filter(c=>c.kind==="CNC"||c.kind==="RACK"),x=cells.reduce((s,c)=>s+c.x,0)/cells.length,z=cells.reduce((s,c)=>s+c.z,0)/cells.length;return Math.atan2(x,z)})();
 function makeSceneLabel(T,text,accent,subtext=""){
   const canvas=document.createElement("canvas"),ctx=canvas.getContext("2d");
   canvas.width=256;canvas.height=72;
@@ -2317,31 +2409,60 @@ function makeSceneLabel(T,text,accent,subtext=""){
   const texture=new T.CanvasTexture(canvas),sprite=new T.Sprite(new T.SpriteMaterial({map:texture,transparent:true,depthTest:false}));
   sprite.scale.set(.78,.22,1);return sprite;
 }
+function addBoltPart(T,metalMat){
+  const part=new T.Group(),shaft=new T.Mesh(new T.CylinderGeometry(.035,.035,.27,18),metalMat),head=new T.Mesh(new T.CylinderGeometry(.09,.09,.05,6),metalMat);
+  shaft.rotation.z=Math.PI/2;head.rotation.z=Math.PI/2;head.position.x=-.15;shaft.castShadow=head.castShadow=true;part.add(shaft);part.add(head);return part;
+}
+function addNutPart(T,metalMat,rad=.13){
+  const nut=new T.Mesh(new T.TorusGeometry(rad,.032,12,6),metalMat);
+  nut.rotation.x=Math.PI/2;nut.castShadow=true;return nut;
+}
 function addThreeSortBins(T,r){
   const group=new T.Group(),wallMat=(color)=>new T.MeshStandardMaterial({color,metalness:.12,roughness:.62,transparent:true,opacity:.9,side:T.DoubleSide});
   const darkMat=new T.MeshStandardMaterial({color:0x06101b,metalness:.04,roughness:.82});
-  const metalMat=new T.MeshStandardMaterial({color:0xb6c3cd,metalness:.34,roughness:.5});
-  SORT_CELLS.forEach((cell,idx)=>{
+  const metalMat=new T.MeshStandardMaterial({color:0xb6c3cd,metalness:.34,roughness:.5}),beltMat=new T.MeshStandardMaterial({color:0x111827,metalness:.08,roughness:.68});
+  WORKSTATIONS.forEach((cell,idx)=>{
     const bin=new T.Group();bin.position.set(cell.x,0,cell.z);
-    const body=new T.Mesh(new T.CylinderGeometry(.42,.36,.34,48,1,true),wallMat(cell.color));
-    body.position.y=.17;body.castShadow=true;body.receiveShadow=true;bin.add(body);
-    const rim=new T.Mesh(new T.CylinderGeometry(.45,.45,.035,48),wallMat(cell.accent));
-    rim.position.y=.35;rim.castShadow=true;bin.add(rim);
-    const floor=new T.Mesh(new T.CylinderGeometry(.35,.35,.035,48),darkMat);
-    floor.position.y=.025;floor.receiveShadow=true;bin.add(floor);
-    const label=makeSceneLabel(T,cell.label,idx? "#60a5fa":"#4ade80",cell.en);
-    label.position.set(0,.72,.04);bin.add(label);
-    for(let i=0;i<3;i++){
-      const part=new T.Group(),a=(i*2.1+idx*.7),rad=.13+i*.015;
-      part.position.set(Math.cos(a)*.13,.39+i*.014,Math.sin(a)*.1);
-      if(cell.key==="BOLT"){
-        const shaft=new T.Mesh(new T.CylinderGeometry(.035,.035,.27,18),metalMat),head=new T.Mesh(new T.CylinderGeometry(.09,.09,.05,6),metalMat);
-        shaft.rotation.z=Math.PI/2;shaft.castShadow=true;head.rotation.z=Math.PI/2;head.position.x=-.15;head.castShadow=true;part.add(shaft);part.add(head);
-      }else{
-        const nut=new T.Mesh(new T.TorusGeometry(rad,.032,12,6),metalMat);
-        nut.rotation.x=Math.PI/2;nut.castShadow=true;part.add(nut);
+    if(cell.kind==="CNC"||cell.kind==="RACK")bin.rotation.y=RIGHT_WORKSTATION_YAW;
+    if(cell.kind==="CNC"){
+      const base=new T.Mesh(new T.BoxGeometry(.78,.46,.66),wallMat(cell.color));
+      base.position.y=.23;base.castShadow=base.receiveShadow=true;bin.add(base);
+      const window=new T.Mesh(new T.BoxGeometry(.50,.18,.018),new T.MeshStandardMaterial({color:0x7dd3fc,metalness:.02,roughness:.2,transparent:true,opacity:.38}));
+      window.position.set(0,.29,-.34);bin.add(window);
+      const infeed=new T.Mesh(new T.BoxGeometry(.46,.035,.20),new T.MeshStandardMaterial({color:0x1f3f55,metalness:.08,roughness:.5}));
+      infeed.position.set(0,.48,-.43);infeed.rotation.x=-Math.PI*.04;infeed.castShadow=true;bin.add(infeed);
+      const bed=new T.Mesh(new T.BoxGeometry(.62,.05,.44),beltMat);
+      bed.position.y=.49;bed.castShadow=true;bin.add(bed);
+      const chuck=new T.Mesh(new T.CylinderGeometry(.11,.11,.12,28),metalMat);
+      chuck.rotation.x=Math.PI/2;chuck.position.set(-.20,.58,0);chuck.castShadow=true;bin.add(chuck);
+      const label=makeSceneLabel(T,cell.label,"#f7c948",cell.en);
+      label.position.set(0,.86,.04);bin.add(label);
+    }else if(cell.kind==="RACK"){
+      const tray=new T.Mesh(new T.BoxGeometry(.78,.16,.58),wallMat(cell.color));
+      tray.position.y=.13;tray.castShadow=tray.receiveShadow=true;bin.add(tray);
+      [-.18,.18].forEach(x=>{
+        const slot=new T.Mesh(new T.BoxGeometry(.09,.11,.50),darkMat);
+        slot.position.set(x,.27,0);slot.rotation.z=Math.PI/4;slot.castShadow=true;bin.add(slot);
+        const pipe=new T.Mesh(new T.CylinderGeometry(.045,.045,.46,24),metalMat);
+        pipe.rotation.x=Math.PI/2;pipe.position.set(x,.39,0);pipe.castShadow=true;bin.add(pipe);
+      });
+      const label=makeSceneLabel(T,cell.label,"#20d5e8",cell.en);
+      label.position.set(0,.74,.04);bin.add(label);
+    }else{
+      const body=new T.Mesh(new T.CylinderGeometry(.42,.36,.34,48,1,true),wallMat(cell.color));
+      body.position.y=.17;body.castShadow=true;body.receiveShadow=true;bin.add(body);
+      const rim=new T.Mesh(new T.CylinderGeometry(.45,.45,.035,48),wallMat(cell.accent));
+      rim.position.y=.35;rim.castShadow=true;bin.add(rim);
+      const floor=new T.Mesh(new T.CylinderGeometry(.35,.35,.035,48),darkMat);
+      floor.position.y=.025;floor.receiveShadow=true;bin.add(floor);
+      const label=makeSceneLabel(T,cell.label,idx? "#60a5fa":"#4ade80",cell.en);
+      label.position.set(0,.72,.04);bin.add(label);
+      for(let i=0;i<3;i++){
+        const part=new T.Group(),a=(i*2.1+idx*.7),rad=.13+i*.015;
+        part.position.set(Math.cos(a)*.13,.39+i*.014,Math.sin(a)*.1);
+        part.add(cell.key==="BOLT"?addBoltPart(T,metalMat):addNutPart(T,metalMat,rad));
+        bin.add(part);
       }
-      bin.add(part);
     }
     group.add(bin);
   });
@@ -2379,8 +2500,10 @@ async function loadActualStlRobot(T,r){
   r.dynamicCollisionObjects=[arm1,arm2,wristHouse,wristPlate,rollAssembly,j4Hub,j4Mark];
   r.staticKeepouts=[
     {label:"베이스 하우징",min:[-.62,.02,-.58],max:[.62,.44,.58]},
-    {label:"볼트 통 프레임",min:[-2.55,.00,-1.70],max:[-1.55,.58,-.70]},
-    {label:"너트 통 프레임",min:[1.55,.00,-1.70],max:[2.55,.58,-.70]}
+    {label:"볼트 통 프레임",min:[-2.78,.00,-2.25],max:[-1.92,.58,-1.25]},
+    {label:"너트 통 프레임",min:[-2.78,.00,-1.15],max:[-1.92,.58,-.15]},
+    {label:"CNC 프레임",min:[1.95,.00,-2.27],max:[2.75,.70,-1.23]},
+    {label:"적재함 프레임",min:[1.95,.00,-1.17],max:[2.75,.62,-.13]}
   ];
   r.groups=G;r.j4Hub=j4Hub;r.j4Mark=j4Mark;r.rollAssembly=rollAssembly;r.gripperMesh=animatedGripper;updateAnimatedGripper(r);r.ready=true;
 }
@@ -2432,8 +2555,10 @@ function armDir(yaw,pitch){return V(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch
 const COLLISION_LIMITS={
   floorY:-220,
   boxes:[
-    {label:"볼트 통 프레임",x:-185,z:90,halfX:58,halfZ:54,minY:0,maxY:72},
-    {label:"너트 통 프레임",x:190,z:90,halfX:58,halfZ:54,minY:0,maxY:72},
+    {label:"볼트 통 프레임",x:-235,z:45,halfX:46,halfZ:34,minY:0,maxY:72},
+    {label:"너트 통 프레임",x:-235,z:125,halfX:46,halfZ:34,minY:0,maxY:72},
+    {label:"CNC 프레임",x:235,z:45,halfX:52,halfZ:38,minY:0,maxY:84},
+    {label:"적재함 프레임",x:235,z:125,halfX:46,halfZ:34,minY:0,maxY:74},
     {label:"작업대 전면 프레임",x:0,z:165,halfX:135,halfZ:32,minY:0,maxY:50}
   ]
 };
@@ -2488,7 +2613,7 @@ function project(p,W,H){
 function drawNative3D(){
   if(!$("robot3dCanvas"))return;const {x:ctx,w:W,h:H}=fitCanvas($("robot3dCanvas")),pose=fk(getVisualJointAngleMap(getCollisionSafeAngleMap("current")));
   const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#10233a");g.addColorStop(1,"#06101b");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-  drawGround(ctx,W,H);drawZone3D(ctx,W,H,V(0,1,170),70,"SCAN ZONE","#20d5e8");drawBox3D(ctx,W,H,V(-185,20,90),V(76,40,66),"#1e6c54","BOLT BIN");drawBox3D(ctx,W,H,V(190,20,90),V(76,40,66),"#304f8d","NUT BIN");
+  drawGround(ctx,W,H);drawZone3D(ctx,W,H,V(0,1,170),70,"SCAN ZONE","#20d5e8");drawBox3D(ctx,W,H,V(-235,20,45),V(76,40,66),"#1e6c54","BOLT BIN");drawBox3D(ctx,W,H,V(-235,20,125),V(76,40,66),"#304f8d","NUT BIN");drawBox3D(ctx,W,H,V(235,24,45),V(84,48,70),"#4b5563","CNC");drawBox3D(ctx,W,H,V(235,18,125),V(78,36,66),"#24536b","RACK");
   drawPart3D(ctx,W,H,V(-35,5,162),"볼트");drawPart3D(ctx,W,H,V(20,5,184),"너트");drawPart3D(ctx,W,H,V(48,5,150),"와셔");
   const pts=[pose.base,pose.shoulder,pose.elbow,pose.wrist,pose.end],colors=["#5b7892","#d9e9f5","#bcd0df","#83a0b6"];
   drawBox3D(ctx,W,H,V(0,19,0),V(88,38,88),"#18344e","BASE");
@@ -2499,7 +2624,7 @@ function drawNative3D(){
   $("simLabels").innerHTML=(state.path.steps||[]).slice(0,-1).map(s=>`<span class="${s===state.path.current_step?"now":""}">${s}</span>`).join("");
   state.robot.end_effector={x:pose.end.x,y:pose.end.z,z:pose.end.y};
 }
-function draw3D(){const canvas=$("robot3dCanvas");if(!canvas||canvas.clientWidth<20||canvas.clientHeight<20)return;updateZoomPct();updateRotDeg();updateTiltDeg();if(!drawThreeRobot())drawNative3D()}
+function draw3D(){const canvas=$("robot3dCanvas");if(!canvas||canvas.clientWidth<20||canvas.clientHeight<20)return;updateZoomPct();updateRotDeg();updateTiltDeg();if(!drawThreeRobot())drawNative3D();renderLedBuzzerSim()}
 function drawGround(ctx,W,H){ctx.strokeStyle="rgba(75,119,150,.22)";ctx.lineWidth=1;for(let n=-300;n<=300;n+=40){line3(ctx,W,H,V(-310,0,n),V(310,0,n));line3(ctx,W,H,V(n,0,-60),V(n,0,310))}}
 function line3(ctx,W,H,a,b){const A=project(a,W,H),B=project(b,W,H);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke()}
 function drawZone3D(ctx,W,H,c,r,label,color){ctx.strokeStyle=color;ctx.fillStyle=color+"18";const pts=[];for(let i=0;i<32;i++)pts.push(project(V(c.x+Math.cos(i/32*Math.PI*2)*r,c.y,c.z+Math.sin(i/32*Math.PI*2)*r),W,H));ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.fill();ctx.stroke();const q=project(c,W,H);ctx.fillStyle=color;ctx.font="10px Segoe UI";ctx.fillText(label,q.x-28,q.y)}
@@ -2529,7 +2654,7 @@ function drawTopDown(){
   ctx.fillStyle="#07121e";ctx.fillRect(0,0,W,H);ctx.strokeStyle="rgba(75,119,150,.28)";
   for(let r=50;r<=300;r+=50){ctx.beginPath();ctx.arc(cx,cy,r*s,0,Math.PI*2);ctx.stroke()}for(let a=0;a<360;a+=30){const t=a*Math.PI/180;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(t)*300*s,cy-Math.sin(t)*300*s);ctx.stroke()}
   const pos=p=>({x:cx+p.x*s,y:cy-p.z*s}),base=pos(V(0,0,0)),end=pos(V(pose.end.x,0,pose.end.z)),target=pos(V(35,0,175)),corrected=pos(V(35+state.vision.correction.dx_mm,0,175+state.vision.correction.dy_mm));
-  zone(0,170,64,"SCAN 영역","rgba(32,213,232,.15)","#20d5e8");zone(-190,75,42,"볼트 통","rgba(74,222,128,.14)","#4ade80");zone(190,75,42,"너트 통","rgba(96,165,250,.14)","#60a5fa");zone(0,-70,62,"위험 영역","rgba(255,91,91,.13)","#ff5b5b");
+  zone(0,170,64,"SCAN 영역","rgba(32,213,232,.15)","#20d5e8");zone(-235,45,42,"볼트 통","rgba(74,222,128,.14)","#4ade80");zone(-235,125,42,"너트 통","rgba(96,165,250,.14)","#60a5fa");zone(235,45,46,"CNC","rgba(247,201,72,.12)","#f7c948");zone(235,125,42,"적재함","rgba(32,213,232,.12)","#20d5e8");zone(0,-70,62,"위험 영역","rgba(255,91,91,.13)","#ff5b5b");
   ctx.lineCap="round";ctx.strokeStyle="#20d5e8";ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(base.x,base.y);ctx.lineTo(end.x,end.y);ctx.stroke();ctx.setLineDash([5,5]);ctx.strokeStyle="#4ade80";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(end.x,end.y);ctx.lineTo(target.x,target.y);ctx.stroke();ctx.setLineDash([]);
   mark(base,"BASE","#bcd0df");mark(end,"현재 팔 끝","#20d5e8");mark(target,"목표","#4ade80");mark(corrected,"보정","#f7c948");
   ctx.fillStyle="#83a0b6";ctx.font="10px Segoe UI";ctx.fillText("청록: 현재 · 초록: 목표 · 노랑: 보정 · 빨강: 제한",10,H-12);
@@ -2864,11 +2989,13 @@ setInterval(()=>{const now=currentTime();setText("clock",now);const sc=$("splash
 (function(){
   const PICK=["SCAN","PRE_GRASP","GRASP","LIFT","CARRY","PLACE"];
   const seq=[];
-  const pushPick=(dest,cnc)=>PICK.forEach(step=>seq.push({target:"PIPE",dest,step,busy:step!=="SCAN",cnc,rem:null}));
-  pushPick("cnc","idle");                                  // 1) 파이프 → CNC 투입
+  const pushPick=(target,dest,cnc)=>PICK.forEach(step=>seq.push({target,dest,step,busy:step!=="SCAN",cnc,rem:null}));
+  pushPick("PIPE","cnc","idle");                           // 1) 파이프 → CNC 투입
   [16,12,8,4].forEach(r=>seq.push({target:"NONE",dest:"none",step:"WAIT",busy:false,cnc:"running",rem:r}));  // 2) CNC 가공 중 — 팔 대기
   seq.push({target:"NONE",dest:"none",step:"WAIT",busy:false,cnc:"done",rem:null});  // 가공 완료
-  pushPick("rack","done");                                 // 3) 파이프 회수 → 적재
+  pushPick("PIPE","rack","done");                          // 3) 파이프 회수 → 적재
+  pushPick("BOLT","bolt","idle");                          // 4) 이물질 볼트 → 볼트 통
+  pushPick("NUT","nut","idle");                            // 5) 너트 → 너트 통
   let idx=0,rack=0,done=0,times=[];
   setInterval(()=>{
     if(!state.demo)return;                                 // 라이브 연결되면 데모 정지
