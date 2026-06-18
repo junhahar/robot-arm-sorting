@@ -609,11 +609,11 @@ body.manual-mode .work-panel>*{display:none}
 .tof-big .unit{font-size:11px;color:var(--muted);margin-left:4px;font-weight:700}
 .tof-current-label{display:block;text-align:center;color:var(--muted);font-size:10px;font-weight:800;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tof-grip-flow{grid-column:2;grid-row:1;display:grid;grid-template-columns:minmax(0,1fr);gap:7px;height:100%;min-height:0}
-.tof-phase{min-width:0;min-height:0;border:1px solid rgba(32,213,232,.24);border-radius:7px;background:rgba(5,12,20,.36);padding:7px 8px;color:var(--dim);overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+.tof-phase{min-width:0;min-height:0;border:1px solid rgba(32,213,232,.24);border-radius:7px;background:rgba(5,12,20,.36);padding:9px 10px;color:var(--dim);overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .tof-phase.active{border-color:rgba(74,222,128,.52);background:rgba(74,222,128,.08)}
 .tof-phase.green{border-color:rgba(74,222,128,.55)}.tof-phase.yellow{border-color:rgba(247,201,72,.55)}.tof-phase.red{border-color:rgba(255,91,91,.55)}
-.tof-phase span{display:block;font-size:8px;line-height:1.2;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tof-phase b{display:block;color:var(--text);font-size:15px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tof-phase span{display:block;font-size:12px;line-height:1.2;margin-bottom:8px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tof-phase b{display:block;width:100%;max-width:100%;color:var(--text);font-size:30px;font-weight:900;line-height:1.12;white-space:normal;word-break:keep-all;overflow:hidden;text-overflow:clip}
 .tof-phase em{display:block;margin-top:2px;font-style:normal;font-size:9px;color:var(--dim);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tof-scale{grid-column:2;grid-row:2;align-self:end;position:relative;height:8px;margin:0;border-radius:8px;background:linear-gradient(90deg,rgba(96,165,250,.2),rgba(74,222,128,.55),rgba(247,201,72,.25));overflow:visible}
 .tof-scale:after{content:"";position:absolute;left:50%;top:-3px;width:2px;height:15px;border-radius:2px;background:rgba(255,255,255,.58);transform:translateX(-50%)}
@@ -2043,13 +2043,15 @@ function renderRightPanel(){
       <div><div class="meter"><i style="width:${clamp(j.load,0,100)}%;background:${danger?"var(--red)":warn?"var(--yellow)":"var(--cyan)"}"></i></div><span class="meter-label">${fmt(j.load,0)}%</span></div><span class="pill ${csc}">${ctext}</span></div>`}).join("");
   const g=state.gripper,tofPlane=getTofPlaneGuide(),pipeGrip=getTofPipeGripGuide(tofPlane),objectGuide=getGripperObjectGuide(pipeGrip),wk=state.work||{};
   const afterActive=objectGuide.active||objectGuide.detected||objectGuide.suspect;
+  const gripLabel=objectGuide.detected?"물체를 집음":"물체를 안집음";
+  const gripCls=objectGuide.detected?"green":objectGuide.suspect?"yellow":objectGuide.active?"red":"yellow";
   const tb=$("tofBody");
   if(tb)tb.innerHTML=`<div class="tof-readout">
       <div class="tof-current-label">평면과의 거리</div>
       <div class="tof-big mono">${fmt(g.tof_mm)}<span class="unit">mm</span></div>
     </div>
     <div class="tof-grip-flow">
-      <div class="tof-phase ${objectGuide.cls} ${afterActive?"active":""}"><span>집기 판단</span><b class="${objectGuide.cls}">${objectGuide.label}</b><em class="mono">감소 ${fmt(pipeGrip.drop)} mm</em></div>
+      <div class="tof-phase ${gripCls} ${afterActive?"active":""}"><span>집기 판단</span><b class="${gripCls}">${gripLabel}</b></div>
     </div>`;
   const wb=$("workBody");
   if(wb)wb.innerHTML=`<div class="work-stats">
