@@ -1,6 +1,6 @@
 # CAN Status Frame
 
-이 문서는 별도 표시용 Nano에 들어가는 LED + 부저 상태 프레임을 정의합니다. 기존 TOF용 Nano나 로봇 제어 Nano의 펌웨어를 바꾸는 문서가 아닙니다.
+이 문서는 표시 전용 Arduino Nano가 수신하는 LED + 부저 상태 프레임을 정의합니다. 기존 TOF용 Nano나 로봇팔 제어 Nano의 펌웨어를 바꾸는 문서가 아닙니다.
 
 ## Bus
 
@@ -8,7 +8,6 @@
 Bitrate: 125 kbps
 Frame: Standard 11-bit
 RPi -> display Nano: 0x410
-display Nano -> RPi: 0x411
 DLC: 8
 Recommended status TX rate: 5Hz
 ```
@@ -27,50 +26,66 @@ byte[6] = seq
 byte[7] = reserved
 ```
 
-| state | 이름 | 의미 |
-|---|---|---|
-| `0` | `IDLE` | CNC 비어 있음 |
-| `1` | `MACHINING` | CNC 가공 중 |
-| `2` | `DONE_WAIT` | 가공 완료, 회수 대기 |
-| `3` | `RACK_FULL` | 랙 만재 |
-| `4` | `ERROR` | 오류 |
-| `255` | `CAN_LOST` | Nano 내부 timeout 표시용, RPi가 직접 보내지 않음 |
+| state | 이름 | 표시 |
+|---:|---|---|
+| `0` | `CNC_EMPTY` | 파란 LED ON |
+| `1` | `CNC_OCCUPIED` | 빨간 LED ON |
+| `2` | `CNC_DONE_WAIT` | 초록 LED 느린 점멸 |
+| `3` | `RACK_LOADED` | 파란 LED ON + 부저 짧게 3번 |
+| `4` | `RACK_FULL` | LED OFF + 부저 반복 |
+| `5` | `ERROR` | 전체 LED 빠른 점멸 + 부저 |
+| `255` | `CAN_LOST` | Nano 내부 timeout 표시. RPi가 직접 보낼 필요 없음 |
 
-## Nano -> RPi 랙 리셋 요청
+## Payload 필드
 
 ```text
-CAN ID: 0x411
-byte[0] = 0x31
-byte[1] = 1
-byte[2] = seq
-byte[3..7] = 0
+rack_count    = 현재 적재 개수
+rack_capacity = 최대 적재 개수, 현재 기본 2
+remaining_sec = CNC 가공 남은 시간. 표시용 Nano는 현재 LED에는 쓰지 않지만 디버깅용으로 보관
+flags         = 예비 필드
+seq           = 송신 순번
 ```
-
-RPi는 이 요청을 받았다고 바로 `rack_count = 0`으로 바꾸면 안 됩니다. 최소한 `robot_busy == False`일 때만 받아야 합니다.
 
 ## cansend 테스트
 
-RPi에서 표시용 Nano 출력만 먼저 확인할 수 있습니다.
-
 ```bash
-# IDLE: 초록 ON
+# CNC_EMPTY: 파란 LED ON
 cansend can0 410#2000000200000000
 
-# MACHINING: 빨강 ON, 남은 시간 15초
+# CNC_OCCUPIED: 빨간 LED ON, 남은 시간 15초
 cansend can0 410#200100020F000000
 
-# DONE_WAIT: 초록 느린 점멸
+# CNC_DONE_WAIT: 초록 LED 느린 점멸
 cansend can0 410#2002000200000000
 
-# RACK_FULL: 빨강 두 번 점멸 + 부저
-cansend can0 410#2003020200000000
+# RACK_LOADED: rack_count 1, 부저 짧게 3번
+cansend can0 410#2003010200000000
 
-# ERROR: 빨강/초록 빠른 점멸 + 부저
-cansend can0 410#2004000200000000
+# RACK_FULL: rack_count 2/2, LED OFF + 부저 반복
+cansend can0 410#2004020200000000
+
+# ERROR: 전체 LED 빠른 점멸 + 부저
+cansend can0 410#2005000200000000
 ```
 
-리셋 버튼을 누르면 RPi `candump can0`에서 아래처럼 보여야 합니다.
+## 상태 전환 기준
 
 ```text
-411   [8]  31 01 xx 00 00 00 00 00
+CNC_EMPTY:
+  홈 대기, 탐색, 집기, CNC로 이동, CNC 입구 도착 전까지
+
+CNC_OCCUPIED:
+  CNC 안으로 물체를 넣는 동작을 시작한 순간부터 가공 완료 전까지
+
+CNC_DONE_WAIT:
+  CNC 가공시간이 끝난 뒤, 로봇이 CNC에서 가공품을 회수하는 동안
+
+RACK_LOADED:
+  적재 위치에서 그리퍼 열기 완료 + 적재함 밖 안전 위치 후퇴 완료
+
+RACK_FULL:
+  rack_count >= rack_capacity
+
+ERROR:
+  비상 정지, 동작 실패, 통신/상태 이상 등 RPi가 에러로 판단한 상황
 ```

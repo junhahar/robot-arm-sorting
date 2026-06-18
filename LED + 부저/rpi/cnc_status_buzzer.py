@@ -1,16 +1,18 @@
-"""CNC LED+buzzer status helper for a separate display Nano.
+"""CAN helper for the Sambo CNC LED + buzzer display Nano.
 
-The Raspberry Pi owns the workflow state. The display Nano only renders the
-state and sends rack-reset requests.
+The Raspberry Pi owns the robot workflow and rack counter. The separate
+Arduino Nano only receives CAN 0x410 and renders LEDs/buzzer patterns.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import math
 import time
 from dataclasses import dataclass, field
 from enum import IntEnum
+from pathlib import Path
 from typing import Any, Iterable
 
 try:
@@ -20,21 +22,33 @@ except ImportError:  # pragma: no cover - dry-run mode does not need python-can.
 
 
 CAN_ID_CNC_STATUS = 0x410
-CAN_ID_RACK_RESET = 0x411
 CMD_CNC_STATUS = 0x20
-CMD_RACK_RESET = 0x31
+
 DEFAULT_CNC_PROCESS_SEC = 20.0
 DEFAULT_RACK_CAPACITY = 2
 DEFAULT_TX_PERIOD_SEC = 0.2
 
 
 class CncStatus(IntEnum):
-    IDLE = 0
-    MACHINING = 1
-    DONE_WAIT = 2
-    RACK_FULL = 3
-    ERROR = 4
+    CNC_EMPTY = 0
+    CNC_OCCUPIED = 1
+    CNC_DONE_WAIT = 2
+    RACK_LOADED = 3
+    RACK_FULL = 4
+    ERROR = 5
     CAN_LOST = 255
+
+
+STATUS_ALIASES = {
+    "IDLE": CncStatus.CNC_EMPTY,
+    "EMPTY": CncStatus.CNC_EMPTY,
+    "MACHINING": CncStatus.CNC_OCCUPIED,
+    "OCCUPIED": CncStatus.CNC_OCCUPIED,
+    "DONE_WAIT": CncStatus.CNC_DONE_WAIT,
+    "LOADED": CncStatus.RACK_LOADED,
+    "FULL": CncStatus.RACK_FULL,
+    "ERR": CncStatus.ERROR,
+}
 
 
 def _u8(value: int | float | None) -> int:
@@ -43,52 +57,79 @@ def _u8(value: int | float | None) -> int:
     return max(0, min(255, int(value)))
 
 
+def load_runtime_config(path: str | Path | None) -> dict[str, int | float]:
+    """Load optional JSON config with cnc_process_sec and rack_capacity."""
+
+    config: dict[str, int | float] = {
+        "cnc_process_sec": DEFAULT_CNC_PROCESS_SEC,
+        "rack_capacity": DEFAULT_RACK_CAPACITY,
+    }
+    if path is None:
+        return config
+
+    with Path(path).open("r", encoding="utf-8") as f:
+        raw = json.load(f)
+
+    if "cnc_process_sec" in raw:
+        config["cnc_process_sec"] = float(raw["cnc_process_sec"])
+    if "rack_capacity" in raw:
+        config["rack_capacity"] = int(raw["rack_capacity"])
+    return config
+
+
 def calc_cnc_status(
     *,
     now: float,
-    cnc_busy: bool,
-    cnc_start: float | None,
+    cnc_occupied: bool,
+    cnc_process_started_at: float | None,
+    cnc_part_ready_for_pickup: bool = False,
     rack_count: int,
     rack_capacity: int = DEFAULT_RACK_CAPACITY,
+    rack_loaded_event: bool = False,
     error: bool = False,
     cnc_process_sec: float = DEFAULT_CNC_PROCESS_SEC,
 ) -> CncStatus:
-    """Return the simplified 5-state CNC status for the display Nano."""
+    """Return a display state from the simple robot workflow variables.
+
+    This helper intentionally uses robot-command completion as the first MVP
+    rule. TOF or camera verification can be added later around these inputs.
+    """
 
     if error:
         return CncStatus.ERROR
 
-    rack_full = rack_capacity > 0 and rack_count >= rack_capacity
+    if rack_loaded_event:
+        return CncStatus.RACK_LOADED
 
-    if cnc_busy:
-        if cnc_start is None:
-            return CncStatus.MACHINING
-
-        elapsed = max(0.0, now - cnc_start)
-        if elapsed < cnc_process_sec:
-            return CncStatus.MACHINING
-
-        if rack_full:
-            return CncStatus.RACK_FULL
-
-        return CncStatus.DONE_WAIT
-
-    if rack_full:
+    if rack_capacity > 0 and rack_count >= rack_capacity:
         return CncStatus.RACK_FULL
 
-    return CncStatus.IDLE
+    if cnc_part_ready_for_pickup:
+        return CncStatus.CNC_DONE_WAIT
+
+    if cnc_occupied:
+        if cnc_process_started_at is None:
+            return CncStatus.CNC_OCCUPIED
+
+        elapsed = max(0.0, now - cnc_process_started_at)
+        if elapsed < cnc_process_sec:
+            return CncStatus.CNC_OCCUPIED
+        return CncStatus.CNC_DONE_WAIT
+
+    return CncStatus.CNC_EMPTY
 
 
 def remaining_cnc_seconds(
     *,
     now: float,
-    cnc_busy: bool,
-    cnc_start: float | None,
+    cnc_occupied: bool,
+    cnc_process_started_at: float | None,
     cnc_process_sec: float = DEFAULT_CNC_PROCESS_SEC,
 ) -> int:
-    if not cnc_busy or cnc_start is None:
+    if not cnc_occupied or cnc_process_started_at is None:
         return 0
-    remaining = max(0.0, cnc_process_sec - max(0.0, now - cnc_start))
+    elapsed = max(0.0, now - cnc_process_started_at)
+    remaining = max(0.0, cnc_process_sec - elapsed)
     return _u8(math.ceil(remaining))
 
 
@@ -97,7 +138,7 @@ def build_status_payload(
     *,
     rack_count: int,
     rack_capacity: int,
-    remaining_sec: int,
+    remaining_sec: int = 0,
     flags: int = 0,
     seq: int = 0,
 ) -> bytes:
@@ -115,29 +156,13 @@ def build_status_payload(
     )
 
 
-def build_rack_reset_payload(*, seq: int = 0) -> bytes:
-    return bytes([CMD_RACK_RESET, 1, _u8(seq), 0, 0, 0, 0, 0])
-
-
-def is_rack_reset_request(msg: Any) -> bool:
-    data = bytes(getattr(msg, "data", b""))
-    return (
-        getattr(msg, "arbitration_id", None) == CAN_ID_RACK_RESET
-        and len(data) >= 2
-        and data[0] == CMD_RACK_RESET
-        and data[1] == 1
-    )
-
-
 @dataclass
 class CncStatusCanNode:
-    """CAN helper for the separate display Nano."""
+    """Small sender used by the robot workflow or dashboard process."""
 
     bus: Any
     period_s: float = DEFAULT_TX_PERIOD_SEC
     seq: int = 0
-    reset_requested: bool = False
-    reset_seq: int | None = None
     _last_tx: float = field(default=0.0, init=False)
 
     def build_status_message(
@@ -146,7 +171,7 @@ class CncStatusCanNode:
         *,
         rack_count: int,
         rack_capacity: int,
-        remaining_sec: int,
+        remaining_sec: int = 0,
         flags: int = 0,
     ) -> Any:
         if can is None:
@@ -172,7 +197,7 @@ class CncStatusCanNode:
         *,
         rack_count: int,
         rack_capacity: int,
-        remaining_sec: int,
+        remaining_sec: int = 0,
         flags: int = 0,
     ) -> Any:
         msg = self.build_status_message(
@@ -193,7 +218,7 @@ class CncStatusCanNode:
         *,
         rack_count: int,
         rack_capacity: int,
-        remaining_sec: int,
+        remaining_sec: int = 0,
         flags: int = 0,
         now: float | None = None,
         force: bool = False,
@@ -208,26 +233,6 @@ class CncStatusCanNode:
             remaining_sec=remaining_sec,
             flags=flags,
         )
-
-    def handle_reset_frame(self, msg: Any) -> bool:
-        if not is_rack_reset_request(msg):
-            return False
-        data = bytes(getattr(msg, "data", b""))
-        self.reset_requested = True
-        self.reset_seq = data[2] if len(data) >= 3 else None
-        return True
-
-    def pop_reset_request(self, *, robot_busy: bool) -> bool:
-        """Return True only when a pending reset request may be accepted."""
-
-        if not self.reset_requested:
-            return False
-
-        self.reset_requested = False
-        if robot_busy:
-            return False
-
-        return True
 
 
 def open_socketcan_bus(interface: str = "can0") -> Any:
@@ -246,6 +251,10 @@ def parse_status(value: str) -> CncStatus:
     key = raw.upper().replace("-", "_")
     if key.startswith("ST_"):
         key = key[3:]
+
+    if key in STATUS_ALIASES:
+        return STATUS_ALIASES[key]
+
     try:
         return CncStatus[key]
     except KeyError as exc:
@@ -259,11 +268,12 @@ def format_frame(can_id: int, payload: bytes, label: str) -> str:
 
 
 def iter_demo_statuses() -> Iterable[tuple[CncStatus, int, int, int, float]]:
-    yield CncStatus.IDLE, 0, DEFAULT_RACK_CAPACITY, 0, 2.0
-    yield CncStatus.MACHINING, 0, DEFAULT_RACK_CAPACITY, 15, 3.0
-    yield CncStatus.DONE_WAIT, 0, DEFAULT_RACK_CAPACITY, 0, 3.0
-    yield CncStatus.RACK_FULL, DEFAULT_RACK_CAPACITY, DEFAULT_RACK_CAPACITY, 0, 4.0
-    yield CncStatus.ERROR, DEFAULT_RACK_CAPACITY, DEFAULT_RACK_CAPACITY, 0, 3.0
+    yield CncStatus.CNC_EMPTY, 0, DEFAULT_RACK_CAPACITY, 0, 3.0
+    yield CncStatus.CNC_OCCUPIED, 0, DEFAULT_RACK_CAPACITY, 15, 4.0
+    yield CncStatus.CNC_DONE_WAIT, 0, DEFAULT_RACK_CAPACITY, 0, 4.0
+    yield CncStatus.RACK_LOADED, 1, DEFAULT_RACK_CAPACITY, 0, 2.0
+    yield CncStatus.RACK_FULL, DEFAULT_RACK_CAPACITY, DEFAULT_RACK_CAPACITY, 0, 5.0
+    yield CncStatus.ERROR, DEFAULT_RACK_CAPACITY, DEFAULT_RACK_CAPACITY, 0, 4.0
 
 
 def send_or_print_status(
@@ -302,55 +312,46 @@ def send_or_print_status(
     return node.seq
 
 
-def listen_for_reset(bus: Any) -> int:
-    print(f"listening for rack reset requests on 0x{CAN_ID_RACK_RESET:03X}")
-    while True:
-        msg = bus.recv(0.5)
-        if msg is None:
-            continue
-        if is_rack_reset_request(msg):
-            payload = bytes(msg.data)
-            print(format_frame(CAN_ID_RACK_RESET, payload, "RACK_RESET_REQUEST"))
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="Send Sambo CNC LED+buzzer CAN frames")
     parser.add_argument("--interface", default="can0", help="SocketCAN interface, default: can0")
-    parser.add_argument("--state", type=parse_status, default=CncStatus.IDLE)
+    parser.add_argument("--config", help="optional JSON config path")
+    parser.add_argument("--state", type=parse_status, default=CncStatus.CNC_EMPTY)
     parser.add_argument("--rack-count", type=int, default=0)
-    parser.add_argument("--rack-capacity", type=int, default=DEFAULT_RACK_CAPACITY)
+    parser.add_argument("--rack-capacity", type=int, default=None)
     parser.add_argument("--remaining", type=int, default=0, help="remaining CNC seconds")
     parser.add_argument("--period", type=float, default=DEFAULT_TX_PERIOD_SEC)
     parser.add_argument("--duration", type=float, default=10.0)
     parser.add_argument("--once", action="store_true", help="send one frame and exit")
     parser.add_argument("--cycle", action="store_true", help="cycle through all display states")
-    parser.add_argument("--listen-reset", action="store_true", help="print 0x411 reset requests")
     parser.add_argument("--dry-run", action="store_true", help="print frames without opening CAN")
     args = parser.parse_args()
+
+    config = load_runtime_config(args.config)
+    rack_capacity = (
+        int(config["rack_capacity"])
+        if args.rack_capacity is None
+        else args.rack_capacity
+    )
 
     bus = None if args.dry_run else open_socketcan_bus(args.interface)
     node = None if args.dry_run else CncStatusCanNode(bus, period_s=args.period)
     seq = 0
 
     try:
-        if args.listen_reset:
-            if bus is None:
-                print(format_frame(CAN_ID_RACK_RESET, build_rack_reset_payload(seq=0), "RACK_RESET_REQUEST"))
-                return 0
-            return listen_for_reset(bus)
-
         if args.cycle:
             deadline = time.monotonic() + args.duration
             while time.monotonic() < deadline:
-                for state, rack_count, rack_capacity, remaining, hold_s in iter_demo_statuses():
+                for state, rack_count, demo_capacity, remaining, hold_s in iter_demo_statuses():
                     state_deadline = min(deadline, time.monotonic() + hold_s)
+                    capacity = rack_capacity if args.rack_capacity is not None else demo_capacity
                     while time.monotonic() < state_deadline:
                         seq = send_or_print_status(
                             node=node,
                             dry_run=args.dry_run,
                             state=state,
                             rack_count=rack_count,
-                            rack_capacity=rack_capacity,
+                            rack_capacity=capacity,
                             remaining_sec=remaining,
                             seq=seq,
                         )
@@ -362,7 +363,7 @@ def main() -> int:
             dry_run=args.dry_run,
             state=args.state,
             rack_count=args.rack_count,
-            rack_capacity=args.rack_capacity,
+            rack_capacity=rack_capacity,
             remaining_sec=args.remaining,
             seq=seq,
         )
@@ -378,7 +379,7 @@ def main() -> int:
                 dry_run=args.dry_run,
                 state=args.state,
                 rack_count=args.rack_count,
-                rack_capacity=args.rack_capacity,
+                rack_capacity=rack_capacity,
                 remaining_sec=args.remaining,
                 seq=seq,
             )
