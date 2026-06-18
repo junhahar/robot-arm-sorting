@@ -48,6 +48,17 @@ WS_HOST = "0.0.0.0"
 WS_PORT = 8765
 SEND_HZ = 10
 STALE_S = 1.5
+CAN_ID_CNC_OUTPUT = 0x411
+CMD_CNC_OUTPUT = 0x21
+CNC_STATUS_LABELS = {
+    0: "CNC_EMPTY",
+    1: "CNC_OCCUPIED",
+    2: "CNC_DONE_WAIT",
+    3: "RACK_LOADED",
+    4: "RACK_FULL",
+    5: "ERROR",
+    255: "CAN_LOST",
+}
 NAMES = {1: "J1", 2: "J2", 3: "J3", 4: "J4", 5: "J5", 6: "J6"}
 
 # ── 모션 파라미터 (ik_server 와 동일) ──
@@ -95,6 +106,21 @@ motors = {i: {"current": None, "temp": None, "load": None, "target": None,
               "flags": 0, "current_ma": None, "rx": 0.0, "cmd_rx": 0.0}
           for i in range(1, 7)}
 health = {"received": 0, "last_rx_ms": 0}
+led_buzzer_output = {
+    "source": "nano_output_echo",
+    "state": 255,
+    "state_label": "CAN_LOST",
+    "mask": 0,
+    "red": False,
+    "green": False,
+    "blue": False,
+    "buzzer": False,
+    "rack_count": 0,
+    "rack_capacity": 2,
+    "remaining_s": 0,
+    "seq": 0,
+    "rx": 0.0,
+}
 
 LIFE_USAGE_SCHEMA = "sambo_servo_life_usage_v1"
 LIFE_USAGE_PATH = Path(__file__).resolve().parent / "servo_life_usage.json"
@@ -303,6 +329,25 @@ def can_reader():
                             m["cmd_rx"] = now
                     elif aid == 0x100 and len(d) >= 2 and d[0] == CMD_GRIPPER:
                         gripper_state["angle"] = int(max(GRIPPER_MIN, min(GRIPPER_MAX, d[1])))
+                    elif aid == CAN_ID_CNC_OUTPUT and len(d) >= 3 and d[0] == CMD_CNC_OUTPUT:
+                        state_code = int(d[1])
+                        mask = int(d[2])
+                        led_buzzer_output.update({
+                            "source": "nano_output_echo",
+                            "state": state_code,
+                            "state_label": CNC_STATUS_LABELS.get(state_code, f"STATE_{state_code}"),
+                            "mask": mask,
+                            "red": bool(mask & 0x01),
+                            "green": bool(mask & 0x02),
+                            "blue": bool(mask & 0x04),
+                            "buzzer": bool(mask & 0x08),
+                            "rack_count": int(d[3]) if len(d) >= 4 else 0,
+                            "rack_capacity": int(d[4]) if len(d) >= 5 else 2,
+                            "remaining_s": int(d[5]) if len(d) >= 6 else 0,
+                            "seq": int(d[6]) if len(d) >= 7 else 0,
+                            "rx": now,
+                        })
+                        health["led_buzzer_last_rx_ms"] = 0
                 last = now
         except Exception as e:
             print("[CAN] error:", e); time.sleep(1)
@@ -742,6 +787,15 @@ def build_snapshot():
             joints.append(j)
         hp = dict(health)
         ga = gripper_state["angle"]
+        led_output = dict(led_buzzer_output)
+        if led_output.get("rx"):
+            led_output["age_ms"] = int((now - led_output["rx"]) * 1000)
+            led_output["fresh"] = led_output["age_ms"] <= 800
+            hp["led_buzzer_last_rx_ms"] = led_output["age_ms"]
+        else:
+            led_output["age_ms"] = None
+            led_output["fresh"] = False
+        led_output.pop("rx", None)
     runtime = load_latest_runtime_state()
     vision = runtime.get("vision", {})
     # 그리퍼(MG90S)는 피드백이 없다. 브리지가 마지막에 STM으로 내린 명령각을 현재각으로 덮어쓴다.
@@ -757,10 +811,18 @@ def build_snapshot():
     system = {"server_connected": True, "can_status": derive_can_status(comms), "estop": es}
     if vision.get("fresh"):
         system.update({"camera_status": "OK", "ai_status": "RUNNING"})
+    cnc = {"output": led_output}
+    if led_output.get("fresh"):
+        cnc.update({
+            "rack_count": led_output.get("rack_count", 0),
+            "rack_max": led_output.get("rack_capacity", 2),
+            "remaining_s": led_output.get("remaining_s", 0),
+        })
     return {"robot": {"joints": joints},
             "system": system,
             "vision": vision,
             "gripper": gripper,
+            "cnc": cnc,
             "pick": _pick_snapshot(),
             "life_usage": life_usage_snapshot(),
             "can_health": hp}

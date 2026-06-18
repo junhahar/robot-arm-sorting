@@ -3,7 +3,7 @@
 
 // Sambo display-only Nano.
 // Raspberry Pi decides the workflow state and sends CAN 0x410.
-// This Nano only renders LEDs and the buzzer.
+// This Nano renders LEDs/buzzer and echoes the actual output mask on CAN 0x411.
 
 const uint8_t CAN_CS_PIN = 10;
 const uint8_t CAN_INT_PIN = 2;
@@ -21,7 +21,9 @@ const uint8_t BLUE_LED_PIN = 7;
 #define PASSIVE_BUZZER 1
 
 const uint32_t CAN_ID_CNC_STATUS = 0x410;  // RPi -> display Nano
+const uint32_t CAN_ID_CNC_OUTPUT = 0x411;  // display Nano -> RPi/dashboard
 const uint8_t CMD_CNC_STATUS = 0x20;
+const uint8_t CMD_CNC_OUTPUT = 0x21;
 
 const bool LED_ACTIVE_HIGH = true;
 const bool BUZZER_ACTIVE_HIGH = true;
@@ -48,6 +50,14 @@ uint8_t lastRxSeq = 0;
 unsigned long lastCanRxMs = 0;
 unsigned long stateStartMs = 0;
 const unsigned long CAN_TIMEOUT_MS = 2500;
+const unsigned long OUTPUT_ECHO_PERIOD_MS = 100;
+
+bool currentRedOn = false;
+bool currentGreenOn = false;
+bool currentBlueOn = false;
+bool currentBuzzerOn = false;
+uint8_t lastEchoMask = 0xFF;
+unsigned long lastOutputEchoMs = 0;
 
 void writeLed(uint8_t pin, bool on) {
   digitalWrite(pin, on == LED_ACTIVE_HIGH ? HIGH : LOW);
@@ -70,6 +80,43 @@ void setOutputs(bool redOn, bool greenOn, bool blueOn, bool buzzerOn) {
   writeLed(GREEN_LED_PIN, greenOn);
   writeLed(BLUE_LED_PIN, blueOn);
   setBuzzer(buzzerOn);
+
+  currentRedOn = redOn;
+  currentGreenOn = greenOn;
+  currentBlueOn = blueOn;
+  currentBuzzerOn = buzzerOn;
+}
+
+uint8_t outputMask() {
+  uint8_t mask = 0;
+  if (currentRedOn) mask |= 0x01;
+  if (currentGreenOn) mask |= 0x02;
+  if (currentBlueOn) mask |= 0x04;
+  if (currentBuzzerOn) mask |= 0x08;
+  return mask;
+}
+
+void sendOutputEcho(uint8_t stateToShow, unsigned long now, bool force = false) {
+  uint8_t mask = outputMask();
+  if (!force && mask == lastEchoMask && now - lastOutputEchoMs < OUTPUT_ECHO_PERIOD_MS) {
+    return;
+  }
+
+  uint8_t payload[8] = {
+    CMD_CNC_OUTPUT,
+    stateToShow,
+    mask,
+    rackCount,
+    rackCapacity,
+    remainingSec,
+    lastRxSeq,
+    0
+  };
+
+  if (CAN0.sendMsgBuf(CAN_ID_CNC_OUTPUT, 0, 8, payload) == CAN_OK) {
+    lastEchoMask = mask;
+    lastOutputEchoMs = now;
+  }
 }
 
 bool phase(unsigned long now, unsigned long halfPeriodMs) {
@@ -152,6 +199,8 @@ void updateOutputPattern() {
       break;
     }
   }
+
+  sendOutputEcho(stateToShow, now);
 }
 
 void handleCncStatusFrame(unsigned long rxId, uint8_t rxLen, uint8_t *rxBuf) {
@@ -226,6 +275,8 @@ void setup() {
   currentState = ST_CAN_LOST;
   stateStartMs = millis();
   lastCanRxMs = 0;
+  lastEchoMask = 0xFF;
+  lastOutputEchoMs = 0;
 
   Serial.println(F("Sambo CNC RGB LED+buzzer display Nano ready"));
 }

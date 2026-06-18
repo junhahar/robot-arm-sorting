@@ -1120,7 +1120,7 @@ const state={
   pick:{status:"SCAN_READY",step:""},
   teach:{poses:{},taught:[],missing:["cnc_infeed","cnc_grab","rack_v0","rack_v1"],lastError:""},
   path:{current_step:"HOME",steps:["HOME","SCAN","PRE_GRASP","GRASP","LIFT","CARRY","PLACE"],progress_percent:0,dest:"none"},
-  cnc:{state:"idle",remaining_s:null,total_s:20,rack_count:0,rack_max:2,loaded_until:0},
+  cnc:{state:"idle",remaining_s:null,total_s:20,rack_count:0,rack_max:2,loaded_until:0,output:null},
   precheck:{home_confirmed:true,path_loaded:true,servo_ready:true,sg90_ready:true,tof_ready:true},
   can_health:{received:1842,errors:0,delay_ms:18,last_rx_ms:22},
   calibration:{tof:"OK",camera:"OK",mpu:"OK",servo:"OK"},
@@ -2023,18 +2023,44 @@ const DISPLAY_STATUS_META={
   CNC_OCCUPIED:{code:1,label:"CNC_OCCUPIED",ko:"CNC 가공 중",note:"빨강 ON · 부저 OFF"},
   CNC_DONE_WAIT:{code:2,label:"CNC_DONE_WAIT",ko:"회수 대기",note:"초록 느린 점멸 · 부저 OFF"},
   RACK_LOADED:{code:3,label:"RACK_LOADED",ko:"적재 완료",note:"파랑 ON · 부저 3회"},
-  RACK_FULL:{code:4,label:"RACK_FULL",ko:"적재함 만재",note:"LED OFF · 부저 반복"},
+  RACK_FULL:{code:4,label:"RACK_FULL",ko:"적재함 만재",note:"LED OFF · 부저 2회 반복"},
   ERROR:{code:5,label:"ERROR",ko:"오류",note:"전체 빠른 점멸 · 부저 ON"},
-  CAN_LOST:{code:255,label:"CAN_LOST",ko:"상태 끊김",note:"파랑/빨강/초록 순차 점멸"}
+  CAN_LOST:{code:255,label:"CAN_LOST",ko:"상태 끊김",note:"빨강/초록/파랑 순차 점멸"}
 };
+const DISPLAY_STATUS_BY_CODE={0:"CNC_EMPTY",1:"CNC_OCCUPIED",2:"CNC_DONE_WAIT",3:"RACK_LOADED",4:"RACK_FULL",5:"ERROR",255:"CAN_LOST"};
 const DISPLAY_STATUS_ALIASES={IDLE:"CNC_EMPTY",MACHINING:"CNC_OCCUPIED",DONE_WAIT:"CNC_DONE_WAIT",DONE:"CNC_DONE_WAIT",RUNNING:"CNC_OCCUPIED"};
+const NANO_OUTPUT_FRESH_MS=800;
+let ledPatternClock={key:"",startedAt:Date.now()};
 function ledPhase(now,halfPeriodMs){return (Math.floor(now/halfPeriodMs)%2)===0}
-function ledDoublePulse(now,cycleMs){const t=now%cycleMs;return t<120||(t>=220&&t<340)}
-function ledTriplePulse(now,cycleMs){const t=now%cycleMs;return t<120||(t>=230&&t<350)||(t>=460&&t<580)}
+function ledPatternElapsed(key,now){if(ledPatternClock.key!==key){ledPatternClock={key,startedAt:now}}return Math.max(0,now-ledPatternClock.startedAt)}
+function ledDoublePulseRepeat(elapsed,cycleMs){const t=((elapsed%cycleMs)+cycleMs)%cycleMs;return t<150||(t>=300&&t<450)}
+function ledTriplePulseOnce(elapsed){return elapsed<180||(elapsed>=350&&elapsed<530)||(elapsed>=700&&elapsed<880)}
+function ledFastPulseRepeat(elapsed){const t=((elapsed%300)+300)%300;return t<120}
+function normalizeDisplayKey(value){
+  if(value!=null&&value!==""&&DISPLAY_STATUS_BY_CODE[Number(value)]!=null)return DISPLAY_STATUS_BY_CODE[Number(value)];
+  const raw=String(value||"").toUpperCase(),key=DISPLAY_STATUS_ALIASES[raw]||raw;
+  return DISPLAY_STATUS_META[key]?key:"";
+}
+function getNanoOutputFeedback(now=Date.now()){
+  const c=state.cnc||{},o=c.output||c.nano_output||state.led_buzzer_output;
+  if(!o||typeof o!=="object")return null;
+  if(o.fresh===false)return null;
+  const hasAge=o.age_ms!=null&&Number.isFinite(Number(o.age_ms));
+  const updated=Number(o.updated_at||o.updated_ms||0);
+  const age=hasAge?Number(o.age_ms):(updated?now-updated:Infinity);
+  if(age>NANO_OUTPUT_FRESH_MS)return null;
+  const maskRaw=o.mask!=null?Number(o.mask):NaN;
+  const fromMask=Number.isFinite(maskRaw);
+  const bool=v=>v===true||v===1||v==="1"||String(v).toLowerCase()==="true"||String(v).toUpperCase()==="ON";
+  const out=fromMask
+    ?{red:!!(maskRaw&0x01),green:!!(maskRaw&0x02),blue:!!(maskRaw&0x04),buzzer:!!(maskRaw&0x08)}
+    :{red:bool(o.red),green:bool(o.green),blue:bool(o.blue),buzzer:bool(o.buzzer)};
+  return Object.assign(out,{synced:true,age_ms:Math.max(0,Math.round(age)),state_key:normalizeDisplayKey(o.state_label)||normalizeDisplayKey(o.state)});
+}
 function getLedBuzzerStatusKey(){
   const c=state.cnc||{},sys=state.system||{};
-  const explicit=String(c.led_state||c.display_state||"").toUpperCase(),normalized=DISPLAY_STATUS_ALIASES[explicit]||explicit;
-  if(DISPLAY_STATUS_META[normalized])return normalized;
+  const normalized=normalizeDisplayKey(c.led_state||c.display_state);
+  if(normalized)return normalized;
   const st=String(c.state||"idle").toLowerCase();
   const rackCount=Number(c.rack_count||0),rackMax=Number(c.rack_max||2),rackFull=rackMax>0&&rackCount>=rackMax;
   const canBad=sys.server_connected&&["ERR","ERROR","LOST","OFF"].includes(String(sys.can_status||"").toUpperCase());
@@ -2047,22 +2073,26 @@ function getLedBuzzerStatusKey(){
   if(rackFull)return"RACK_FULL";
   return"CNC_EMPTY";
 }
-function getLedBuzzerOutputs(key,now){
+function getLedBuzzerOutputs(key,now,elapsed=0){
   if(key==="CNC_EMPTY")return{blue:true,red:false,green:false,buzzer:false};
   if(key==="CNC_OCCUPIED")return{blue:false,red:true,green:false,buzzer:false};
-  if(key==="CNC_DONE_WAIT")return{blue:false,red:false,green:ledPhase(now,650),buzzer:false};
-  if(key==="RACK_LOADED")return{blue:true,red:false,green:false,buzzer:ledTriplePulse(now,1800)};
-  if(key==="RACK_FULL")return{blue:false,red:false,green:false,buzzer:ledPhase(now,420)};
-  if(key==="ERROR"){const blink=ledPhase(now,120);return{blue:blink,red:blink,green:blink,buzzer:blink}}
-  const phase=Math.floor(now/420)%3;return{blue:phase===0,red:phase===1,green:phase===2,buzzer:false};
+  if(key==="CNC_DONE_WAIT")return{blue:false,red:false,green:ledPhase(now,700),buzzer:false};
+  if(key==="RACK_LOADED")return{blue:true,red:false,green:false,buzzer:ledTriplePulseOnce(elapsed)};
+  if(key==="RACK_FULL")return{blue:false,red:false,green:false,buzzer:ledDoublePulseRepeat(elapsed,1400)};
+  if(key==="ERROR"){const blink=ledPhase(now,150);return{blue:blink,red:blink,green:blink,buzzer:ledFastPulseRepeat(elapsed)}}
+  const phase=Math.floor(now/350)%4;return{blue:phase===2,red:phase===0,green:phase===1,buzzer:false};
 }
 function getLedBuzzerStatus(now=Date.now()){
-  const c=state.cnc||{},key=getLedBuzzerStatusKey(),meta=DISPLAY_STATUS_META[key]||DISPLAY_STATUS_META.CAN_LOST;
-  return{key,meta,out:getLedBuzzerOutputs(key,now),rack_count:Number(c.rack_count||0),rack_max:Number(c.rack_max||2)};
+  const c=state.cnc||{};
+  const feedback=getNanoOutputFeedback(now);
+  const key=feedback?.state_key||getLedBuzzerStatusKey(),meta=DISPLAY_STATUS_META[key]||DISPLAY_STATUS_META.CAN_LOST;
+  const elapsed=ledPatternElapsed(key,now);
+  const out=feedback||getLedBuzzerOutputs(key,now,elapsed);
+  return{key,meta,out,rack_count:Number(c.rack_count||0),rack_max:Number(c.rack_max||2),synced:!!feedback,output_age_ms:feedback?.age_ms};
 }
 function renderLedBuzzerSim(){
   if(!$("ledBuzzerSim"))return;
-  const {key,meta,out,rack_count,rack_max}=getLedBuzzerStatus(Date.now());
+  const {key,meta,out,rack_count,rack_max,synced,output_age_ms}=getLedBuzzerStatus(Date.now());
   $("ledBuzzerSim").className=`led-buzzer-sim state-${key.toLowerCase()}${out.buzzer?" buzzer-on":""}`;
   $("ledBuzzerBlue")?.classList.toggle("on",out.blue);
   $("ledBuzzerRed")?.classList.toggle("on",out.red);
@@ -2070,8 +2100,8 @@ function renderLedBuzzerSim(){
   $("ledBuzzerBuzz")?.classList.toggle("on",out.buzzer);
   setText("ledBuzzerState",meta.ko);
   setText("ledBuzzerCode",`state ${meta.code}`);
-  setText("ledBuzzerFrame",`0x410 · ${meta.label}`);
-  setText("ledBuzzerNote",`${meta.note} · 적재 ${rack_count}/${rack_max}`);
+  setText("ledBuzzerFrame",`${synced?"0x411 SYNC":"0x410"} · ${meta.label}`);
+  setText("ledBuzzerNote",`${meta.note} · 적재 ${rack_count}/${rack_max}${synced?` · Nano ${output_age_ms}ms`:""}`);
 }
 
 function renderRightPanel(){
@@ -2478,10 +2508,6 @@ function addCncStatusLights(T,bin,r){
   bin.add(rack);
 }
 function addRackStatusLights(T,bin,r){
-  [-.14,.14].forEach((x,i)=>{
-    const lamp=makeThreeLamp(T,0x20d5e8,.038);
-    lamp.position.set(x,.45,-.31);bin.add(lamp);r.statusLights.rackSlots[i]=lamp;
-  });
   const buzzerMat=new T.MeshStandardMaterial({color:0x111827,emissive:0x000000,emissiveIntensity:0,metalness:.12,roughness:.44});
   const buzzer=new T.Mesh(new T.CylinderGeometry(.085,.085,.04,28),buzzerMat);
   buzzer.rotation.x=Math.PI/2;buzzer.position.set(.32,.43,-.30);buzzer.castShadow=true;bin.add(buzzer);
@@ -2497,7 +2523,6 @@ function updateThreeLedBuzzerScene(r){
   setThreeLamp(lights.cnc?.blue,out.blue,0x38bdf8);
   setThreeLamp(lights.cnc?.red,out.red,0xff4f4f);
   setThreeLamp(lights.cnc?.green,out.green,0x4ade80);
-  (lights.rackSlots||[]).forEach((lamp,i)=>setThreeLamp(lamp,i<status.rack_count,0x20d5e8));
   if(lights.buzzer?.material){
     lights.buzzer.material.color.setHex(out.buzzer?0xf7c948:0x111827);
     if(lights.buzzer.material.emissive){lights.buzzer.material.emissive.setHex(out.buzzer?0xf7c948:0x000000);lights.buzzer.material.emissiveIntensity=out.buzzer?1.4:0}
@@ -2509,7 +2534,7 @@ function updateThreeLedBuzzerScene(r){
   });
 }
 function addThreeSortBins(T,r){
-  r.statusLights={cnc:{},rackSlots:[],buzzer:null,buzzerRings:[]};
+  r.statusLights={cnc:{},buzzer:null,buzzerRings:[]};
   const group=new T.Group(),wallMat=(color)=>new T.MeshStandardMaterial({color,metalness:.12,roughness:.62,transparent:true,opacity:.9,side:T.DoubleSide});
   const darkMat=new T.MeshStandardMaterial({color:0x06101b,metalness:.04,roughness:.82});
   const metalMat=new T.MeshStandardMaterial({color:0xb6c3cd,metalness:.34,roughness:.5}),beltMat=new T.MeshStandardMaterial({color:0x111827,metalness:.08,roughness:.68});
@@ -2731,7 +2756,6 @@ function drawNativeLedBuzzerStatus(ctx,W,H){
   drawLed3D(ctx,W,H,V(216,55,10),"#38bdf8",out.blue,"B");
   drawLed3D(ctx,W,H,V(235,55,10),"#ff4f4f",out.red,"R");
   drawLed3D(ctx,W,H,V(254,55,10),"#4ade80",out.green,"G");
-  [0,1].forEach(i=>drawLed3D(ctx,W,H,V(226+i*20,42,91),"#20d5e8",i<s.rack_count,String(i+1)));
   drawBuzzer3D(ctx,W,H,V(272,42,92),out.buzzer);
 }
 function drawLed3D(ctx,W,H,p,color,on,label){
@@ -3051,7 +3075,7 @@ function applyIncoming(d){
   if(d.can_frame)applyCanFrame(d.can_frame);
   if(d.human_pose)Object.assign(state.human_pose,d.human_pose);if(d.gripper){const _g=typeof d.gripper==="string"?{state:d.gripper.toUpperCase()}:Object.assign({},d.gripper);if(gripperPreviewDirty){delete _g.sg90_angle;delete _g.sg90_angle_deg;delete _g.state;}Object.assign(state.gripper,_g);}
   if(d.vision){Object.assign(state.vision,d.vision);if(d.vision.correction)Object.assign(state.vision.correction,d.vision.correction)}
-  if(d.path)Object.assign(state.path,d.path);if(d.cnc&&typeof d.cnc==="object")state.cnc=Object.assign(state.cnc||{},d.cnc);if(d.work&&typeof d.work==="object")state.work=Object.assign(state.work||{},d.work);if(d.precheck)Object.assign(state.precheck,d.precheck);if(d.can_health)Object.assign(state.can_health,d.can_health);if(d.calibration)Object.assign(state.calibration,d.calibration);if(Array.isArray(d.alerts))state.alerts=d.alerts;if(d.pick&&typeof d.pick==="object")state.pick=Object.assign(state.pick||{},d.pick);deriveCurrentStep();
+  if(d.path)Object.assign(state.path,d.path);if(d.cnc&&typeof d.cnc==="object")state.cnc=Object.assign(state.cnc||{},d.cnc);if(d.led_buzzer_output&&typeof d.led_buzzer_output==="object")state.cnc.output=d.led_buzzer_output;if(d.work&&typeof d.work==="object")state.work=Object.assign(state.work||{},d.work);if(d.precheck)Object.assign(state.precheck,d.precheck);if(d.can_health)Object.assign(state.can_health,d.can_health);if(d.calibration)Object.assign(state.calibration,d.calibration);if(Array.isArray(d.alerts))state.alerts=d.alerts;if(d.pick&&typeof d.pick==="object")state.pick=Object.assign(state.pick||{},d.pick);deriveCurrentStep();
   if(d.event?.message)addLog(d.event.message,(d.event.level||"INFO").toLowerCase());
 }
 
@@ -3064,6 +3088,25 @@ function applyCanFrame(frame){
   }else if(id===0x202&&data.length>=4){
     const motorId=data[0],raw=(data[2]<<8)|data[1],ok=!!data[3],j=state.robot.joints[motorId-1];
     if(j&&ok){j.current_ma=Math.round(raw*6.5);state.digital_twin.current_id="0x202 OK"}
+  }else if(id===0x411&&data.length>=3&&data[0]===0x21){
+    const mask=Number(data[2]);
+    state.cnc.output={
+      source:"can_frame",
+      state:data[1],
+      state_label:normalizeDisplayKey(data[1]),
+      mask,
+      red:!!(mask&0x01),
+      green:!!(mask&0x02),
+      blue:!!(mask&0x04),
+      buzzer:!!(mask&0x08),
+      rack_count:data.length>=4?Number(data[3]):0,
+      rack_capacity:data.length>=5?Number(data[4]):2,
+      remaining_s:data.length>=6?Number(data[5]):0,
+      seq:data.length>=7?Number(data[6]):0,
+      updated_at:Date.now(),
+      fresh:true
+    };
+    state.digital_twin.last_ack="Nano LED/Buzzer 0x411 SYNC";
   }else if(id===0x200){
     state.digital_twin.last_ack="STM ACK 0x200 OK";
   }
