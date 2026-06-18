@@ -28,6 +28,22 @@ body::before{
 }
 button,select{font:inherit}
 button{cursor:pointer}
+.sambo-cursor{display:none}
+@media (pointer:fine){
+  body.sambo-custom-cursor,body.sambo-custom-cursor *{cursor:none!important}
+  body.sambo-custom-cursor input,body.sambo-custom-cursor textarea{cursor:text!important}
+  .sambo-cursor{position:fixed;left:0;top:0;z-index:10000;display:block;width:31px;height:38px;pointer-events:none;opacity:0;transform:translate3d(-3px,-2px,0);transition:opacity .14s ease,filter .12s ease;--cursor-scale:1}
+  .sambo-cursor.visible{opacity:1}
+  .sambo-cursor::before{content:"";position:absolute;left:0;top:0;width:25px;height:34px;transform:scale(var(--cursor-scale));transform-origin:4px 4px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 40'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='4' y1='2' x2='25' y2='36' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23e5fcff'/%3E%3Cstop offset='.25' stop-color='%2372e4ff'/%3E%3Cstop offset='.65' stop-color='%2335bce7'/%3E%3Cstop offset='1' stop-color='%230b83aa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M4.2 2.8 C3.9 1.5 5.2 .7 6.3 1.6 L25.4 17.7 C27.1 19.1 26.5 21.5 24.3 22.1 L17.8 24.1 C16.9 24.4 16.6 25.2 17 26 L20.2 32.8 C20.9 34.4 20.1 36.1 18.5 36.7 L15.6 37.8 C14.1 38.4 12.5 37.6 11.9 36.1 L8.7 28.2 C8.3 27.2 7.1 27 6.4 27.9 L4.5 30.6 C3.2 32.5 .5 31.5 .8 29.2 L3.7 4.2 C3.8 3.6 3.9 3.2 4.2 2.8 Z' fill='url(%23g)' stroke='%23d7fbff' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M6.7 4.8 C10.7 8 15.7 12.2 21.8 17.4' fill='none' stroke='%23ffffff' stroke-opacity='.42' stroke-width='1.35' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;filter:drop-shadow(1px 1px 0 rgba(255,255,255,.72)) drop-shadow(3px 4px 0 rgba(5,33,57,.86)) drop-shadow(0 0 10px rgba(53,188,231,.5));transition:transform .16s cubic-bezier(.2,1.35,.28,1),filter .12s ease;will-change:transform}
+  .sambo-cursor::after{display:none}
+  .sambo-cursor.is-pointer{--cursor-scale:1.05}
+  .sambo-cursor.is-pointer::before{filter:drop-shadow(1px 1px 0 rgba(255,255,255,.86)) drop-shadow(4px 5px 0 rgba(5,33,57,.88)) drop-shadow(0 0 15px rgba(114,228,255,.66))}
+  .sambo-cursor.is-drag::before{filter:drop-shadow(1px 1px 0 rgba(255,255,255,.82)) drop-shadow(4px 5px 0 rgba(5,33,57,.88)) drop-shadow(0 0 15px rgba(114,228,255,.74))}
+  .sambo-cursor.is-down{filter:brightness(1.06)}
+  body.sambo-custom-cursor:active .sambo-cursor::before,.sambo-cursor.is-down::before{transform:translate(2px,2px) scale(.9);filter:drop-shadow(.5px .5px 0 rgba(255,255,255,.5)) drop-shadow(1px 2px 0 rgba(5,33,57,.92)) drop-shadow(0 0 7px rgba(53,188,231,.42))}
+  .sambo-cursor.is-click-pop::before{animation:samboCursorPop .2s cubic-bezier(.2,1.45,.32,1)}
+  @keyframes samboCursorPop{0%{transform:translate(2px,2px) scale(.9)}68%{transform:translate(-1px,-1px) scale(1.08)}100%{transform:translate(0,0) scale(var(--cursor-scale))}}
+}
 .mono{font-family:"Cascadia Mono","Consolas",monospace;font-variant-numeric:tabular-nums}
 .muted{color:var(--muted)}.dim{color:var(--dim)}.green{color:var(--green)}.cyan{color:var(--cyan)}
 .yellow{color:var(--yellow)}.red{color:var(--red)}.blue{color:var(--blue)}
@@ -540,14 +556,22 @@ body.manual-mode .right-panel>.work-panel{display:none}
 .step-chart-now>span{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .step-chart-pct{margin-left:auto;color:var(--cyan);font-size:21px;font-weight:900;text-align:right;line-height:1.05;white-space:nowrap}
 /* CNC 박스 */
-.cnc-state{display:flex;align-items:center;gap:8px}
-.cnc-dot{width:11px;height:11px;border-radius:50%;background:var(--dim);flex:0 0 auto;box-shadow:0 0 0 3px rgba(78,107,130,.14)}
-.cnc-state.idle .cnc-dot{background:var(--dim)}
-.cnc-state.running .cnc-dot{background:var(--red);box-shadow:0 0 9px var(--red);animation:cncpulse 1.1s ease-in-out infinite}
-.cnc-state.done .cnc-dot{background:var(--green);box-shadow:0 0 9px var(--green)}
+.cnc-state{display:flex;align-items:center;gap:8px;min-width:0}
+.cnc-leds{display:flex;align-items:center;gap:5px;flex:0 0 auto}
+.cnc-led{width:10px;height:10px;border-radius:50%;border:1px solid rgba(133,157,178,.5);background:#111827;box-shadow:inset 0 0 4px rgba(0,0,0,.8)}
+.cnc-led.blue.on{background:#38bdf8;border-color:#7dd3fc;box-shadow:0 0 10px rgba(56,189,248,.9),inset 0 0 4px rgba(255,255,255,.35)}
+.cnc-led.red.on{background:#ff4f4f;border-color:#ff7676;box-shadow:0 0 10px rgba(255,91,91,.9),inset 0 0 4px rgba(255,255,255,.35)}
+.cnc-led.green.on{background:#4ade80;border-color:#86efac;box-shadow:0 0 10px rgba(74,222,128,.85),inset 0 0 4px rgba(255,255,255,.35)}
+.cnc-state.led-cnc_occupied .cnc-led.red.on,.cnc-state.led-error .cnc-led.on{animation:cncpulse 1.1s ease-in-out infinite}
 @keyframes cncpulse{0%,100%{opacity:1}50%{opacity:.35}}
-.cnc-state b{font-size:15px;color:var(--text);white-space:nowrap}
-.cnc-state.done b{color:var(--green)}
+.cnc-state b{font-size:14px;color:var(--text);white-space:normal;line-height:1.14;overflow-wrap:anywhere}
+.cnc-state.led-cnc_empty b,.cnc-state.led-rack_loaded b{color:#bfeeff}
+.cnc-state.led-cnc_occupied b,.cnc-state.led-error b{color:#ffb7b7}
+.cnc-state.led-cnc_done_wait b{color:#b8ffd9}
+.cnc-buzzer{display:flex;align-items:center;gap:6px;color:var(--dim);font-size:10px;line-height:1;min-height:14px}
+.cnc-buzzer-icon{width:16px;height:12px;border-radius:4px;border:1px solid rgba(133,157,178,.5);background:#111827;box-shadow:inset 0 0 5px rgba(0,0,0,.8)}
+.cnc-buzzer.on{color:#f5df93}.cnc-buzzer.on .cnc-buzzer-icon{background:#f7c948;border-color:#fde68a;box-shadow:0 0 12px rgba(247,201,72,.88),inset 0 0 5px rgba(255,255,255,.36);animation:buzzerbeat .55s ease-in-out infinite}
+@keyframes buzzerbeat{50%{transform:scale(1.12)}}
 .cnc-timer{font-size:13px;color:var(--muted);font-weight:700;white-space:nowrap}
 .cnc-timer .mono{color:var(--text);font-size:15px}
 .cnc-timer.hidden{visibility:hidden}
@@ -670,6 +694,7 @@ body.manual-mode .tof-scale,body.manual-mode .tof-zones{width:100%}
 </style>
 </head>
 <body>
+<div class="sambo-cursor" id="samboCursor" aria-hidden="true"></div>
 
 <!-- ===== SAMBO MOTORS inspired lock/start screen ===== -->
 <section class="splash-screen" id="splashScreen" aria-label="삼보모터스 로봇팔 자동 분류 시스템 시작 화면">
@@ -774,7 +799,15 @@ body.manual-mode .tof-scale,body.manual-mode .tof-zones{width:100%}
     </div>
     <div class="sc-box sc-cnc" id="cncBox">
       <div class="sc-head">CNC</div>
-      <div class="cnc-state idle" id="cncState"><span class="cnc-dot"></span><b id="cncStateLabel">대기</b></div>
+      <div class="cnc-state led-cnc_empty" id="cncState">
+        <span class="cnc-leds" aria-hidden="true">
+          <i class="cnc-led blue" id="cncLedBlue"></i>
+          <i class="cnc-led red" id="cncLedRed"></i>
+          <i class="cnc-led green" id="cncLedGreen"></i>
+        </span>
+        <b id="cncStateLabel">CNC 비어 있음</b>
+      </div>
+      <div class="cnc-buzzer" id="cncBuzzer"><span class="cnc-buzzer-icon"></span><span id="cncBuzzerLabel">부저 대기</span></div>
       <div class="cnc-timer hidden" id="cncTimer">⏱ <span class="mono" id="cncRemain">—</span> 남음</div>
       <div class="cnc-bar hidden" id="cncBar"><i id="cncBarFill"></i></div>
       <div class="cnc-rack">적재 <span class="mono" id="cncRack">0/2</span></div>
@@ -1065,7 +1098,7 @@ const state={
   pick:{status:"SCAN_READY",step:""},
   teach:{poses:{},taught:[],missing:["cnc_infeed","cnc_grab","rack_v0","rack_v1"],lastError:""},
   path:{current_step:"HOME",steps:["HOME","SCAN","PRE_GRASP","GRASP","LIFT","GRIP_CHECK","CARRY","PLACE"],progress_percent:0,dest:"none"},
-  cnc:{state:"idle",remaining_s:null,total_s:20,rack_count:0,rack_max:2},
+  cnc:{state:"idle",remaining_s:null,total_s:20,rack_count:0,rack_max:2,loaded_until:0,output:null},
   precheck:{home_confirmed:true,path_loaded:true,servo_ready:true,sg90_ready:true,tof_ready:true},
   can_health:{received:1842,errors:0,delay_ms:18,last_rx_ms:22},
   calibration:{tof:"OK",camera:"OK",mpu:"OK",servo:"OK"},
@@ -1952,11 +1985,17 @@ function renderPath(){
 }
 function renderCnc(){
   const c=state.cnc||{},box=$("cncState");if(!box)return;
-  const st=c.state||"idle";   // idle | running | done
-  box.className="cnc-state "+(["idle","running","done"].includes(st)?st:"idle");
-  setText("cncStateLabel",st==="running"?"가공 중":st==="done"?"가공 완료":"대기");
+  const status=getLedBuzzerStatus(Date.now()),out=status.out,meta=status.meta;
+  box.className=`cnc-state led-${status.key.toLowerCase()}`;
+  $("cncLedBlue")?.classList.toggle("on",out.blue);
+  $("cncLedRed")?.classList.toggle("on",out.red);
+  $("cncLedGreen")?.classList.toggle("on",out.green);
+  const buzzer=$("cncBuzzer");
+  if(buzzer)buzzer.classList.toggle("on",out.buzzer);
+  setText("cncStateLabel",meta.ko);
+  setText("cncBuzzerLabel",out.buzzer?"부저 울림":"부저 대기");
   const timer=$("cncTimer"),bar=$("cncBar"),fill=$("cncBarFill");
-  if(st==="running"&&c.remaining_s!=null){
+  if(status.key==="CNC_OCCUPIED"&&c.remaining_s!=null){
     const rem=Math.max(0,Math.round(c.remaining_s)),tot=c.total_s||20;
     setText("cncRemain",rem+"s");
     if(timer)timer.classList.remove("hidden");
@@ -1965,7 +2004,7 @@ function renderCnc(){
     if(timer)timer.classList.add("hidden");
     if(bar)bar.classList.add("hidden");
   }
-  setText("cncRack",(c.rack_count||0)+"/"+(c.rack_max||2));
+  setText("cncRack",status.rack_count+"/"+status.rack_max);
 }
 
 function renderRightPanel(){
@@ -2348,7 +2387,176 @@ function addNutPart(T,metalMat,rad=.13){
   const nut=new T.Mesh(new T.TorusGeometry(rad,.032,12,6),metalMat);
   nut.rotation.x=Math.PI/2;nut.castShadow=true;return nut;
 }
+/* ===== LED+부저 상태 로직 (lee 흡수) — CNC 상태/나노 0x411 echo → LED·부저 출력 ===== */
+const DISPLAY_STATUS_META={
+  CNC_EMPTY:{code:0,label:"CNC_EMPTY",ko:"CNC 비어 있음",note:"파랑 ON · 부저 OFF"},
+  CNC_OCCUPIED:{code:1,label:"CNC_OCCUPIED",ko:"CNC 가공 중",note:"빨강 ON · 부저 OFF"},
+  CNC_DONE_WAIT:{code:2,label:"CNC_DONE_WAIT",ko:"회수 대기",note:"초록 느린 점멸 · 부저 OFF"},
+  RACK_LOADED:{code:3,label:"RACK_LOADED",ko:"적재 완료",note:"파랑 ON · 부저 3회"},
+  RACK_FULL:{code:4,label:"RACK_FULL",ko:"적재함 만재",note:"LED OFF · 부저 2회 반복"},
+  ERROR:{code:5,label:"ERROR",ko:"오류",note:"전체 빠른 점멸 · 부저 ON"},
+  CAN_LOST:{code:255,label:"CAN_LOST",ko:"상태 끊김",note:"빨강/초록/파랑 순차 점멸"}
+};
+const DISPLAY_STATUS_BY_CODE={0:"CNC_EMPTY",1:"CNC_OCCUPIED",2:"CNC_DONE_WAIT",3:"RACK_LOADED",4:"RACK_FULL",5:"ERROR",255:"CAN_LOST"};
+const DISPLAY_STATUS_ALIASES={IDLE:"CNC_EMPTY",MACHINING:"CNC_OCCUPIED",DONE_WAIT:"CNC_DONE_WAIT",DONE:"CNC_DONE_WAIT",RUNNING:"CNC_OCCUPIED"};
+const NANO_OUTPUT_FRESH_MS=800;
+let ledPatternClock={key:"",startedAt:Date.now()};
+function ledPhase(now,halfPeriodMs){return (Math.floor(now/halfPeriodMs)%2)===0}
+function ledPatternElapsed(key,now){if(ledPatternClock.key!==key){ledPatternClock={key,startedAt:now}}return Math.max(0,now-ledPatternClock.startedAt)}
+function ledDoublePulseRepeat(elapsed,cycleMs){const t=((elapsed%cycleMs)+cycleMs)%cycleMs;return t<150||(t>=300&&t<450)}
+function ledTriplePulseOnce(elapsed){return elapsed<180||(elapsed>=350&&elapsed<530)||(elapsed>=700&&elapsed<880)}
+function ledFastPulseRepeat(elapsed){const t=((elapsed%300)+300)%300;return t<120}
+function normalizeDisplayKey(value){
+  if(value!=null&&value!==""&&DISPLAY_STATUS_BY_CODE[Number(value)]!=null)return DISPLAY_STATUS_BY_CODE[Number(value)];
+  const raw=String(value||"").toUpperCase(),key=DISPLAY_STATUS_ALIASES[raw]||raw;
+  return DISPLAY_STATUS_META[key]?key:"";
+}
+function getNanoOutputFeedback(now=Date.now()){
+  const c=state.cnc||{},o=c.output||c.nano_output||state.led_buzzer_output;
+  if(!o||typeof o!=="object")return null;
+  if(o.fresh===false)return null;
+  const hasAge=o.age_ms!=null&&Number.isFinite(Number(o.age_ms));
+  const updated=Number(o.updated_at||o.updated_ms||0);
+  const age=hasAge?Number(o.age_ms):(updated?now-updated:Infinity);
+  if(age>NANO_OUTPUT_FRESH_MS)return null;
+  const maskRaw=o.mask!=null?Number(o.mask):NaN;
+  const fromMask=Number.isFinite(maskRaw);
+  const bool=v=>v===true||v===1||v==="1"||String(v).toLowerCase()==="true"||String(v).toUpperCase()==="ON";
+  const out=fromMask
+    ?{red:!!(maskRaw&0x01),green:!!(maskRaw&0x02),blue:!!(maskRaw&0x04),buzzer:!!(maskRaw&0x08)}
+    :{red:bool(o.red),green:bool(o.green),blue:bool(o.blue),buzzer:bool(o.buzzer)};
+  return Object.assign(out,{synced:true,age_ms:Math.max(0,Math.round(age)),state_key:normalizeDisplayKey(o.state_label)||normalizeDisplayKey(o.state)});
+}
+function getLedBuzzerStatusKey(){
+  const c=state.cnc||{},sys=state.system||{};
+  const normalized=normalizeDisplayKey(c.led_state||c.display_state);
+  if(normalized)return normalized;
+  const st=String(c.state||"idle").toLowerCase();
+  const rackCount=Number(c.rack_count||0),rackMax=Number(c.rack_max||2),rackFull=rackMax>0&&rackCount>=rackMax;
+  const canBad=sys.server_connected&&["ERR","ERROR","LOST","OFF"].includes(String(sys.can_status||"").toUpperCase());
+  if(sys.estop||canBad)return"ERROR";
+  if(!state.demo&&!sys.server_connected)return"CAN_LOST";
+  if(rackFull)return"RACK_FULL";
+  if(st==="rack_loaded"||st==="loaded"||Number(c.loaded_until||0)>Date.now())return"RACK_LOADED";
+  if(st==="running"||st==="machining"||st==="occupied"||st==="processing")return"CNC_OCCUPIED";
+  if(st==="done"||st==="done_wait"||st==="complete"||st==="finished")return"CNC_DONE_WAIT";
+  if(rackFull)return"RACK_FULL";
+  return"CNC_EMPTY";
+}
+function getLedBuzzerOutputs(key,now,elapsed=0){
+  if(key==="CNC_EMPTY")return{blue:true,red:false,green:false,buzzer:false};
+  if(key==="CNC_OCCUPIED")return{blue:false,red:true,green:false,buzzer:false};
+  if(key==="CNC_DONE_WAIT")return{blue:false,red:false,green:ledPhase(now,700),buzzer:false};
+  if(key==="RACK_LOADED")return{blue:true,red:false,green:false,buzzer:ledTriplePulseOnce(elapsed)};
+  if(key==="RACK_FULL")return{blue:false,red:false,green:false,buzzer:ledDoublePulseRepeat(elapsed,1400)};
+  if(key==="ERROR"){const blink=ledPhase(now,150);return{blue:blink,red:blink,green:blink,buzzer:ledFastPulseRepeat(elapsed)}}
+  const phase=Math.floor(now/350)%4;return{blue:phase===2,red:phase===0,green:phase===1,buzzer:false};
+}
+function getLedBuzzerStatus(now=Date.now()){
+  const c=state.cnc||{};
+  const feedback=getNanoOutputFeedback(now);
+  const key=feedback?.state_key||getLedBuzzerStatusKey(),meta=DISPLAY_STATUS_META[key]||DISPLAY_STATUS_META.CAN_LOST;
+  const elapsed=ledPatternElapsed(key,now);
+  const out=feedback||getLedBuzzerOutputs(key,now,elapsed);
+  return{key,meta,out,rack_count:Number(c.rack_count||0),rack_max:Number(c.rack_max||2),synced:!!feedback,output_age_ms:feedback?.age_ms};
+}
+/* ===== 3D LED/부저 램프 (lee 흡수) — CNC에 LED 3개, 적재함에 부저 ===== */
+function makeThreeLamp(T,color,size=.045){
+  const group=new T.Group();
+  const bulbMat=new T.MeshStandardMaterial({color:0x111827,emissive:0x000000,emissiveIntensity:0,metalness:.02,roughness:.36});
+  const bezelMat=new T.MeshStandardMaterial({color:0x020617,metalness:.34,roughness:.55});
+  const bulb=new T.Mesh(new T.SphereGeometry(size,24,12),bulbMat);
+  const bezel=new T.Mesh(new T.TorusGeometry(size*1.22,size*.16,8,28),bezelMat);
+  bezel.rotation.x=Math.PI/2;bulb.castShadow=true;group.add(bezel);group.add(bulb);group.userData.bulb=bulb;group.userData.color=color;return group;
+}
+function setThreeLamp(lamp,on,color){
+  const bulb=lamp?.userData?.bulb||lamp;if(!bulb?.material)return;
+  bulb.material.color.setHex(on?color:0x111827);
+  if(bulb.material.emissive){bulb.material.emissive.setHex(on?color:0x000000);bulb.material.emissiveIntensity=on?1.7:0}
+}
+function addCncStatusLights(T,bin,r){
+  const rack=new T.Group(),colors={blue:0x38bdf8,red:0xff4f4f,green:0x4ade80};
+  rack.position.set(0,.69,-.35);
+  [["blue",-.16],["red",0],["green",.16]].forEach(([name,x])=>{
+    const lamp=makeThreeLamp(T,colors[name],.045);
+    lamp.position.set(x,0,0);rack.add(lamp);
+    r.statusLights.cnc[name]=lamp;
+  });
+  bin.add(rack);
+}
+function addRackStatusLights(T,bin,r){
+  const buzzerMat=new T.MeshStandardMaterial({color:0x111827,emissive:0x000000,emissiveIntensity:0,metalness:.12,roughness:.44});
+  const buzzer=new T.Mesh(new T.CylinderGeometry(.085,.085,.04,28),buzzerMat);
+  buzzer.rotation.x=Math.PI/2;buzzer.position.set(.32,.43,-.30);buzzer.castShadow=true;bin.add(buzzer);
+  const ringMat=(opacity)=>new T.MeshBasicMaterial({color:0xf7c948,transparent:true,opacity,side:T.DoubleSide});
+  const ringA=new T.Mesh(new T.TorusGeometry(.13,.006,8,48),ringMat(.0));
+  const ringB=new T.Mesh(new T.TorusGeometry(.20,.006,8,48),ringMat(.0));
+  ringA.position.copy(buzzer.position);ringB.position.copy(buzzer.position);ringA.visible=ringB.visible=false;bin.add(ringA);bin.add(ringB);
+  r.statusLights.buzzer=buzzer;r.statusLights.buzzerRings=[ringA,ringB];
+}
+function updateThreeLedBuzzerScene(r){
+  const lights=r?.statusLights;if(!lights)return;
+  const now=Date.now(),status=getLedBuzzerStatus(now),out=status.out;
+  setThreeLamp(lights.cnc?.blue,out.blue,0x38bdf8);
+  setThreeLamp(lights.cnc?.red,out.red,0xff4f4f);
+  setThreeLamp(lights.cnc?.green,out.green,0x4ade80);
+  if(lights.buzzer?.material){
+    lights.buzzer.material.color.setHex(out.buzzer?0xf7c948:0x111827);
+    if(lights.buzzer.material.emissive){lights.buzzer.material.emissive.setHex(out.buzzer?0xf7c948:0x000000);lights.buzzer.material.emissiveIntensity=out.buzzer?1.4:0}
+  }
+  (lights.buzzerRings||[]).forEach((ring,i)=>{
+    ring.visible=out.buzzer;
+    if(ring.material)ring.material.opacity=out.buzzer?(.38-i*.12):0;
+    const pulse=1+((now%620)/620)*.45+i*.20;ring.scale.setScalar(pulse);
+  });
+}
+/* ===== 2D 폴백용 LED/부저 (lee 흡수) ===== */
+function drawNativeLedBuzzerStatus(ctx,W,H){
+  const s=getLedBuzzerStatus(Date.now()),out=s.out;
+  drawLed3D(ctx,W,H,V(216,55,10),"#38bdf8",out.blue,"B");
+  drawLed3D(ctx,W,H,V(235,55,10),"#ff4f4f",out.red,"R");
+  drawLed3D(ctx,W,H,V(254,55,10),"#4ade80",out.green,"G");
+  drawBuzzer3D(ctx,W,H,V(272,42,92),out.buzzer);
+}
+function drawLed3D(ctx,W,H,p,color,on,label){
+  const q=project(p,W,H),r=on?5.5:4.3;
+  ctx.save();ctx.shadowBlur=on?12:0;ctx.shadowColor=color;ctx.fillStyle=on?color:"#111827";ctx.strokeStyle=on?color:"rgba(133,157,178,.5)";ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle=on?"#04161b":"#607184";ctx.font="bold 7px Consolas";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(label,q.x,q.y);ctx.restore();
+}
+function drawBuzzer3D(ctx,W,H,p,on){
+  const q=project(p,W,H);
+  ctx.save();ctx.fillStyle=on?"#f7c948":"#111827";ctx.strokeStyle=on?"#fde68a":"rgba(133,157,178,.5)";ctx.lineWidth=1.5;ctx.shadowBlur=on?13:0;ctx.shadowColor="#f7c948";ctx.beginPath();ctx.rect(q.x-8,q.y-6,16,12);ctx.fill();ctx.stroke();if(on){ctx.strokeStyle="rgba(247,201,72,.7)";ctx.beginPath();ctx.arc(q.x,q.y,15,Math.PI*.18,Math.PI*1.82);ctx.stroke();}ctx.restore();
+}
+/* ===== 커스텀 마우스 커서 (lee 흡수) ===== */
+function initSamboCursor(){
+  const cursor=$("samboCursor");
+  if(!cursor||!window.matchMedia||!matchMedia("(pointer:fine)").matches)return;
+  const interactive="a,button,input,select,textarea,label,[role='button'],.mode-btn,.view-btn,.tool-btn,.teach-btn,.ai-fab,.cam-placeholder,.status-chip.has-tip,.joint-row,.motor-row,.led-output,.cnc-state";
+  const move=e=>{
+    cursor.style.left=e.clientX+"px";
+    cursor.style.top=e.clientY+"px";
+    cursor.classList.add("visible");
+    cursor.classList.toggle("is-pointer",!!e.target.closest(interactive));
+    cursor.classList.toggle("is-drag",!!e.target.closest("#robot3dCanvas"));
+  };
+  document.body.classList.add("sambo-custom-cursor");
+  window.addEventListener("pointermove",move,{passive:true});
+  window.addEventListener("pointerdown",()=>{
+    cursor.classList.remove("is-click-pop");
+    cursor.classList.add("is-down");
+  },{passive:true});
+  window.addEventListener("pointerup",()=>{
+    cursor.classList.remove("is-down");
+    cursor.classList.remove("is-click-pop");
+    void cursor.offsetWidth;
+    cursor.classList.add("is-click-pop");
+  },{passive:true});
+  cursor.addEventListener("animationend",()=>cursor.classList.remove("is-click-pop"));
+  window.addEventListener("blur",()=>cursor.classList.remove("visible"));
+  document.addEventListener("mouseleave",()=>cursor.classList.remove("visible"));
+  document.addEventListener("mouseenter",()=>cursor.classList.add("visible"));
+}
 function addThreeSortBins(T,r){
+  r.statusLights={cnc:{},buzzer:null,buzzerRings:[]};
   const group=new T.Group(),wallMat=(color)=>new T.MeshStandardMaterial({color,metalness:.12,roughness:.62,transparent:true,opacity:.9,side:T.DoubleSide});
   const darkMat=new T.MeshStandardMaterial({color:0x06101b,metalness:.04,roughness:.82});
   const metalMat=new T.MeshStandardMaterial({color:0xb6c3cd,metalness:.34,roughness:.5}),beltMat=new T.MeshStandardMaterial({color:0x111827,metalness:.08,roughness:.68});
@@ -2366,6 +2574,7 @@ function addThreeSortBins(T,r){
       bed.position.y=.49;bed.castShadow=true;bin.add(bed);
       const chuck=new T.Mesh(new T.CylinderGeometry(.11,.11,.12,28),metalMat);
       chuck.rotation.x=Math.PI/2;chuck.position.set(-.20,.58,0);chuck.castShadow=true;bin.add(chuck);
+      addCncStatusLights(T,bin,r);
       const label=makeSceneLabel(T,cell.label,"#f7c948",cell.en);
       label.position.set(0,.86,.04);bin.add(label);
     }else if(cell.kind==="RACK"){
@@ -2377,6 +2586,7 @@ function addThreeSortBins(T,r){
         const pipe=new T.Mesh(new T.CylinderGeometry(.045,.045,.46,24),metalMat);
         pipe.rotation.x=Math.PI/2;pipe.position.set(x,.39,0);pipe.castShadow=true;bin.add(pipe);
       });
+      addRackStatusLights(T,bin,r);
       const label=makeSceneLabel(T,cell.label,"#20d5e8",cell.en);
       label.position.set(0,.74,.04);bin.add(label);
     }else{
@@ -2469,6 +2679,7 @@ function drawThreeRobot(){
     applyStlAngles(r,poseAngles);
     updateAnimatedGripper(r);
   }
+  updateThreeLedBuzzerScene(r);
   const dist=9.20/view.zoom,phi=view.pitch,theta=view.yaw,targetX=view.panX||0,targetZ=.35+(view.panZ||0);
   r.camera.position.set(targetX+dist*Math.sin(phi)*Math.cos(theta),1.28+dist*Math.cos(phi),targetZ+dist*Math.sin(phi)*Math.sin(theta));r.camera.lookAt(targetX,.5,targetZ);
   r.renderer.render(r.scene,r.camera);
@@ -2545,6 +2756,7 @@ function drawNative3D(){
   if(!$("robot3dCanvas"))return;const {x:ctx,w:W,h:H}=fitCanvas($("robot3dCanvas")),pose=fk(getVisualJointAngleMap(getCollisionSafeAngleMap("current")));
   const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#10233a");g.addColorStop(1,"#06101b");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
   drawGround(ctx,W,H);drawZone3D(ctx,W,H,V(0,1,170),70,"SCAN ZONE","#20d5e8");drawBox3D(ctx,W,H,V(-235,20,45),V(76,40,66),"#1e6c54","BOLT BIN");drawBox3D(ctx,W,H,V(-235,20,125),V(76,40,66),"#304f8d","NUT BIN");drawBox3D(ctx,W,H,V(235,24,45),V(84,48,70),"#4b5563","CNC");drawBox3D(ctx,W,H,V(235,18,125),V(78,36,66),"#24536b","RACK");
+  drawNativeLedBuzzerStatus(ctx,W,H);
   drawPart3D(ctx,W,H,V(-35,5,162),"볼트");drawPart3D(ctx,W,H,V(20,5,184),"너트");drawPart3D(ctx,W,H,V(48,5,150),"와셔");
   const pts=[pose.base,pose.shoulder,pose.elbow,pose.wrist,pose.end],colors=["#5b7892","#d9e9f5","#bcd0df","#83a0b6"];
   drawBox3D(ctx,W,H,V(0,19,0),V(88,38,88),"#18344e","BASE");
@@ -2876,8 +3088,10 @@ function applyIncoming(d){
   if(d.type==="TEACH_SAVED"){state.teach.poses[d.name]={angles:d.angles,saved_at:d.saved_at};state.teach.lastError="";addLog("티칭 저장됨: "+d.name+(d.saved_at?" ("+d.saved_at+")":""),"ok");sendTeachList();renderLifePredictionCard();return}
   if(d.type==="TEACH_ERROR"){state.teach.lastError=(d.name?d.name+": ":"")+(d.message||"저장 실패");addLog("티칭 실패: "+state.teach.lastError,"err");renderLifePredictionCard();return}
   if(d.type==="TEACH_STATE"){state.teach.taught=d.taught||[];state.teach.missing=d.missing||[];if(d.poses)for(const n in d.poses){const v=d.poses[n];state.teach.poses[n]=(v&&v.angles)?v:{angles:v};}renderLifePredictionCard();return}
+  if(d.type==="PICK_RESULT"){addLog(d.message||("PICK: "+d.result),d.result==="started"?"ok":"warn");return}
   if(d.life_usage)applyLifeUsageSnapshot(d.life_usage,false);
   if(d.mode)setMode(d.mode,true);if(d.system)Object.assign(state.system,d.system);
+  if(d.system&&"auto_running"in d.system){if(!state.auto)state.auto={running:false};state.auto.running=!!d.system.auto_running;}  // 서버 기준 동기화 → 워크플로우 자동 종료돼도 START 다시 먹힘
   if(d.robot?.joints){d.robot.joints.forEach(n=>{const i=jointIndexById(n.id),j=state.robot.joints[i];if(j){const next=Object.assign({},n);if(next.current!=null)next.current=rawToLogicalAngleByIndex(i,next.current);if(state.mode==="MANUAL")delete next.target;Object.assign(j,next)}});if(d.robot.end_effector)state.robot.end_effector=d.robot.end_effector}
   else state.robot.joints.forEach((j,i)=>{if(d[j.id]!=null){const logical=rawToLogicalAngleByIndex(i,d[j.id]);j.current=logical;if(state.mode!=="MANUAL")j.target=logical}});
   if(d.digital_twin)Object.assign(state.digital_twin,d.digital_twin);
@@ -2889,7 +3103,7 @@ function applyIncoming(d){
   if(d.can_frame)applyCanFrame(d.can_frame);
   if(d.human_pose)Object.assign(state.human_pose,d.human_pose);if(d.gripper){const _g=typeof d.gripper==="string"?{state:d.gripper.toUpperCase()}:Object.assign({},d.gripper);if(gripperPreviewDirty){delete _g.sg90_angle;delete _g.sg90_angle_deg;delete _g.state;}Object.assign(state.gripper,_g);}
   if(d.vision){Object.assign(state.vision,d.vision);if(d.vision.correction)Object.assign(state.vision.correction,d.vision.correction)}
-  if(d.path)Object.assign(state.path,d.path);if(d.cnc&&typeof d.cnc==="object")state.cnc=Object.assign(state.cnc||{},d.cnc);if(d.work&&typeof d.work==="object")state.work=Object.assign(state.work||{},d.work);if(d.precheck)Object.assign(state.precheck,d.precheck);if(d.can_health)Object.assign(state.can_health,d.can_health);if(d.calibration)Object.assign(state.calibration,d.calibration);if(Array.isArray(d.alerts))state.alerts=d.alerts;if(d.pick&&typeof d.pick==="object")state.pick=Object.assign(state.pick||{},d.pick);deriveCurrentStep();
+  if(d.path)Object.assign(state.path,d.path);if(d.cnc&&typeof d.cnc==="object")state.cnc=Object.assign(state.cnc||{},d.cnc);if(d.led_buzzer_output&&typeof d.led_buzzer_output==="object")state.cnc.output=d.led_buzzer_output;if(d.work&&typeof d.work==="object")state.work=Object.assign(state.work||{},d.work);if(d.precheck)Object.assign(state.precheck,d.precheck);if(d.can_health)Object.assign(state.can_health,d.can_health);if(d.calibration)Object.assign(state.calibration,d.calibration);if(Array.isArray(d.alerts))state.alerts=d.alerts;if(d.pick&&typeof d.pick==="object")state.pick=Object.assign(state.pick||{},d.pick);deriveCurrentStep();
   if(d.event?.message)addLog(d.event.message,(d.event.level||"INFO").toLowerCase());
 }
 
@@ -2902,6 +3116,10 @@ function applyCanFrame(frame){
   }else if(id===0x202&&data.length>=4){
     const motorId=data[0],raw=(data[2]<<8)|data[1],ok=!!data[3],j=state.robot.joints[motorId-1];
     if(j&&ok){j.current_ma=Math.round(raw*6.5);state.digital_twin.current_id="0x202 OK"}
+  }else if(id===0x411&&data.length>=3&&data[0]===0x21){
+    const mask=Number(data[2]);
+    state.cnc.output={source:"can_frame",state:data[1],state_label:normalizeDisplayKey(data[1]),mask,red:!!(mask&0x01),green:!!(mask&0x02),blue:!!(mask&0x04),buzzer:!!(mask&0x08),rack_count:data.length>=4?Number(data[3]):0,rack_capacity:data.length>=5?Number(data[4]):2,remaining_s:data.length>=6?Number(data[5]):0,seq:data.length>=7?Number(data[6]):0,updated_at:Date.now(),fresh:true};
+    state.digital_twin.last_ack="Nano LED/Buzzer 0x411 SYNC";
   }else if(id===0x200){
     state.digital_twin.last_ack="STM ACK 0x200 OK";
   }
@@ -2972,7 +3190,7 @@ setInterval(()=>{const now=currentTime();setText("clock",now);const sc=$("splash
 const bootTime=Date.now();
 const initialWsUrl=getWsUrl();if($("wsUrlLabel"))$("wsUrlLabel").textContent=initialWsUrl;
 addLog("서버 연결 대기 — 실데이터 수신 시 화면 갱신","warn");addLog(`WebSocket ${initialWsUrl} 연결 대기`,"info");addLog("6축 STS3215 상태 패널 준비 완료","ok");
-try{let u=localStorage.getItem("gripperCamUrl");if(!u){u="http://"+location.hostname+":8091/?action=stream"}if(!state.camera)state.camera={gripper_url:""};state.camera.gripper_url=u;applyGripperStream()}catch(e){};loadStoredLifeTotals();loadOfficialLimits();loadLifeBaseline();setMode("AUTO_RUN");connectWS();requestAnimationFrame(frame);
+try{let u=localStorage.getItem("gripperCamUrl");if(!u){u="http://"+location.hostname+":8091/?action=stream"}if(!state.camera)state.camera={gripper_url:""};state.camera.gripper_url=u;applyGripperStream()}catch(e){};loadStoredLifeTotals();loadOfficialLimits();loadLifeBaseline();setMode("AUTO_RUN");connectWS();requestAnimationFrame(frame);initSamboCursor();
 </script>
 <script src="./sambo_object_overlay.js"></script>
 <script src="./sambo_pc_ollama_chat.js?v=20260614_ko_chat"></script>
