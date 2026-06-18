@@ -106,6 +106,8 @@ health = {"received": 0, "last_rx_ms": 0}
 tof = {"mm": None, "status": None, "rx": 0.0, "dbg_t": 0.0}   # 그리퍼 ToF(VL53L0X) 파지판정. 나노→CAN 0x300(CAN_프로토콜_정리.md §7)
 TOF_DEBUG = True                                             # 보정중 콘솔에 ToF mm 출력 → 보정 끝나면 False
 grip_result = {"state": None, "mm": None, "t": 0.0}          # 파지판정 결과(대시보드 tof-judge 표시용)
+# LED+부저 Nano 출력 echo(나노→CAN 0x411, cmd 0x21). 실제 LED/부저 출력 미러링용 → 대시보드 cnc.output로 전달.
+led_buzzer_output = {"state": 255, "mask": 0, "red": False, "green": False, "blue": False, "buzzer": False, "rack_count": 0, "rack_capacity": 2, "remaining_s": 0, "seq": 0, "rx": 0.0}
 
 LIFE_USAGE_SCHEMA = "sambo_servo_life_usage_v1"
 LIFE_USAGE_PATH = Path(__file__).resolve().parent / "servo_life_usage.json"
@@ -316,6 +318,22 @@ def can_reader():
                             if TOF_DEBUG and (now - tof["dbg_t"]) > 0.7:
                                 tof["dbg_t"] = now
                                 print(f"[ToF] {tof['mm']} mm (st={d[2]})")
+                    elif aid == 0x411 and len(d) >= 3 and d[0] == 0x21:
+                        # LED+부저 Nano 출력 echo: d[1]=state, d[2]=output_mask(빨0x01/초0x02/파0x04/부저0x08)
+                        mask = int(d[2])
+                        led_buzzer_output.update({
+                            "state": int(d[1]),
+                            "mask": mask,
+                            "red": bool(mask & 0x01),
+                            "green": bool(mask & 0x02),
+                            "blue": bool(mask & 0x04),
+                            "buzzer": bool(mask & 0x08),
+                            "rack_count": int(d[3]) if len(d) >= 4 else 0,
+                            "rack_capacity": int(d[4]) if len(d) >= 5 else 2,
+                            "remaining_s": int(d[5]) if len(d) >= 6 else 0,
+                            "seq": int(d[6]) if len(d) >= 7 else 0,
+                            "rx": now,
+                        })
                     elif aid == 0x100 and len(d) >= 4 and d[0] == 0x03:
                         mid = d[1]
                         m = motors.get(mid)
@@ -336,7 +354,9 @@ def can_reader():
 
 # ── 모션 ──
 def smoothstep(t):
-    return t * t * (3.0 - 2.0 * t)
+    # 확실한 S-curve = 5차 smootherstep: 6t^5 - 15t^4 + 10t^3.
+    # 양 끝에서 속도=0 AND 가속도=0 → 저크 스파이크 없음(3차 smoothstep보다 시작/끝이 더 매끈).
+    return t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
 
 
 def _send_angle(bus, mid, deg, move_ms=STREAM_MOVE_MS):
@@ -621,6 +641,9 @@ def get_vision():
 def submit_and_wait(seq, speed=PICK_SPEED, min_dur=MIN_DURATION, timeout=PICK_TIMEOUT_S):
     """seq 제출 후 완료까지 대기 → "done" | "preempted"(HALT 등) | "timeout"(무응답).
     내부에서 request_motion으로 gen 생성, motion_worker의 completed_gen으로 done 판정."""
+    with pick_lock:
+        if run_flags["estop"]:
+            return "estop"
     my_gen = request_motion(seq, "pick", min_dur=min_dur, speed=speed)
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -697,9 +720,19 @@ def _start_auto():
 
     def _worker():
         try:
+            if submit_and_wait([(SCAN_POSE, "START scan")], speed=30.0) != "done":
+                print("[AUTO] scan not reached -> hold"); return
             _set_run(True)        # detect 스윕/센터링 ON (루프가 vision 받게)
             res = auto_runner_workflow.run(_pick_api, log=None)
             print(f"[AUTO] 워크플로우 종료: {res}")
+            # 종료(END)/AUTO_STOP으로 멈췄고 E-STOP 아니면 → 사이클 마친 뒤 스캔→원점 복귀
+            with pick_lock:
+                go_home = run_flags["stop_after_cycle"] and not run_flags["estop"]
+                run_flags["stop_after_cycle"] = False
+            if go_home:
+                request_motion([({1: SCAN_POSE[1]}, "M1 복귀"),
+                                (SCAN_POSE, "스캔복귀"), (HOME_POSE, "원점")], "END → 원점", compensate=False)
+                print("[AUTO] 종료 → 스캔→원점 복귀")
         except Exception as e:
             print(f"[AUTO] 워크플로우 오류: {e}")
         finally:
@@ -1004,14 +1037,28 @@ def build_snapshot():
         gripper["grip_result"] = grip_result["state"]   # 파지 성공/실패(판정 후 10s 표시)
     with pick_lock:
         es = run_flags["estop"]
-    system = {"server_connected": True, "can_status": derive_can_status(comms), "estop": es}
+    system = {"server_connected": True, "can_status": derive_can_status(comms), "estop": es,
+              "auto_running": _auto_alive()}   # 대시보드 START 가드 동기화용(워크플로우 자동 종료 시 false)
     if vision.get("fresh"):
         system.update({"camera_status": "OK", "ai_status": "RUNNING"})
+    # LED+부저 Nano echo(0x411) → cnc.output. fresh(<=800ms)면 대시보드가 실제 출력 미러링.
+    led_output = dict(led_buzzer_output)
+    if led_output.get("rx"):
+        led_output["age_ms"] = int((now - led_output["rx"]) * 1000)
+        led_output["fresh"] = led_output["age_ms"] <= 800
+    else:
+        led_output["age_ms"] = None
+        led_output["fresh"] = False
+    led_output.pop("rx", None)
+    cnc = {"output": led_output}
+    if led_output.get("fresh"):
+        cnc.update({"rack_count": led_output.get("rack_count", 0), "rack_max": led_output.get("rack_capacity", 2), "remaining_s": led_output.get("remaining_s", 0)})
     return {"robot": {"joints": joints},
             "system": system,
             "vision": vision,
             "gripper": gripper,
             "pick": _pick_snapshot(),
+            "cnc": cnc,
             "life_usage": life_usage_snapshot(),
             "can_health": hp}
 
@@ -1108,11 +1155,14 @@ async def ws_handler(ws):
                 payload = d.get("payload") or {}
                 with pick_lock:
                     _es = run_flags["estop"]
-                if _es and cmd not in ("ESTOP", "ESTOP_RESET", "HALT", "PING"):
-                    print(f"[CMD] {cmd} 거부 (E-STOP 래치)")
+                # E-Stop 중: 로봇을 움직일 수 있는 자동/모션 명령 전부 차단(START·STOP·END·PICK·SWEEP).
+                # → 수동(조그·관절·그리퍼·HALT)·ESTOP_RESET만 허용. 손으로 정리 후 RESET으로 풀고 재개.
+                _AUTO_CMDS = ("AUTO_START", "AUTO_STOP", "END", "PICK", "S", "VISION_SEND", "SWEEP")
+                if _es and cmd in _AUTO_CMDS:
+                    print(f"[CMD] {cmd} 거부 (E-STOP 중 — 자동 정지. 수동은 가능, ESTOP_RESET 으로 재개)")
                     continue
                 if cmd == "AUTO_START":
-                    request_motion([(SCAN_POSE, "스캔자세")], "START → 스캔자세", speed=12.0, compensate=False)   # 천천히(서보가 따라가게, 툭툭 방지) + 보상 생략
+                    request_motion([(SCAN_POSE, "스캔자세")], "START → 스캔자세", speed=30.0, compensate=False)   # 6축 한방 이동(30°/s) + 보상 생략
                     _start_auto()                       # 자동 워크플로우 루프(ENABLED=True일 때만 실동작)
                     print("[CMD] AUTO_START → 스캔자세" + (" + 자동루프" if _auto_alive() else " (auto 비활성/단일PICK 운전)"))
                 elif cmd == "AUTO_STOP":
@@ -1194,22 +1244,59 @@ async def ws_handler(ws):
                 elif cmd in ("PICK", "S", "VISION_SEND"):
                     res = handle_pick()
                     print(f"[CMD] PICK → {res}")
+                    if res != "started":   # 게이트실패/작업중/모듈없음 → 사유를 대시보드로(먹통처럼 보이는 것 방지)
+                        _msg = {"gate_fail": "잡을 물체 없음 — 검출 불안정/신뢰도 낮음",
+                                "busy": "작업 중 — 잠시 후 다시",
+                                "no_module": "PICK 모듈 없음"}.get(res, "PICK 실패: %s" % res)
+                        await ws.send(json.dumps({"type": "PICK_RESULT", "result": res, "message": _msg},
+                                                 ensure_ascii=False))
                 elif cmd == "ESTOP":
                     _set_run(False)                     # 자동탐색 끄기
                     with pick_lock:
-                        run_flags["estop"] = True
-                    request_motion([(SCAN_POSE, "E-STOP 스캔복귀"), (HOME_POSE, "E-STOP 원점")], "E-STOP 후퇴", compensate=False)
-                    print("[CMD] ESTOP → 중단·스캔→원점·래치")
+                        run_flags["estop"] = True       # 자동루프 정지(should_stop)+자동 재시작 차단. 수동은 허용.
+                    # 그 자리 즉시정지: 진행 중 이동 선점 + 각 모터를 현재 실측각에 토크 홀드(후퇴 안 함)
+                    with lock:
+                        hold = {m: motors[m]["current"] for m in range(1, 7)
+                                if motors[m]["current"] is not None}
+                    if hold:
+                        request_motion([(hold, "E-STOP 현재각 홀드")], "E-STOP 즉시정지", min_dur=0.05)
+                        print(f"[CMD] ESTOP → 자동정지·현재각 홀드 {sorted(hold)} (수동 가능)")
+                    else:
+                        request_motion([], "E-STOP 선점")  # 현재각 미수신: 진행 이동만 선점
+                        print("[CMD] ESTOP → 자동정지·진행이동 선점 (수동 가능)")
                 elif cmd == "ESTOP_RESET":
                     with pick_lock:
                         run_flags["estop"] = False
-                    print("[CMD] ESTOP_RESET → 해제")
+                    _set_cnc_busy(False)                # 새 사이클 깨끗이 시작(가공중 플래그 초기화)
+                    def _estop_resume():
+                        # 복구: J1 제외 나머지(M2~6) 한방으로 스캔 올린 뒤 → J1 스캔. S-curve 30°/s. 완료 후 자동 재개.
+                        others = {m: SCAN_POSE[m] for m in (2, 3, 4, 5, 6)}
+                        my_gen = request_motion([(others, "RESET M2~6 스캔(들기)"),
+                                                 ({1: SCAN_POSE[1]}, "RESET J1 스캔")],
+                                                "ESTOP_RESET 복구", speed=30.0, compensate=False)
+                        deadline = time.time() + 20.0
+                        while time.time() < deadline:
+                            with mlock:
+                                g = motion["gen"]; done = motion["completed_gen"]
+                            if g != my_gen:
+                                print("[CMD] ESTOP_RESET 복구 선점됨(수동개입?) → 자동 재개 보류")
+                                return
+                            if done == my_gen:
+                                break
+                            time.sleep(0.02)
+                        _start_auto()                   # 스캔부터 자동 분류 사이클 재시작
+                        print("[CMD] ESTOP_RESET → 복구완료 · 자동 재개")
+                    threading.Thread(target=_estop_resume, daemon=True).start()
+                    print("[CMD] ESTOP_RESET → 해제·복구 시작(M2~6→J1 스캔, 30°/s S-curve)")
                 elif cmd == "END":
                     _set_run(False)                     # 자동탐색 끄기(종료 후 책상틈 잡으러 가는 것 방지)
                     with pick_lock:
                         busy = pick_state["status"] == "BUSY"
                         run_flags["stop_after_cycle"] = True
-                    if not busy:
+                    if _auto_alive():
+                        # 자동운전 중: 선점 안 하고 현재 사이클 마칠 때까지 둠 → 루프 끝나면 _worker가 스캔→원점.
+                        print("[CMD] END → 자동: 현재 사이클 끝까지 하고 스캔→원점 (대기)")
+                    elif not busy:
                         request_motion([({1: SCAN_POSE[1]}, "M1 복귀"),               # ★M1 먼저 180 (틀어진 채 끌려가던 거 방지)
                                         (SCAN_POSE, "스캔복귀"), (HOME_POSE, "원점")], "END → 원점", compensate=False)
                         with pick_lock:
