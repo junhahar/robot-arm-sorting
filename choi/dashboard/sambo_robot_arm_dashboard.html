@@ -1687,10 +1687,11 @@ function startAutoRun(){
   if(!confirm("로봇팔을 스캔 자세로 이동합니다.\n주변에 사람이 없는지 확인하세요."))return;
   if(!state.auto)state.auto={running:false};
   if(state.auto.running)return;
-  state.auto.running=true;
+  const sent=sendDashboardCommand("AUTO_START");      // ★먼저 전송 시도
+  if(!sent){addLog("자동 운전 시작 — 미연결: 명령 미전송","warn");return;}  // 미전송이면 latch 안 함(연결 후 다시 누르면 동작)
+  state.auto.running=true;                            // 전송 성공 후에만 running 래치
   setMode("AUTO_RUN");
-  const sent=sendDashboardCommand("AUTO_START");
-  addLog(sent?"자동 운전 시작 명령 송신 (RPi)":"자동 운전 시작 — DEMO 경로 진행","ok");
+  addLog("자동 운전 시작 명령 송신 (RPi)","ok");
   renderHeader();renderPath();draw3D();
 }
 let _sweeping=false;
