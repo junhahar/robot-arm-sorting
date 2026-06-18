@@ -20,6 +20,7 @@
 | `rpi/led_buzzer_config.example.json` | CNC 가공시간, 적재함 용량 설정 예시 |
 | `docs/can_status_frame.md` | CAN ID, payload, 상태 번호, `cansend` 테스트 |
 | `docs/wiring.md` | Nano, MCP2515, LED, 부저 배선 |
+| `현장_적용_체크리스트.md` | 실제 조립/통합 전 확인용 요약 체크리스트 |
 
 ## 최종 하드웨어
 
