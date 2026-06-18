@@ -28,6 +28,19 @@ body::before{
 }
 button,select{font:inherit}
 button{cursor:pointer}
+.sambo-cursor{display:none}
+@media (pointer:fine){
+  body.sambo-custom-cursor,body.sambo-custom-cursor *{cursor:none!important}
+  body.sambo-custom-cursor input,body.sambo-custom-cursor textarea{cursor:text!important}
+  .sambo-cursor{position:fixed;left:0;top:0;z-index:10000;display:block;width:28px;height:34px;pointer-events:none;opacity:0;transform:translate3d(-2px,-1px,0);transition:opacity .14s ease,filter .12s ease}
+  .sambo-cursor.visible{opacity:1}
+  .sambo-cursor::before{content:"";position:absolute;left:0;top:0;width:22px;height:32px;background:#03070d;clip-path:polygon(0 0,0 27px,7px 20px,11px 31px,16px 29px,12px 18px,22px 18px);filter:drop-shadow(0 0 1px #e9fbff) drop-shadow(0 0 8px rgba(32,213,232,.78))}
+  .sambo-cursor::after{content:"";position:absolute;left:13px;top:13px;width:18px;height:18px;border:1px solid rgba(32,213,232,.0);border-radius:50%;transform:translate(-50%,-50%) scale(.58);transition:.12s ease}
+  .sambo-cursor.is-pointer::after{border-color:rgba(32,213,232,.8);background:rgba(32,213,232,.12);transform:translate(-50%,-50%) scale(1)}
+  .sambo-cursor.is-drag::after{border-color:rgba(247,201,72,.86);box-shadow:0 0 14px rgba(247,201,72,.34);transform:translate(-50%,-50%) scale(1.08)}
+  .sambo-cursor.is-down{filter:brightness(1.3)}
+  .sambo-cursor.is-down::before{transform:translate(1px,1px)}
+}
 .mono{font-family:"Cascadia Mono","Consolas",monospace;font-variant-numeric:tabular-nums}
 .muted{color:var(--muted)}.dim{color:var(--dim)}.green{color:var(--green)}.cyan{color:var(--cyan)}
 .yellow{color:var(--yellow)}.red{color:var(--red)}.blue{color:var(--blue)}
@@ -703,6 +716,7 @@ body.manual-mode .tof-scale,body.manual-mode .tof-zones{width:100%}
 </style>
 </head>
 <body>
+<div class="sambo-cursor" id="samboCursor" aria-hidden="true"></div>
 
 <!-- ===== SAMBO MOTORS inspired lock/start screen ===== -->
 <section class="splash-screen" id="splashScreen" aria-label="삼보모터스 로봇팔 자동 분류 시스템 시작 화면">
@@ -3138,6 +3152,25 @@ function renderAll(){
   }
   applyFocusView();
 }
+function initSamboCursor(){
+  const cursor=$("samboCursor");
+  if(!cursor||!window.matchMedia||!matchMedia("(pointer:fine)").matches)return;
+  const interactive="a,button,input,select,textarea,label,[role='button'],.mode-btn,.view-btn,.tool-btn,.teach-btn,.ai-fab,.cam-placeholder,.status-chip.has-tip,.joint-row,.motor-row,.led-output,.cnc-state";
+  const move=e=>{
+    cursor.style.left=e.clientX+"px";
+    cursor.style.top=e.clientY+"px";
+    cursor.classList.add("visible");
+    cursor.classList.toggle("is-pointer",!!e.target.closest(interactive));
+    cursor.classList.toggle("is-drag",!!e.target.closest("#robot3dCanvas"));
+  };
+  document.body.classList.add("sambo-custom-cursor");
+  window.addEventListener("pointermove",move,{passive:true});
+  window.addEventListener("pointerdown",()=>cursor.classList.add("is-down"),{passive:true});
+  window.addEventListener("pointerup",()=>cursor.classList.remove("is-down"),{passive:true});
+  window.addEventListener("blur",()=>cursor.classList.remove("visible"));
+  document.addEventListener("mouseleave",()=>cursor.classList.remove("visible"));
+  document.addEventListener("mouseenter",()=>cursor.classList.add("visible"));
+}
 function frame(now){
   draw3D();
   if(now-lastAuxRenderAt>=AUX_RENDER_MIN_MS){lastAuxRenderAt=now;drawHumanPose();drawGripper();drawTopDown()}
@@ -3180,6 +3213,7 @@ const bootTime=Date.now();
 const initialWsUrl=getWsUrl();if($("wsUrlLabel"))$("wsUrlLabel").textContent=initialWsUrl;
 addLog("서버 연결 대기 — 실데이터 수신 시 화면 갱신","warn");addLog(`WebSocket ${initialWsUrl} 연결 대기`,"info");addLog("6축 STS3215 상태 패널 준비 완료","ok");
 try{let u=localStorage.getItem("gripperCamUrl");if(!u){u="http://"+location.hostname+":8091/?action=stream"}if(!state.camera)state.camera={gripper_url:""};state.camera.gripper_url=u;applyGripperStream()}catch(e){};loadStoredLifeTotals();loadOfficialLimits();loadLifeBaseline();setMode("AUTO_RUN");connectWS();requestAnimationFrame(frame);
+initSamboCursor();
 </script>
 <script src="./sambo_object_overlay.js"></script>
 <script src="./sambo_pc_ollama_chat.js?v=20260614_ko_chat"></script>
