@@ -2398,6 +2398,7 @@ const WORKSTATIONS=[
   {key:"CNC",kind:"CNC",label:"CNC",en:"MACHINE",x:2.35,z:-1.75,color:0x5b6470,accent:0xf7c948},
   {key:"RACK",kind:"RACK",label:"적재함",en:"STOCK RACK",x:2.35,z:-.65,color:0x345b70,accent:0x20d5e8}
 ];
+const RIGHT_WORKSTATION_YAW=(()=>{const cells=WORKSTATIONS.filter(c=>c.kind==="CNC"||c.kind==="RACK"),x=cells.reduce((s,c)=>s+c.x,0)/cells.length,z=cells.reduce((s,c)=>s+c.z,0)/cells.length;return Math.atan2(x,z)})();
 function makeSceneLabel(T,text,accent,subtext=""){
   const canvas=document.createElement("canvas"),ctx=canvas.getContext("2d");
   canvas.width=256;canvas.height=72;
@@ -2422,6 +2423,7 @@ function addThreeSortBins(T,r){
   const metalMat=new T.MeshStandardMaterial({color:0xb6c3cd,metalness:.34,roughness:.5}),beltMat=new T.MeshStandardMaterial({color:0x111827,metalness:.08,roughness:.68});
   WORKSTATIONS.forEach((cell,idx)=>{
     const bin=new T.Group();bin.position.set(cell.x,0,cell.z);
+    if(cell.kind==="CNC"||cell.kind==="RACK")bin.rotation.y=RIGHT_WORKSTATION_YAW;
     if(cell.kind==="CNC"){
       const base=new T.Mesh(new T.BoxGeometry(.78,.46,.66),wallMat(cell.color));
       base.position.y=.23;base.castShadow=base.receiveShadow=true;bin.add(base);
