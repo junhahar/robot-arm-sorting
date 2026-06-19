@@ -752,10 +752,6 @@ body.manual-mode .tof-scale,body.manual-mode .tof-zones{width:100%}
   </div>
   <div class="header-status">
     <div class="run-controls">
-      <button class="run-btn pick" id="pickBtn" onclick="pickRobot()">PICK</button>
-      <button class="run-btn" id="grabOkBtn" onclick="labelGrab(true)"><b>✓ 성공</b><small>GRAB OK</small></button>
-      <button class="run-btn" id="grabNgBtn" onclick="labelGrab(false)"><b>✗ 실패</b><small>GRAB NG</small></button>
-      <button class="run-btn sweep" id="sweepBtn" onclick="toggleSweep()"><b>↔ 탐색</b><small>SWEEP</small></button>
       <button class="run-btn start" id="startBtn" onclick="startAutoRun()"><b>▶ 시작</b><small>AUTO RUN</small></button>
       <button class="run-btn stop active" id="stopBtn" onclick="stopAutoRun()"><b>■ 종료</b><small>END</small></button>
       <button class="run-btn estop" id="estopBtn" onclick="triggerEstop()"><b>⏻ E-STOP</b><small>비상정지</small></button>
@@ -1068,7 +1064,7 @@ const STEP_LABELS={HOME:"대기",SCAN:"스캔",PRE_GRASP:"접근",GRASP:"집기"
 // 백엔드(pick_runner/auto_runner_workflow) 단계명 → 진행바 8노드 매핑. 바 구조는 그대로, 어휘만 정렬.
 // 운반계열(작업평면→CNC / CNC→픽스처 / →적재V홈)=CARRY, 놓기계열(CNC투입 / 적재놓기)=PLACE,
 // 완성파이프 잡기=GRASP, 스캔복귀=HOME, 파지실패복귀=GRIP_CHECK. (그 외는 이름 그대로 매칭)
-const STAGE_ALIAS={CNC_MOVE:"CARRY",CNC_GRAB_MOVE:"CARRY",RACK_MOVE:"CARRY",CNC_INSERT:"PLACE",RACK_PLACE:"PLACE",CNC_GRAB:"GRASP",RETURN:"HOME",GRIP_FAIL:"GRIP_CHECK"};
+const STAGE_ALIAS={CNC_MOVE:"CARRY",CNC_GRAB_MOVE:"CARRY",RACK_MOVE:"CARRY",CNC_INSERT:"PLACE",RACK_PLACE:"PLACE",CNC_GRAB:"GRASP",RETURN:"HOME",GRIP_FAIL:"GRIP_CHECK",DETECT:"SCAN",PIPE_TO_CNC:"PRE_GRASP",SORT:"PRE_GRASP",RETRIEVE:"CARRY",IDLE:"HOME"};
 // 캡션 목적지 추론: 브리지가 dest를 안 보내므로 단계명/대상으로 역추적. (CNC가공·적재 단계는 이름에 목적지가 있고, 일반 분류는 검출 대상으로)
 const STAGE_DEST={CNC_MOVE:"cnc",CNC_INSERT:"cnc",CNC_GRAB_MOVE:"cnc",CNC_GRAB:"cnc",RACK_MOVE:"rack",RACK_PLACE:"rack"};
 const OBJ_DEST={BOLT:"bolt",NUT:"nut",PIPE:"cnc"};
@@ -1735,34 +1731,10 @@ function startAutoRun(){
   addLog("자동 운전 시작 명령 송신 (RPi)","ok");
   renderHeader();renderPath();draw3D();
 }
-let _sweeping=false;
-function setSweepBtn(){const b=$("sweepBtn");if(b)b.classList.toggle("active",_sweeping);}
-function toggleSweep(){
-  // 탐색(검증용): M1 좌우 등속 스윕 토글. 종료/E-STOP/PICK이 브리지에서 스윕을 멈추므로
-  // 그 핸들러들에서 _sweeping=false 로 표시를 동기화한다(상태는 서버 스냅샷에 없음).
-  _sweeping=!_sweeping;
-  const sent=sendDashboardCommand(_sweeping?"SWEEP":"SWEEP_STOP");
-  if(!sent)_sweeping=false;                          // 미연결이면 토글 취소
-  setSweepBtn();
-  addLog(sent?(_sweeping?"탐색 시작 — M1 좌우 스윕 (RPi)":"탐색 정지 — 제자리 (RPi)")
-            :"탐색 — 미연결: 명령 미전송",sent?"ok":"warn");
-}
-function pickRobot(){
-  // S 버튼과 동일: 검출된 물체 1회 잡기(확인창 없이 즉시 전송).
-  _sweeping=false;setSweepBtn();                     // PICK이 브리지에서 스윕을 멈추므로 표시 동기화
-  const sent=sendDashboardCommand("PICK");
-  addLog(sent?"PICK 송신 (RPi)":"PICK — 미연결: 명령 미전송",sent?"ok":"warn");
-}
-function labelGrab(ok){
-  // 방금 잡기 성공/실패 수동 라벨 → 브리지가 grab_data.jsonl 마지막 줄 success에 기록
-  const sent=sendDashboardCommand("GRAB_LABEL",{success:ok});
-  addLog(sent?("방금 잡기: "+(ok?"성공":"실패")+" 기록"):"라벨 — 미연결",sent?"ok":"warn");
-}
 function stopAutoRun(){
   if(!confirm("현재 사이클을 마친 뒤 원점(HOME)으로 이동합니다.\n주변에 사람이 없는지 확인하세요."))return;
   if(!state.auto)state.auto={running:false};
   state.auto.running=false;
-  _sweeping=false;setSweepBtn();                     // 종료가 스윕도 멈춤 → 표시 동기화
   const sent=sendDashboardCommand("END");
   addLog(sent?"종료 명령 송신 — 사이클 후 원점 (RPi)":"종료 — 현재 자세 유지","warn");
   renderHeader();renderPath();draw3D();
@@ -1807,7 +1779,6 @@ function applyFocusView(){
 function triggerEstop(){
   if(state.system.estop)return;
   state.system.estop=true;state.mode="E_STOP";document.body.classList.add("estop-active");
-  _sweeping=false;setSweepBtn();                     // E-STOP이 스윕도 멈춤 → 표시 동기화
   const reset=$("resetEstopBtn");if(reset)reset.style.display="block";
   sendDashboardCommand("ESTOP");
   addLog("E-STOP 발동 — 즉시 중단 후 스캔→원점 후퇴, 명령 잠금","err");
@@ -1931,7 +1902,7 @@ function deriveCurrentStep(){
   const steps=state.path.steps||[],pk=state.pick||{};let step="HOME";
   if(pk.status==="BUSY"){
     const mapped=STAGE_ALIAS[pk.step]||pk.step;     // 백엔드 단계명 → 진행바 노드 매핑
-    step=steps.includes(mapped)?mapped:"PLACE";     // 매핑 후에도 미지정이면 마지막 단계 유지(되감김 깜빡임 방지)
+    step=steps.includes(mapped)?mapped:(steps.includes(state.path.current_step)?state.path.current_step:"SCAN");  // 미지정 단계는 직전 노드 유지(PLACE로 튀던 버그 수정)
     // 파지 확인: grip_result(ToF 130mm 판정)는 파이프 잡기·CNC 회수 경로에서만 옴 → 볼트/너트는 결과 없어 자동 스킵.
     const gr=state.gripper&&state.gripper.grip_result;
     const tgt=(state.vision||{}).target,dest=state.path.dest||pk.dest;
@@ -1953,6 +1924,13 @@ function stepCaption(step){
   let dest=state.path.dest&&state.path.dest!=="none"?state.path.dest:(state.pick&&state.pick.dest)||null;
   if(!dest){const raw=(state.pick&&state.pick.step)||"";dest=STAGE_DEST[raw]||OBJ_DEST[tgt]||null;}  // 브리지 dest 미전송 시 단계명/대상으로 추론
   const destKo=DEST_LABELS[dest]||"목적지";
+  const rawStep=(state.pick&&state.pick.step)||"";   // 원시 백엔드 단계 → CNC 투입/회수/적재 구분(같은 노드라도 문구만 다르게)
+  if(rawStep==="CNC_MOVE")return "CNC로 투입하러 이동";
+  if(rawStep==="CNC_INSERT")return "CNC에 투입";
+  if(rawStep==="RETRIEVE"||rawStep==="CNC_GRAB_MOVE")return "CNC에서 회수하러 이동";
+  if(rawStep==="CNC_GRAB")return "CNC 파이프 회수(집기)";
+  if(rawStep==="RACK_MOVE")return "적재함으로 이동";
+  if(rawStep==="RACK_PLACE")return "적재함에 적재";
   switch(step){
     case "HOME": return "원점에서 대기 중";
     case "SCAN": return tgt?`${typeKo}로 판별`:"물체 탐색 중…";
@@ -2016,13 +1994,17 @@ function renderRightPanel(){
     return `<div class="motor-row mono"><b>${JOINT_DISPLAY[i].axis} (M${i+1})</b><div><div class="meter"><i class="temp" style="width:${clamp(j.temp/75*100,0,100)}%"></i></div><span class="meter-label">${fmt(j.temp,0)}°C</span></div>
       <div><div class="meter"><i style="width:${clamp(j.load,0,100)}%;background:${danger?"var(--red)":warn?"var(--yellow)":"var(--cyan)"}"></i></div><span class="meter-label">${fmt(j.load,0)}%</span></div><span class="pill ${csc}">${ctext}</span></div>`}).join("");
   const g=state.gripper,tofPlane=getTofPlaneGuide(),pipeGrip=getTofPipeGripGuide(tofPlane),objectGuide=getGripperObjectGuide(pipeGrip),wk=state.work||{};
-  const afterActive=objectGuide.active||objectGuide.detected||objectGuide.suspect;
-  const gripLabel=objectGuide.detected?"파지 성공":"파지 실패";
-  const gripCls=objectGuide.detected?"green":objectGuide.suspect?"yellow":objectGuide.active?"red":"yellow";
+  // ★파지 판정 = 서버 grip_result(pick_runner._grip_ok, 130mm 임계)만 사용 — 파지판정 단계(LIFT 후 10초)에만 옴.
+  //   클라 자체계산(objectGuide: ref=50mm/drop, object_detected 초기값true)은 마운트(잡음84/못잡음235) 안 맞아 폐기.
+  const grR=state.gripper.grip_result;
+  const afterActive=grR==="성공"||grR==="실패";
+  const gripLabel=grR==="성공"?"✓ 파지 성공":grR==="실패"?"✗ 파지 실패 · 재시도":"파지 판정 대기";
+  const gripCls=grR==="성공"?"green":grR==="실패"?"red":"";
   const tb=$("tofBody");
+  const tofDead=g.tof_fresh===false;   // ★브리지가 2초+ 끊김 통보 → 옛 숫자 대신 "신호없음"(나노 살아나면 다음 프레임에 자동 숫자복귀)
   if(tb)tb.innerHTML=`<div class="tof-readout">
       <div class="tof-current-label">측정 거리</div>
-      <div class="tof-big mono">${fmt(g.tof_mm)}<span class="unit">mm</span></div>
+      <div class="tof-big mono${tofDead?" red":""}">${tofDead?"신호없음":fmt(g.tof_mm)+'<span class="unit">mm</span>'}</div>
     </div>
     <div class="tof-grip-flow">
       <div class="tof-phase ${gripCls} ${afterActive?"active":""}"><b class="${gripCls}">${gripLabel}</b></div>

@@ -34,7 +34,7 @@ except Exception:                      # dry-run 단독 테스트 시 ik_pose �
     check_limits = None
 
 # ── pick 속도 (수동 20과 분리) ──
-PICK_SPEED = 30.0
+PICK_SPEED = 25.0          # 잡기/놓기 모션 속도(deg/s). 30은 너무 빨라 25로 (2026-06-19)
 
 # ── 자세 상수 (ik_server_pose.py에서 이식) ──
 # ★ SCAN_POSE는 브리지에도 있음(중복) → 추후 poses.py로 단일화. 값은 브리지와 반드시 일치.
@@ -53,6 +53,7 @@ GRIPPER_OPEN = 60                       # 놓기
 GRIP_SETTLE = 0.8                       # 그리퍼 동작 완료 대기[s]
 GRIP_HOLD_DELAY = 1.0                   # 잡은 뒤 딜레이[s]
 GRIP_OK_MAX = 130.0                     # ToF 파지판정: 거리 ≤ 이 값(mm)=잡음. 잡음84/못잡음(지면)235 사이
+GRIP_TOF_BYPASS = True                  # ★테스트용: True면 ToF 무시·파지 무조건 성공(워크플로우/모션 검증). ★데모 전 반드시 False!
 
 VALID_TARGETS = ("BOLT", "NUT", "PIPE")
 # near 미지정 시 기본값 (정석: 브리지가 계약A distance_mm로 도출해 넘김)
@@ -277,15 +278,24 @@ def _grab_phases(cmd, near):
 
 def _grip_ok(api, dry_run):
     """LIFT 후 ToF로 파지 성공 판정. tof ≤ GRIP_OK_MAX = 잡음.
-    dry_run 또는 ToF 미수신이면 통과(판정 보류 → 기존 동작 유지)."""
+    dry_run 또는 ToF 미지원(read_tof 없는 api)이면 판정 보류(통과).
+    ToF 지원하는데 미수신(None)이면 ★fail-closed(실패 처리) — ToF 죽었는데 조용히 헛성공→desync 되는 것 차단."""
     if dry_run:
         return True
+    if GRIP_TOF_BYPASS:                               # ★테스트: ToF 없이 검증 — 무조건 성공(헛잡아도 진행). 데모 전 False!
+        print("[GRIP] ⚠ToF 우회(GRIP_TOF_BYPASS=True) — 무조건 성공 처리")
+        return True
     read = getattr(api, "read_tof", None)
-    mm = read() if read else None
-    if mm is None:
-        return True                                  # ToF 없음/미수신 → 판정 안 함(안전: 막지 않음)
-    ok = mm <= GRIP_OK_MAX
+    if read is None:
+        return True                                  # ToF 미지원 api(테스트 등) → 판정 안 함
+    mm = read()
     setr = getattr(api, "set_grip_result", None)
+    if mm is None:                                   # ToF 미수신(하드웨어 다운/프레임 끊김)
+        print("[GRIP] ⚠ToF 미수신 — 파지판정 불가 → 실패 처리(fail-closed)")
+        if setr:
+            setr("실패", None)
+        return False                                 # 못 믿으면 성공 주장 안 함 → 재시도→3회면 auto 정지+알림
+    ok = mm <= GRIP_OK_MAX
     if setr:
         setr("성공" if ok else "실패", mm)            # 대시보드 tof-judge 표시용
     return ok

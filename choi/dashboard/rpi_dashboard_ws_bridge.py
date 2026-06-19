@@ -108,6 +108,9 @@ TOF_DEBUG = True                                             # 보정중 콘솔�
 grip_result = {"state": None, "mm": None, "t": 0.0}          # 파지판정 결과(대시보드 tof-judge 표시용)
 # LED+부저 Nano 출력 echo(나노→CAN 0x411, cmd 0x21). 실제 LED/부저 출력 미러링용 → 대시보드 cnc.output로 전달.
 led_buzzer_output = {"state": 255, "mask": 0, "red": False, "green": False, "blue": False, "buzzer": False, "rack_count": 0, "rack_capacity": 2, "remaining_s": 0, "seq": 0, "rx": 0.0}
+# CNC 패널 표시용(옵션B): auto_runner의 set_cnc_busy로 가공 시작/종료를 추적 → 나노 없이 가공중 카운트다운 표시. 모션/CAN 무관.
+cnc_track = {"busy": False, "start": 0.0}
+CNC_TIMER_S = 20.0   # auto_runner_workflow.CNC_TIMER_S와 동일값 유지(다르면 카운트다운만 어긋남)
 
 LIFE_USAGE_SCHEMA = "sambo_servo_life_usage_v1"
 LIFE_USAGE_PATH = Path(__file__).resolve().parent / "servo_life_usage.json"
@@ -553,6 +556,9 @@ def _set_busy(b):
 
 def _set_cnc_busy(b):
     """파이프 CNC 가공 중 깃발. detect가 있으면 파이프 제외(볼트/너트만). (계약 7c)"""
+    cnc_track["busy"] = bool(b)              # 옵션B: CNC 패널 카운트다운용(나노 없이 가공상태 표시). 모션 무관.
+    if b:
+        cnc_track["start"] = time.monotonic()
     try:
         if b:
             CNC_FLAG.write_text("1")
@@ -689,6 +695,7 @@ class _PickApi:
     request_gripper = staticmethod(request_gripper)
     get_gen = staticmethod(get_gen)
     set_cnc_busy = staticmethod(_set_cnc_busy)
+    set_busy = staticmethod(_set_busy)
     read_tof = staticmethod(read_tof)
     set_grip_result = staticmethod(set_grip_result)
     should_stop = staticmethod(should_stop)
@@ -720,11 +727,15 @@ def _start_auto():
 
     def _worker():
         try:
-            if submit_and_wait([(SCAN_POSE, "START scan")], speed=30.0) != "done":
-                print("[AUTO] scan not reached -> hold"); return
+            _set_busy(True)       # ★스캔 도착 전 detect 정지(이동중 스테일 비전으로 확 튀는 것 방지). run()이 이후 관리
+            if submit_and_wait([(SCAN_POSE, "START scan")], speed=25.0) != "done":
+                _set_busy(False); print("[AUTO] scan not reached -> hold"); return
             _set_run(True)        # detect 스윕/센터링 ON (루프가 vision 받게)
+            with pick_lock:
+                pick_state["status"] = "BUSY"   # ★진행바 게이트: 자동 중 단계바 표시(deriveCurrentStep은 status==BUSY일 때만 step 그림)
             res = auto_runner_workflow.run(_pick_api, log=None)
             print(f"[AUTO] 워크플로우 종료: {res}")
+            _set_run(False)       # ★복귀 모션 전 detect 스윕 정지 → 복귀 중 M1 0x07/0x03 충돌(반대 툭) 방지
             # 종료(END)/AUTO_STOP으로 멈췄고 E-STOP 아니면 → 사이클 마친 뒤 스캔→원점 복귀
             with pick_lock:
                 go_home = run_flags["stop_after_cycle"] and not run_flags["estop"]
@@ -737,6 +748,10 @@ def _start_auto():
             print(f"[AUTO] 워크플로우 오류: {e}")
         finally:
             _set_run(False)       # detect OFF
+            _set_cnc_busy(False)  # ★중단/종료 시 cnc 플래그 해제 → stuck으로 파이프 영구 제외되는 것 방지
+            with pick_lock:
+                pick_state["status"] = "SCAN_READY"   # ★자동 종료 → 진행바 HOME/대기 복귀
+                pick_state["step"] = ""
     _auto_thread = threading.Thread(target=_worker, daemon=True)
     _auto_thread.start()
 
@@ -1033,6 +1048,10 @@ def build_snapshot():
         gripper["reason"] = "bridge_command"
     if tof["rx"] and (now - tof["rx"]) < 2.0:
         gripper["tof_mm"] = tof["mm"]   # 대시보드 ToF 거리(라이브 0x300) → gripper.tof_mm로 표시
+        gripper["tof_fresh"] = True
+    else:
+        gripper["tof_mm"] = None         # ★2초+ 끊김: 신선값 없음 → 대시보드 "신호없음"(50.2 고정 방지). 0x300 다시 오면 자동 복귀
+        gripper["tof_fresh"] = False     # (팀원 추가분 반영)
     if grip_result["state"] and (now - grip_result["t"]) < 10.0:
         gripper["grip_result"] = grip_result["state"]   # 파지 성공/실패(판정 후 10s 표시)
     with pick_lock:
@@ -1051,6 +1070,13 @@ def build_snapshot():
         led_output["fresh"] = False
     led_output.pop("rx", None)
     cnc = {"output": led_output}
+    # 옵션B: 나노 없이도 CNC 가공상태 표시(가공중 카운트다운). 나노 echo 신선하면 아래 fresh 블록이 덮음(output 우선).
+    if not cnc_track["busy"]:
+        _cnc_state, _rem = "idle", 0.0
+    else:
+        _ela = now - cnc_track["start"]
+        _cnc_state, _rem = ("running", round(CNC_TIMER_S - _ela, 1)) if _ela < CNC_TIMER_S else ("done", 0.0)
+    cnc.update({"state": _cnc_state, "remaining_s": _rem, "total_s": CNC_TIMER_S, "rack_count": 0, "rack_max": 2})
     if led_output.get("fresh"):
         cnc.update({"rack_count": led_output.get("rack_count", 0), "rack_max": led_output.get("rack_capacity", 2), "remaining_s": led_output.get("remaining_s", 0)})
     return {"robot": {"joints": joints},
@@ -1162,7 +1188,7 @@ async def ws_handler(ws):
                     print(f"[CMD] {cmd} 거부 (E-STOP 중 — 자동 정지. 수동은 가능, ESTOP_RESET 으로 재개)")
                     continue
                 if cmd == "AUTO_START":
-                    request_motion([(SCAN_POSE, "스캔자세")], "START → 스캔자세", speed=30.0, compensate=False)   # 6축 한방 이동(30°/s) + 보상 생략
+                    request_motion([(SCAN_POSE, "스캔자세")], "START → 스캔자세", speed=25.0, compensate=False)   # 6축 한방 이동(30°/s) + 보상 생략
                     _start_auto()                       # 자동 워크플로우 루프(ENABLED=True일 때만 실동작)
                     print("[CMD] AUTO_START → 스캔자세" + (" + 자동루프" if _auto_alive() else " (auto 비활성/단일PICK 운전)"))
                 elif cmd == "AUTO_STOP":
@@ -1273,7 +1299,7 @@ async def ws_handler(ws):
                         others = {m: SCAN_POSE[m] for m in (2, 3, 4, 5, 6)}
                         my_gen = request_motion([(others, "RESET M2~6 스캔(들기)"),
                                                  ({1: SCAN_POSE[1]}, "RESET J1 스캔")],
-                                                "ESTOP_RESET 복구", speed=30.0, compensate=False)
+                                                "ESTOP_RESET 복구", speed=25.0, compensate=False)
                         deadline = time.time() + 20.0
                         while time.time() < deadline:
                             with mlock:

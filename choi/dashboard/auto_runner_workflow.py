@@ -23,24 +23,16 @@ choi auto_runner.py 초안(SCAN→DETECT→PICK 단순루프) 위에 실제 워�
 """
 
 import time
-import threading
 
 import pick_runner
 from pick_runner import SCAN_POSE, GRIPPER_OPEN
 
-# LED+부저 Nano 상태 송신(CAN 0x410). 모듈 없거나 python-can 미설치면 자동 비활성(워크플로우는 정상 동작).
-try:
-    from cnc_status_buzzer import (CncStatusCanNode, calc_cnc_status,
-                                   remaining_cnc_seconds, open_socketcan_bus)
-except Exception:
-    CncStatusCanNode = None
-
-ENABLED = False          # ★ 자동진행 비활성. 검증 끝나기 전 절대 True 금지.
+ENABLED = True           # ★ 자동진행 활성(브링업). 첫 구동은 반드시 손 E-stop 대기.
 CNC_TIMER_S = 20.0       # CNC 가공 시간(타이머)
 MAX_GRIP_RETRY = 3       # 파지/회수 연속 실패 N회 → 정지(사람 확인)
 
 DEFAULTS = {
-    "conf_th": 0.5, "stable_n": 5, "ttl_ms": 2500,
+    "conf_th": 0.5, "stable_n": 15, "ttl_ms": 2500,   # stable_n→15: 더 안정된 값에서 잡기(떨어뜨려 위치바뀜 대비). 빠르면 ↑(2026-06-19)
     "detect_timeout_s": 8.0, "scan_settle_s": 0.4, "poll_s": 0.1,
     "speed": 20,
     "rack_slots": 2,     # 적재함 V홈 수
@@ -124,30 +116,6 @@ def run(api, cfg=None, log=None, dry_run=False):
     cycle = 0
     sorted_ok = 0
     aborted = False
-    # 0x410 송신 스레드가 읽는 공유 상태(루프가 갱신). loaded_until = 적재 직후 RACK_LOADED(부저3회) 표시 구간.
-    led_ctx = {"busy": False, "start": 0.0, "rack": 0, "loaded_until": 0.0}
-    _led_stop = threading.Event()
-    _led_thread = None
-    _led_bus = None
-
-    def _led_worker(node):
-        # CNC 상태(led_ctx) → calc_cnc_status → 0x410 송신(~5Hz). 워크플로우 루프 타이밍과 독립.
-        while not _led_stop.is_set():
-            now = time.time()
-            busy = led_ctx["busy"]
-            start = led_ctx["start"] if busy else None
-            loaded = now < led_ctx["loaded_until"]
-            try:
-                st = calc_cnc_status(now=now, cnc_occupied=busy, cnc_process_started_at=start,
-                                     rack_count=led_ctx["rack"], rack_capacity=cfg["rack_slots"],
-                                     rack_loaded_event=loaded, cnc_process_sec=CNC_TIMER_S)
-                rem = remaining_cnc_seconds(now=now, cnc_occupied=busy, cnc_process_started_at=start,
-                                            cnc_process_sec=CNC_TIMER_S)
-                node.send_status(st, rack_count=led_ctx["rack"],
-                                 rack_capacity=cfg["rack_slots"], remaining_sec=rem)
-            except Exception:
-                pass
-            _led_stop.wait(0.2)
 
     if log:
         log.start_session(mode="auto")
@@ -160,23 +128,19 @@ def run(api, cfg=None, log=None, dry_run=False):
     def set_cnc_busy(b):
         nonlocal cnc_busy
         cnc_busy = b
-        led_ctx["busy"] = b    # 0x410 송신 스레드와 상태 공유
         api.set_cnc_busy(b)    # detect가 파이프 제외(cnc_busy면 볼트/너트만 best)
+
+    def set_busy(b):
+        fn = getattr(api, "set_busy", None)   # 픽 중 detect M1 제어 정지(BUSY_FLAG). dry_run엔 없음→no-op
+        if fn:
+            fn(b)
 
     try:
         if not dry_run:
             api.request_gripper(GRIPPER_OPEN)
-            if CncStatusCanNode is not None:   # LED+부저 Nano 상태 송신(0x410) 시작
-                try:
-                    _led_bus = open_socketcan_bus("can0")
-                    _led_thread = threading.Thread(target=_led_worker,
-                                                   args=(CncStatusCanNode(_led_bus),), daemon=True)
-                    _led_thread.start()
-                    print("[auto_runner] LED 상태 송신(0x410) 시작")
-                except Exception as e:
-                    print(f"[auto_runner] LED 송신 비활성(CAN 못 엶): {e}")
-                    _led_bus = None
+            set_busy(True)            # 기본=detect 정지(픽 M1 충돌 방지). DETECT 단계에서만 잠깐 품
 
+        need_scan = True            # 픽/회수로 자세 흐트러진 뒤에만 SCAN 재이동. 빈 탐색 사이클엔 재이동 X(sweep 안 죽임)
         while not aborted and not api.should_stop():
             cycle += 1
             if cycle > 100:               # 안전 상한(무한 dry-run 방지)
@@ -184,13 +148,15 @@ def run(api, cfg=None, log=None, dry_run=False):
             if log:
                 log.set_cycle(cycle)
 
-            # ── SCAN ──
-            step("SCAN")
-            if not dry_run:
-                if not _safe_move(api, SCAN_POSE, "SCAN", cfg):
-                    break
-                if not _idle(api, cfg["scan_settle_s"], api.get_gen()):
-                    break
+            # ── SCAN (need_scan일 때만 — 빈 탐색 사이클엔 재이동 안 함: request_motion의 stop_sweep가 sweep 죽이는 것 방지) ──
+            if need_scan:
+                step("SCAN")
+                if not dry_run:
+                    if not _safe_move(api, SCAN_POSE, "SCAN", cfg):
+                        break
+                    if not _idle(api, cfg["scan_settle_s"], api.get_gen()):
+                        break
+                need_scan = False
 
             # ── 가공중 타이머 만료 체크 (검출보다 먼저) ──
             if cnc_busy and (_now() - cnc_start) >= CNC_TIMER_S:
@@ -201,6 +167,7 @@ def run(api, cfg=None, log=None, dry_run=False):
                     if not _idle(api, 1.0, api.get_gen()):
                         break
                     continue
+                need_scan = True            # 회수=모션(자세 흐트러짐) → 다음 사이클 SCAN 재이동
                 step("RETRIEVE")
                 print(f"  [회수] 타이머 만료 → CNC 파이프 회수 → 적재 V홈{rack_count+1}")
                 r1 = _grab_from_cnc(api, dry_run)
@@ -224,16 +191,17 @@ def run(api, cfg=None, log=None, dry_run=False):
                     aborted = True; break
                 if r2[0] == "done":
                     rack_count += 1
-                    led_ctx["rack"] = rack_count
-                    led_ctx["loaded_until"] = time.time() + 2.0   # 적재 직후 2초 RACK_LOADED(부저3회)
                     set_cnc_busy(False)
+                    need_scan = False    # ★회수성공도 RETURN이 스캔 복귀 → 다음 사이클 중복 SCAN(툭) 생략
                     if log:
                         log.log_sort(object_type="PIPE", bin=f"rack{rack_count}", success=True)
                 continue
 
             # ── DETECT (detect가 스윕/센터링 알아서, cnc_busy면 파이프 제외하고 best) ──
             step("DETECT")
+            set_busy(False)           # detect 활성(스윕/센터링)
             v = api.get_vision() if dry_run else _wait_detection(api, cfg, api.get_gen())
+            set_busy(True)            # detect 정지(이제 픽 모션 — M1 충돌 방지)
             if v is None or v.get("x_mm") is None:
                 # 작업평면 비어있음
                 if cnc_busy:
@@ -247,6 +215,7 @@ def run(api, cfg=None, log=None, dry_run=False):
                         break
                     continue
 
+            need_scan = True            # 픽=모션(자세 흐트러짐) → 다음 사이클 SCAN 재이동
             target = v.get("target", "NONE")
             arm_mm = [v["x_mm"], v["y_mm"]]
 
@@ -256,7 +225,7 @@ def run(api, cfg=None, log=None, dry_run=False):
                     step("PIPE_TO_CNC")
                     r = _pipe_to_cnc(api, arm_mm, v, dry_run)
                     if r[0] == "done":
-                        set_cnc_busy(True); cnc_start = _now(); led_ctx["start"] = cnc_start; pipe_fail = 0
+                        set_cnc_busy(True); cnc_start = _now(); pipe_fail = 0
                         print("  [CNC] 파이프 투입 → 가공 시작(타이머 20초)")
                     elif r[0] == "grip_fail":
                         pipe_fail += 1
@@ -290,18 +259,12 @@ def run(api, cfg=None, log=None, dry_run=False):
                                      success=True, yolo_conf=v.get("confidence"))
                 elif r[0] == "aborted":
                     aborted = True; break
+
+            if r[0] == "done":          # ★성공 픽은 RETURN이 이미 스캔 복귀 → 다음 사이클 중복 SCAN(M1 재보정 툭) 생략
+                need_scan = False
     finally:
-        _led_stop.set()                      # 0x410 송신 스레드 정지
-        if _led_thread is not None:
-            _led_thread.join(timeout=1.0)
-        if _led_bus is not None:
-            _sd = getattr(_led_bus, "shutdown", None)
-            if _sd is not None:
-                try:
-                    _sd()
-                except Exception:
-                    pass
-        if not aborted and not dry_run:
+        set_busy(False)             # 종료시 detect 정지플래그 해제(다음 단일PICK/스윕 정상)
+        if not aborted and not dry_run and not api.should_stop():   # 정지(END/ESTOP)면 핸들러가 자세 소유
             _safe_move(api, SCAN_POSE, "SCAN", cfg)
         api.set_step("IDLE")
         if log:
