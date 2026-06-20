@@ -548,6 +548,22 @@ LOAD_EACH_LIMIT = 95.0     # % — 한 축이라도 지속 초과시 즉시정�
 LOAD_TOTAL_LIMIT = 300.0   # % — 6축 합 지속 초과시
 LOAD_SUSTAIN_S = 0.5       # 부하 초과가 이만큼 지속돼야 발동(정상 이동 순간 스파이크 무시)
 
+# ── 대시보드 이벤트 로그 알림 버퍼(워커 스레드 → 스냅샷이 d.events로 1회씩 전달) ──
+_events_lock = threading.Lock()
+pending_events = []        # [{message, level}]
+
+def _push_event(message, level="info"):
+    with _events_lock:
+        pending_events.append({"message": str(message), "level": level})
+        if len(pending_events) > 30:
+            del pending_events[:-30]
+
+def _drain_events():
+    with _events_lock:
+        evs = pending_events[:]
+        pending_events.clear()
+        return evs
+
 
 def safety_monitor():
     """모터 온도/부하 감시. 온도≥임계→graceful 종료(stop_after_cycle). 부하≥임계(지속)→즉시정지+현재각 홀드(사람 확인 후 END)."""
@@ -570,6 +586,7 @@ def safety_monitor():
                 with pick_lock:
                     run_flags["stop_after_cycle"] = True
                 print(f"[SAFETY] ⚠온도 {hot} ≥{TEMP_LIMIT}°C {TEMP_SUSTAIN_N}회 연속 → 현재작업 끝나고 원점(종료)")
+                _push_event(f"⚠과열 {max(t for _, t in hot):.0f}°C (M{[m for m, _ in hot]}) ≥{TEMP_LIMIT:.0f}°C — 현재작업 끝내고 원점(종료)", "err")
         else:
             temp_hot_count = 0                       # 한 번이라도 정상이면 카운트 리셋(연속만 인정)
             temp_tripped = False
@@ -588,6 +605,7 @@ def safety_monitor():
                 with pick_lock:
                     run_flags["stop_after_cycle"] = True
                 print(f"[SAFETY] ⚠부하 초과(각:{over_each} 합:{total:.0f}%) {LOAD_SUSTAIN_S}s 지속 → 즉시 정지+홀드. 확인 후 END로 풀거나 해결.")
+                _push_event(f"⚠부하 초과 (M{[m for m, _ in over_each]} 합 {total:.0f}%) — 즉시 정지+홀드. 확인 후 END", "err")
         else:
             load_over_since = None
             load_tripped = False
@@ -1161,6 +1179,7 @@ def build_snapshot():
             "pick": _pick_snapshot(),
             "cnc": cnc,
             "work": work,
+            "events": _drain_events(),
             "life_usage": life_usage_snapshot(),
             "can_health": hp}
 

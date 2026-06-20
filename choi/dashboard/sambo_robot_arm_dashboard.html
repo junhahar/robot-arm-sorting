@@ -3088,6 +3088,7 @@ function applyIncoming(d){
   if(d.vision){Object.assign(state.vision,d.vision);if(d.vision.correction)Object.assign(state.vision.correction,d.vision.correction)}
   if(d.path)Object.assign(state.path,d.path);if(d.cnc&&typeof d.cnc==="object")state.cnc=Object.assign(state.cnc||{},d.cnc);if(d.led_buzzer_output&&typeof d.led_buzzer_output==="object")state.cnc.output=d.led_buzzer_output;if(d.work&&typeof d.work==="object")state.work=Object.assign(state.work||{},d.work);if(d.precheck)Object.assign(state.precheck,d.precheck);if(d.can_health)Object.assign(state.can_health,d.can_health);if(d.calibration)Object.assign(state.calibration,d.calibration);if(Array.isArray(d.alerts))state.alerts=d.alerts;if(d.pick&&typeof d.pick==="object")state.pick=Object.assign(state.pick||{},d.pick);deriveCurrentStep();
   if(d.event?.message)addLog(d.event.message,(d.event.level||"INFO").toLowerCase());
+  if(Array.isArray(d.events))d.events.forEach(e=>{if(e&&e.message)addLog(e.message,(e.level||"info").toLowerCase())});  // 백엔드 알림(과열/부하 경고 등)
 }
 
 function applyCanFrame(frame){
