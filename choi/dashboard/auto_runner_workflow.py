@@ -147,16 +147,10 @@ def run(api, cfg=None, log=None, dry_run=False):
         if fn:
             fn(b)
 
-    def set_rack(n):
-        fn = getattr(api, "set_rack", None)   # CNC 패널 "적재 n/2" 표시(브리지). 없으면 no-op
-        if fn:
-            fn(n)
-
     try:
         if not dry_run:
             api.request_gripper(GRIPPER_OPEN)
             set_busy(True)            # 기본=detect 정지(픽 M1 충돌 방지). DETECT 단계에서만 잠깐 품
-        set_rack(0)                   # ★시작 시 CNC 적재 표시 0으로(세션 시작=빈 적재 가정)
 
         need_scan = True            # 픽/회수로 자세 흐트러진 뒤에만 SCAN 재이동. 빈 탐색 사이클엔 재이동 X(sweep 안 죽임)
         while not aborted and not api.should_stop():
@@ -178,16 +172,10 @@ def run(api, cfg=None, log=None, dry_run=False):
 
             # ── 가공중 타이머 만료 체크 (검출보다 먼저) ──
             if cnc_busy and (_now() - cnc_start) >= CNC_TIMER_S:
-                if rack_count >= cfg["rack_slots"]:
-                    # 적재함 가득 — 미구현(파레트 가정). 일단 경고+대기.
-                    if log:
-                        log.log_event("WARN", "적재함 가득(파레트 비우기 대기)")
-                    if not _idle(api, 1.0, api.get_gen()):
-                        break
-                    continue
                 need_scan = True            # 회수=모션(자세 흐트러짐) → 다음 사이클 SCAN 재이동
+                slot = rack_count % cfg["rack_slots"]   # 적재 V홈 순환(용량 캡 없음 — 적재함 비움/파레트 가정)
                 step("RETRIEVE")
-                print(f"  [회수] 타이머 만료 → CNC 파이프 회수 → 적재 V홈{rack_count+1}")
+                print(f"  [회수] 타이머 만료 → CNC 파이프 회수 → 적재 V홈{slot+1}")
                 r1 = _grab_from_cnc(api, dry_run)
                 if r1[0] == "aborted":
                     aborted = True; break
@@ -208,13 +196,12 @@ def run(api, cfg=None, log=None, dry_run=False):
                     continue
                 cnc_fail = 0
                 set_cnc_busy(False)           # ★회수 성공 = 파이프가 CNC서 빠짐 → CNC 즉시 비움(적재 결과 무관, "회수대기" 멈춤 방지)
-                r2 = _place_to_rack(api, rack_count, dry_run)
+                r2 = _place_to_rack(api, slot, dry_run)
                 if r2[0] == "aborted":
                     aborted = True; break
                 if r2[0] == "done":
                     rack_count += 1
                     set_cnc_busy(False)
-                    set_rack(rack_count)   # ★CNC 패널 적재 n/2 갱신
                     need_scan = False    # ★회수성공도 RETURN이 스캔 복귀 → 다음 사이클 중복 SCAN(툭) 생략
                     cyc = max(0.0, _now() - pipe_pick_start)   # (작업현황) 이 파이프 집기→적재 시간
                     rw = getattr(api, "report_work", None)      # 구브리지/dry_run이면 None → no-op

@@ -575,8 +575,6 @@ body.manual-mode .right-panel>.work-panel{display:none}
 .cnc-bar{height:7px;border-radius:5px;background:rgba(54,94,126,.35);overflow:hidden}
 .cnc-bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--red),var(--yellow));transition:width .4s linear}
 .cnc-bar.hidden{visibility:hidden}
-.cnc-rack{font-size:11px;color:var(--muted)}
-.cnc-rack .mono{color:var(--text);font-weight:800}
 .step-chart-pct small{display:block;color:var(--dim);font-size:9px;font-weight:600}
 .cam-wrap{position:relative;background:#05090f}
 .cam-stream{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none;background:#000}
@@ -802,7 +800,6 @@ body.manual-mode .tof-scale,body.manual-mode .tof-zones{width:100%}
       </div>
       <div class="cnc-timer hidden" id="cncTimer">⏱ <span class="mono" id="cncRemain">—</span> 남음</div>
       <div class="cnc-bar hidden" id="cncBar"><i id="cncBarFill"></i></div>
-      <div class="cnc-rack">적재 <span class="mono" id="cncRack">0/2</span></div>
     </div>
   </section>
 
@@ -1974,7 +1971,6 @@ function renderCnc(){
     if(timer)timer.classList.add("hidden");
     if(bar)bar.classList.add("hidden");
   }
-  setText("cncRack",status.rack_count+"/"+status.rack_max);
 }
 
 function renderRightPanel(){
