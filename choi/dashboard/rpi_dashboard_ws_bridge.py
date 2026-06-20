@@ -112,6 +112,13 @@ led_buzzer_output = {"state": 255, "mask": 0, "red": False, "green": False, "blu
 # CNC 패널 표시용(옵션B): auto_runner의 set_cnc_busy로 가공 시작/종료를 추적 → 나노 없이 가공중 카운트다운 표시. 모션/CAN 무관.
 cnc_track = {"busy": False, "start": 0.0}
 CNC_TIMER_S = 20.0   # auto_runner_workflow.CNC_TIMER_S와 동일값 유지(다르면 카운트다운만 어긋남)
+rack_track = {"count": 0}   # CNC 패널 "적재 n/2" — auto_runner가 set_rack로 갱신(세션 적재 수, 시작 시 0)
+
+def _set_rack(n):
+    try:
+        rack_track["count"] = int(n)
+    except Exception:
+        pass
 
 # ── 작업현황(Work Status) 1일 누적 — 파일 저장, 날짜 바뀔 때만 0(시작/종료/재시작으론 안 바뀜) ──
 WORK_STATS_PATH = Path(__file__).resolve().parent / "work_stats.json"
@@ -776,6 +783,7 @@ class _PickApi:
     get_vision = staticmethod(get_vision)
     set_step = staticmethod(set_step)
     report_work = staticmethod(_report_work)   # 작업현황(적재 완료마다 하루치 +1)
+    set_rack = staticmethod(_set_rack)         # CNC 패널 적재 n/2(세션 적재 수)
 
 
 _pick_api = _PickApi()
@@ -1162,7 +1170,7 @@ def build_snapshot():
     else:
         _ela = now - cnc_track["start"]
         _cnc_state, _rem = ("running", round(CNC_TIMER_S - _ela, 1)) if _ela < CNC_TIMER_S else ("done", 0.0)
-    cnc.update({"state": _cnc_state, "remaining_s": _rem, "total_s": CNC_TIMER_S, "rack_count": 0, "rack_max": 2})
+    cnc.update({"state": _cnc_state, "remaining_s": _rem, "total_s": CNC_TIMER_S, "rack_count": rack_track["count"], "rack_max": 2})
     if led_output.get("fresh"):
         cnc.update({"rack_count": led_output.get("rack_count", 0), "rack_max": led_output.get("rack_capacity", 2), "remaining_s": led_output.get("remaining_s", 0)})
     # 작업현황(하루 누적): done/평균/직전 사이클

@@ -35,6 +35,7 @@ DEFAULTS = {
     "conf_th": 0.5, "stable_n": 45, "ttl_ms": 2500,   # stable_n→45: 3초(@~15fps) 안정 후 잡기. 75는 안 잡힐 위험 커 절충. median 윈도우(maxlen75)는 5초 여유 유지(2026-06-20)
     "detect_timeout_s": 8.0, "scan_settle_s": 0.4, "poll_s": 0.1,
     "stabilize_s": 2.5,    # BUSY 해제 후 최소 대기(초). detect가 _stable_count 리셋→재축적 시간 보장(멈춰서 안정될 시간)
+    "m1_settle_s": 1.5,    # ★센터링(M1 회전) 후 물리 M1이 명령각 도달 대기(초). 0.9→1.5(M1 추종 -18도 더 도달). 수동PICK 타이밍 재현(2026-06-20)
     "speed": 20,
     "rack_slots": 2,     # 적재함 V홈 수
 }
@@ -146,10 +147,16 @@ def run(api, cfg=None, log=None, dry_run=False):
         if fn:
             fn(b)
 
+    def set_rack(n):
+        fn = getattr(api, "set_rack", None)   # CNC 패널 "적재 n/2" 표시(브리지). 없으면 no-op
+        if fn:
+            fn(n)
+
     try:
         if not dry_run:
             api.request_gripper(GRIPPER_OPEN)
             set_busy(True)            # 기본=detect 정지(픽 M1 충돌 방지). DETECT 단계에서만 잠깐 품
+        set_rack(0)                   # ★시작 시 CNC 적재 표시 0으로(세션 시작=빈 적재 가정)
 
         need_scan = True            # 픽/회수로 자세 흐트러진 뒤에만 SCAN 재이동. 빈 탐색 사이클엔 재이동 X(sweep 안 죽임)
         while not aborted and not api.should_stop():
@@ -207,6 +214,7 @@ def run(api, cfg=None, log=None, dry_run=False):
                 if r2[0] == "done":
                     rack_count += 1
                     set_cnc_busy(False)
+                    set_rack(rack_count)   # ★CNC 패널 적재 n/2 갱신
                     need_scan = False    # ★회수성공도 RETURN이 스캔 복귀 → 다음 사이클 중복 SCAN(툭) 생략
                     cyc = max(0.0, _now() - pipe_pick_start)   # (작업현황) 이 파이프 집기→적재 시간
                     rw = getattr(api, "report_work", None)      # 구브리지/dry_run이면 None → no-op
@@ -221,6 +229,13 @@ def run(api, cfg=None, log=None, dry_run=False):
             step("DETECT")
             set_busy(False)           # detect 활성(스윕/센터링)
             v = api.get_vision() if dry_run else _wait_detection(api, cfg, api.get_gen())
+            # ★센터링(M1 회전) 후 물리 M1이 명령각에 도달할 시간 확보 + 좌표 재읽기.
+            #   수동 PICK은 사람 반응시간(~0.9초)이 곧 M1 도달시간이라 정확했음. auto는 즉시 잡아 M1 추종오차(DETECT 센터링 -18도)로 빗나감.
+            if v is not None and not dry_run:
+                _idle(api, cfg["m1_settle_s"], api.get_gen())
+                _v2 = api.get_vision()
+                if _gate_ok(_v2, cfg):
+                    v = _v2
             set_busy(True)            # detect 정지(이제 픽 모션 — M1 충돌 방지)
             if v is None or v.get("x_mm") is None:
                 # 작업평면 비어있음
