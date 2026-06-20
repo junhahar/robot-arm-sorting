@@ -22,6 +22,7 @@ import struct
 import threading
 import time
 from pathlib import Path
+from datetime import datetime
 
 import can
 import websockets
@@ -111,6 +112,50 @@ led_buzzer_output = {"state": 255, "mask": 0, "red": False, "green": False, "blu
 # CNC 패널 표시용(옵션B): auto_runner의 set_cnc_busy로 가공 시작/종료를 추적 → 나노 없이 가공중 카운트다운 표시. 모션/CAN 무관.
 cnc_track = {"busy": False, "start": 0.0}
 CNC_TIMER_S = 20.0   # auto_runner_workflow.CNC_TIMER_S와 동일값 유지(다르면 카운트다운만 어긋남)
+
+# ── 작업현황(Work Status) 1일 누적 — 파일 저장, 날짜 바뀔 때만 0(시작/종료/재시작으론 안 바뀜) ──
+WORK_STATS_PATH = Path(__file__).resolve().parent / "work_stats.json"
+
+def _today():
+    return datetime.now().strftime("%Y-%m-%d")
+
+def _work_load():
+    try:
+        d = json.loads(WORK_STATS_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        d = {}
+    if d.get("date") != _today():            # 날짜 다르면(새 날/첫 실행) 0부터
+        d = {"date": _today(), "done": 0, "sum_s": 0.0, "last": None}
+    d.setdefault("done", 0); d.setdefault("sum_s", 0.0); d.setdefault("last", None)
+    return d
+
+work_stats = _work_load()                    # 브리지 시작 시 그날 값 복원
+
+def _work_save():
+    try:
+        WORK_STATS_PATH.write_text(json.dumps(work_stats, ensure_ascii=False), encoding="utf-8")
+    except Exception:
+        pass
+
+def _work_rollover():                         # 자정 넘어가면 자동 0
+    if work_stats.get("date") != _today():
+        work_stats.update({"date": _today(), "done": 0, "sum_s": 0.0, "last": None})
+        _work_save()
+
+def _report_work(cycle_s=None):               # auto_runner가 적재 완료마다 호출(하루치 +1)
+    _work_rollover()
+    work_stats["done"] += 1
+    if cycle_s is not None:
+        work_stats["sum_s"] += float(cycle_s)
+    work_stats["last"] = {"cycle_s": cycle_s, "at": datetime.now().strftime("%H:%M")}
+    _work_save()
+
+# ── DB 로거(자동운전 중에만 활성; 텔레메트리 log_motor와 공유) ──
+try:
+    from robot_logger import RobotLogger
+except Exception:
+    RobotLogger = None
+db_log = None
 
 LIFE_USAGE_SCHEMA = "sambo_servo_life_usage_v1"
 LIFE_USAGE_PATH = Path(__file__).resolve().parent / "servo_life_usage.json"
@@ -303,6 +348,12 @@ def can_reader():
                                 m["load"] = round((load_raw & 0x03FF) * 0.1, 1)
                             m["flags"] = flags
                             m["rx"] = now
+                            if db_log is not None:        # 자동운전 중에만 DB 기록(텔레메트리 → motor_sample)
+                                try:
+                                    db_log.log_motor(mid, cur_angle=m.get("current"), tgt_angle=m.get("target"),
+                                                     temp=m.get("temp"), load=m.get("load"), current=m.get("current_ma"))
+                                except Exception:
+                                    pass
                             if m["cmd_rx"] == 0.0 and m["target"] is None and m["current"] is not None:
                                 pass  # 목표각 기본값(=current) 제거: 명령(0x100) 없으면 target 안 보냄
                     elif aid == 0x202 and len(d) >= 4:
@@ -706,6 +757,7 @@ class _PickApi:
     should_stop = staticmethod(should_stop)
     get_vision = staticmethod(get_vision)
     set_step = staticmethod(set_step)
+    report_work = staticmethod(_report_work)   # 작업현황(적재 완료마다 하루치 +1)
 
 
 _pick_api = _PickApi()
@@ -731,6 +783,7 @@ def _start_auto():
         run_flags["estop"] = False
 
     def _worker():
+        global db_log
         try:
             _set_busy(True)       # ★스캔 도착 전 detect 정지(이동중 스테일 비전으로 확 튀는 것 방지). run()이 이후 관리
             if submit_and_wait([(SCAN_POSE, "START scan")], speed=25.0) != "done":
@@ -738,7 +791,13 @@ def _start_auto():
             _set_run(True)        # detect 스윕/센터링 ON (루프가 vision 받게)
             with pick_lock:
                 pick_state["status"] = "BUSY"   # ★진행바 게이트: 자동 중 단계바 표시(deriveCurrentStep은 status==BUSY일 때만 step 그림)
-            res = auto_runner_workflow.run(_pick_api, log=None)
+            if RobotLogger is not None:
+                try:
+                    db_log = RobotLogger(mode_default="auto")   # ★DB 로깅 시작(텔레메트리 log_motor도 이 인스턴스 공유)
+                    print("[AUTO] DB 로깅 시작")
+                except Exception as e:
+                    db_log = None; print(f"[AUTO] DB 로깅 비활성: {e}")
+            res = auto_runner_workflow.run(_pick_api, log=db_log)
             print(f"[AUTO] 워크플로우 종료: {res}")
             _set_run(False)       # ★복귀 모션 전 detect 스윕 정지 → 복귀 중 M1 0x07/0x03 충돌(반대 툭) 방지
             # 종료(END)/AUTO_STOP으로 멈췄고 E-STOP 아니면 → 사이클 마친 뒤 스캔→원점 복귀
@@ -754,6 +813,10 @@ def _start_auto():
         finally:
             _set_run(False)       # detect OFF
             _set_cnc_busy(False)  # ★중단/종료 시 cnc 플래그 해제 → stuck으로 파이프 영구 제외되는 것 방지
+            if db_log is not None:
+                try: db_log.close()       # auto_runner.run이 end_session 처리 → 여기선 flush+conn 닫기
+                except Exception: pass
+                db_log = None
             with pick_lock:
                 pick_state["status"] = "SCAN_READY"   # ★자동 종료 → 진행바 HOME/대기 복귀
                 pick_state["step"] = ""
@@ -1084,12 +1147,20 @@ def build_snapshot():
     cnc.update({"state": _cnc_state, "remaining_s": _rem, "total_s": CNC_TIMER_S, "rack_count": 0, "rack_max": 2})
     if led_output.get("fresh"):
         cnc.update({"rack_count": led_output.get("rack_count", 0), "rack_max": led_output.get("rack_capacity", 2), "remaining_s": led_output.get("remaining_s", 0)})
+    # 작업현황(하루 누적): done/평균/직전 사이클
+    _work_rollover()
+    _wdone = work_stats["done"]
+    _wlast = work_stats.get("last")
+    work = {"done": _wdone,
+            "avg_s": round(work_stats["sum_s"] / _wdone, 1) if _wdone else None,
+            "cycle_s": (_wlast or {}).get("cycle_s"), "last": _wlast}
     return {"robot": {"joints": joints},
             "system": system,
             "vision": vision,
             "gripper": gripper,
             "pick": _pick_snapshot(),
             "cnc": cnc,
+            "work": work,
             "life_usage": life_usage_snapshot(),
             "can_health": hp}
 

@@ -32,7 +32,7 @@ CNC_TIMER_S = 20.0       # CNC 가공 시간(타이머)
 MAX_GRIP_RETRY = 3       # 파지/회수 연속 실패 N회 → 정지(사람 확인)
 
 DEFAULTS = {
-    "conf_th": 0.5, "stable_n": 15, "ttl_ms": 2500,   # stable_n→15: 더 안정된 값에서 잡기(떨어뜨려 위치바뀜 대비). 빠르면 ↑(2026-06-19)
+    "conf_th": 0.5, "stable_n": 45, "ttl_ms": 2500,   # stable_n→45: 3초(@~15fps) 안정 후 잡기. 75는 안 잡힐 위험 커 절충. median 윈도우(maxlen75)는 5초 여유 유지(2026-06-20)
     "detect_timeout_s": 8.0, "scan_settle_s": 0.4, "poll_s": 0.1,
     "stabilize_s": 2.5,    # BUSY 해제 후 최소 대기(초). detect가 _stable_count 리셋→재축적 시간 보장(멈춰서 안정될 시간)
     "speed": 20,
@@ -123,6 +123,10 @@ def run(api, cfg=None, log=None, dry_run=False):
     cycle = 0
     sorted_ok = 0
     aborted = False
+    cur_part_id = None       # (DB) 현재 CNC 파이프의 part_id(투입→회수→적재 공통 키)
+    part_seq = 0             # (DB) 파이프 일련번호 카운터
+    pipe_pick_start = 0.0    # (작업현황) 현재 파이프 집기 시작 시각
+    GRIP_OK_MAX = 130        # (DB) 파지 판정 임계 mm (pick_runner._grip_ok 동일 의미)
 
     if log:
         log.start_session(mode="auto")
@@ -180,6 +184,9 @@ def run(api, cfg=None, log=None, dry_run=False):
                 r1 = _grab_from_cnc(api, dry_run)
                 if r1[0] == "aborted":
                     aborted = True; break
+                if log:
+                    log.log_grip(part_id=cur_part_id, phase="retrieve_grip",
+                                 threshold_mm=GRIP_OK_MAX, result=(r1[0] == "done"))
                 if r1[0] != "done":               # grip_fail/error → CNC 비었거나 회수 실패
                     cnc_fail += 1
                     print(f"  [재시도] CNC 회수 실패 {cnc_fail}/{MAX_GRIP_RETRY}")
@@ -193,6 +200,7 @@ def run(api, cfg=None, log=None, dry_run=False):
                         break
                     continue
                 cnc_fail = 0
+                set_cnc_busy(False)           # ★회수 성공 = 파이프가 CNC서 빠짐 → CNC 즉시 비움(적재 결과 무관, "회수대기" 멈춤 방지)
                 r2 = _place_to_rack(api, rack_count, dry_run)
                 if r2[0] == "aborted":
                     aborted = True; break
@@ -200,8 +208,13 @@ def run(api, cfg=None, log=None, dry_run=False):
                     rack_count += 1
                     set_cnc_busy(False)
                     need_scan = False    # ★회수성공도 RETURN이 스캔 복귀 → 다음 사이클 중복 SCAN(툭) 생략
+                    cyc = max(0.0, _now() - pipe_pick_start)   # (작업현황) 이 파이프 집기→적재 시간
+                    rw = getattr(api, "report_work", None)      # 구브리지/dry_run이면 None → no-op
+                    if rw:
+                        rw(cycle_s=round(cyc, 1))
                     if log:
-                        log.log_sort(object_type="PIPE", bin=f"rack{rack_count}", success=True)
+                        log.log_sort(object_type="PIPE", dest="rack",
+                                     bin=f"rack{rack_count}", success=True, part_id=cur_part_id)
                 continue
 
             # ── DETECT (detect가 스윕/센터링 알아서, cnc_busy면 파이프 제외하고 best) ──
@@ -230,11 +243,20 @@ def run(api, cfg=None, log=None, dry_run=False):
             if not cnc_busy:
                 if target == "PIPE":
                     step("PIPE_TO_CNC")
+                    pipe_pick_start = _now()              # (작업현황) 사이클 시작(집기→적재)
+                    part_seq += 1                          # (DB) 새 파이프 번호
                     r = _pipe_to_cnc(api, arm_mm, v, dry_run)
                     if r[0] == "done":
                         set_cnc_busy(True); cnc_start = _now(); pipe_fail = 0
+                        cur_part_id = part_seq             # (DB) CNC에 들어간 파이프
+                        if log:
+                            log.log_grip(part_id=cur_part_id, phase="infeed_grip",
+                                         threshold_mm=GRIP_OK_MAX, result=True)
                         print("  [CNC] 파이프 투입 → 가공 시작(타이머 20초)")
                     elif r[0] == "grip_fail":
+                        if log:
+                            log.log_grip(part_id=part_seq, phase="infeed_grip",
+                                         threshold_mm=GRIP_OK_MAX, result=False)
                         pipe_fail += 1
                         print(f"  [재시도] 파이프 파지 실패 {pipe_fail}/{MAX_GRIP_RETRY} → 재검출")
                         if log:
