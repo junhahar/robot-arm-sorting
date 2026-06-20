@@ -34,6 +34,7 @@ MAX_GRIP_RETRY = 3       # 파지/회수 연속 실패 N회 → 정지(사람 �
 DEFAULTS = {
     "conf_th": 0.5, "stable_n": 15, "ttl_ms": 2500,   # stable_n→15: 더 안정된 값에서 잡기(떨어뜨려 위치바뀜 대비). 빠르면 ↑(2026-06-19)
     "detect_timeout_s": 8.0, "scan_settle_s": 0.4, "poll_s": 0.1,
+    "stabilize_s": 2.5,    # BUSY 해제 후 최소 대기(초). detect가 _stable_count 리셋→재축적 시간 보장(멈춰서 안정될 시간)
     "speed": 20,
     "rack_slots": 2,     # 적재함 V홈 수
 }
@@ -52,13 +53,19 @@ def _gate_ok(v, cfg):
 
 
 def _wait_detection(api, cfg, gen0):
-    """안정 검출 대기(detect가 스윕/센터링 알아서). 게이트 충족 시 vision, 아니면 None."""
-    deadline = time.time() + cfg["detect_timeout_s"]
+    """안정 검출 대기(detect가 스윕/센터링 알아서). 게이트 충족 시 vision, 아니면 None.
+
+    BUSY 해제 직후 호출됨 → stabilize_s 동안은 gate 무시(detect가 _stable_count
+    리셋 후 재축적할 시간 보장). 이 방어 없으면 스테일 stable_frames가 gate 통과.
+    """
+    t0 = time.time()
+    min_wait = cfg.get("stabilize_s", 1.2)
+    deadline = t0 + cfg["detect_timeout_s"]
     while time.time() < deadline:
         if api.should_stop() or api.get_gen() != gen0:
             return None
         v = api.get_vision()
-        if _gate_ok(v, cfg):
+        if (time.time() - t0) >= min_wait and _gate_ok(v, cfg):
             return v
         time.sleep(cfg["poll_s"])
     return None

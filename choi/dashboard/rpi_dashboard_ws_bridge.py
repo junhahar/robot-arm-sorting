@@ -70,8 +70,8 @@ ARRIVE_DT = 0.05           # 도착 폴링/목표 재전송 주기[s]
 # ── M1 등속(스캔/스윕) + 5005 (ik_server 대체) ──
 CMD_SET_ANGLE_SPEED = 0x07   # STS3215 등속(위치+속도) — 틱틱 방지
 SCAN_SPEED_REG = 250         # 스캔/센터링 등속 속도(reg)
-SWEEP_SPEED = 28.0           # 스윕 시간추정 속도(°/s)
-SWEEP_SPEED_REG = 320        # 스윕 등속 reg
+SWEEP_SPEED = 20.0           # 스윕 M1 회전 속도(°/s). 15는 저속 cog(덜덜) → 20. REG와 동기 필수
+SWEEP_SPEED_REG = 230        # 스윕 모터 reg. SWEEP_SPEED와 비례 동기(28↔320 → 20↔230). desync 방지
 SWEEP_LEFT, SWEEP_RIGHT = 120.0, 240.0
 M1_SCAN_MIN, M1_SCAN_MAX = 120.0, 240.0   # M1 스캔 안전범위(180±60)
 IK_PORT = 5005               # detect의 scan/home/sweep/stop 수신
@@ -492,6 +492,7 @@ run_flags = {"estop": False, "stop_after_cycle": False}   # E-Stop 래치 / 종�
 
 # ── 안전: 온도/부하 감시 (온도→graceful 종료 / 부하→즉시 정지+홀드) ──
 TEMP_LIMIT = 58.0          # °C — 초과시 현재작업 끝내고 원점(graceful 종료)
+TEMP_SUSTAIN_N = 10        # 온도 노이즈 스파이크 무시: 연속 N회(×0.1s=1s) 초과해야 정지
 LOAD_EACH_LIMIT = 95.0     # % — 한 축이라도 지속 초과시 즉시정지(박힘/고장). ★정상 peak 관찰 후 튜닝
 LOAD_TOTAL_LIMIT = 300.0   # % — 6축 합 지속 초과시
 LOAD_SUSTAIN_S = 0.5       # 부하 초과가 이만큼 지속돼야 발동(정상 이동 순간 스파이크 무시)
@@ -500,6 +501,7 @@ LOAD_SUSTAIN_S = 0.5       # 부하 초과가 이만큼 지속돼야 발동(정�
 def safety_monitor():
     """모터 온도/부하 감시. 온도≥임계→graceful 종료(stop_after_cycle). 부하≥임계(지속)→즉시정지+현재각 홀드(사람 확인 후 END)."""
     temp_tripped = False
+    temp_hot_count = 0
     load_over_since = None
     load_tripped = False
     while True:
@@ -510,12 +512,15 @@ def safety_monitor():
             curs = {m: motors[m]["current"] for m in range(1, 7)}
         # 온도 → graceful 종료(현재작업 끝→원점)
         hot = [(i + 1, t) for i, t in enumerate(temps) if t is not None and t >= TEMP_LIMIT]
-        if hot and not temp_tripped:
-            temp_tripped = True
-            with pick_lock:
-                run_flags["stop_after_cycle"] = True
-            print(f"[SAFETY] ⚠온도 {hot} ≥{TEMP_LIMIT}°C → 현재작업 끝나고 원점(종료)")
-        elif not hot:
+        if hot:
+            temp_hot_count += 1                      # ★연속 카운트 — 스파이크 1~2회는 무시
+            if temp_hot_count >= TEMP_SUSTAIN_N and not temp_tripped:
+                temp_tripped = True
+                with pick_lock:
+                    run_flags["stop_after_cycle"] = True
+                print(f"[SAFETY] ⚠온도 {hot} ≥{TEMP_LIMIT}°C {TEMP_SUSTAIN_N}회 연속 → 현재작업 끝나고 원점(종료)")
+        else:
+            temp_hot_count = 0                       # 한 번이라도 정상이면 카운트 리셋(연속만 인정)
             temp_tripped = False
         # 부하 → 즉시 정지+홀드 (지속 확인 — 순간 스파이크 무시)
         valid = [x for x in loads if x is not None]

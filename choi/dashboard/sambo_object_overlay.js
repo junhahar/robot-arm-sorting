@@ -612,8 +612,8 @@
     const o = ensureThreeOverlay();
     if (!o) return;
     o.root.visible = true;
-    o.target.visible = !!detection;
-    o.approachLine.visible = !!detection;
+    o.target.visible = false;        // ★물체 마커 비활성(좌표 부정확 → 표시 안 함). 브랜드 바닥(root/floor)은 유지.
+    o.approachLine.visible = false;  // ★접근선도 비활성
     updateFloorMotion(o.floor, now);
     if (!detection) return;
 

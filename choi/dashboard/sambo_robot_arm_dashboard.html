@@ -1064,7 +1064,7 @@ const STEP_LABELS={HOME:"대기",SCAN:"스캔",PRE_GRASP:"접근",GRASP:"집기"
 // 백엔드(pick_runner/auto_runner_workflow) 단계명 → 진행바 8노드 매핑. 바 구조는 그대로, 어휘만 정렬.
 // 운반계열(작업평면→CNC / CNC→픽스처 / →적재V홈)=CARRY, 놓기계열(CNC투입 / 적재놓기)=PLACE,
 // 완성파이프 잡기=GRASP, 스캔복귀=HOME, 파지실패복귀=GRIP_CHECK. (그 외는 이름 그대로 매칭)
-const STAGE_ALIAS={CNC_MOVE:"CARRY",CNC_GRAB_MOVE:"CARRY",RACK_MOVE:"CARRY",CNC_INSERT:"PLACE",RACK_PLACE:"PLACE",CNC_GRAB:"GRASP",RETURN:"HOME",GRIP_FAIL:"GRIP_CHECK",DETECT:"SCAN",PIPE_TO_CNC:"PRE_GRASP",SORT:"PRE_GRASP",RETRIEVE:"CARRY",IDLE:"HOME"};
+const STAGE_ALIAS={CNC_MOVE:"CARRY",CNC_GRAB_MOVE:"CARRY",RACK_MOVE:"CARRY",CNC_INSERT:"PLACE",RACK_PLACE:"PLACE",CNC_GRAB:"GRASP",RETURN:"SCAN",GRIP_FAIL:"GRIP_CHECK",DETECT:"SCAN",PIPE_TO_CNC:"PRE_GRASP",SORT:"PRE_GRASP",RETRIEVE:"CARRY",IDLE:"HOME"};
 // 캡션 목적지 추론: 브리지가 dest를 안 보내므로 단계명/대상으로 역추적. (CNC가공·적재 단계는 이름에 목적지가 있고, 일반 분류는 검출 대상으로)
 const STAGE_DEST={CNC_MOVE:"cnc",CNC_INSERT:"cnc",CNC_GRAB_MOVE:"cnc",CNC_GRAB:"cnc",RACK_MOVE:"rack",RACK_PLACE:"rack"};
 const OBJ_DEST={BOLT:"bolt",NUT:"nut",PIPE:"cnc"};
@@ -1931,6 +1931,7 @@ function stepCaption(step){
   if(rawStep==="CNC_GRAB")return "CNC 파이프 회수(집기)";
   if(rawStep==="RACK_MOVE")return "적재함으로 이동";
   if(rawStep==="RACK_PLACE")return "적재함에 적재";
+  if(rawStep==="RETURN")return "스캔 자세로 복귀";   // RETURN=스캔복귀(원점 아님) → "원점 대기" 오표시 수정
   switch(step){
     case "HOME": return "원점에서 대기 중";
     case "SCAN": return tgt?`${typeKo}로 판별`:"물체 탐색 중…";
